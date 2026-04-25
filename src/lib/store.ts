@@ -2083,28 +2083,21 @@ export const useStore = create<AppState>()(
         const thread = chatThreads.find((t) => t.id === chatId);
         if (!thread || thread.kind !== 'group') return { ok: false, error: 'Not a group' };
 
-        const uid = String(currentUser.id);
-        const unique = [...new Set(userIds.map(String))].filter(Boolean);
+        const unique = [...new Set(userIds)].filter(Boolean);
         if (unique.length === 0) return { ok: false, error: 'No members selected' };
 
-        const members = thread.memberIds.map(String);
         for (const id of unique) {
-          if (!members.includes(id)) {
+          if (!thread.memberIds.includes(id)) {
             return { ok: false, error: 'User is not in this group' };
           }
         }
 
-        const nextMembers = members.filter((id) => !unique.includes(id));
-        const soleSelfLeave =
-          unique.length === 1 &&
-          unique[0] === uid &&
-          members.length === 1 &&
-          members[0] === uid;
-        if (nextMembers.length < 1 && !soleSelfLeave) {
+        const nextMembers = thread.memberIds.filter((id) => !unique.includes(id));
+        if (nextMembers.length < 1) {
           return { ok: false, error: 'The group must keep at least one member.' };
         }
 
-        const removingOthers = unique.some((id) => id !== uid);
+        const removingOthers = unique.some((id) => id !== currentUser.id);
         if (removingOthers) {
           if (thread.scope === 'official') {
             if (currentUser.role !== 'Admin') {
@@ -2122,7 +2115,7 @@ export const useStore = create<AppState>()(
             return { ok: false, error: 'Cannot remove members from this chat' };
           }
         } else {
-          if (!unique.includes(uid)) {
+          if (!unique.includes(currentUser.id)) {
             return { ok: false, error: 'Invalid request' };
           }
         }
@@ -2137,10 +2130,6 @@ export const useStore = create<AppState>()(
           const json = await r.json();
           if (!r.ok || !json?.success) return { ok: false, error: json?.message || 'Could not remove members' };
           const t = json.data;
-          if (t?.deleted) {
-            set({ chatThreads: chatThreads.filter((x) => x.id !== chatId) });
-            return { ok: true };
-          }
           set({
             chatThreads: chatThreads.map((x) =>
               x.id === chatId
