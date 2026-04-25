@@ -1188,7 +1188,8 @@ export default function MessagesPage() {
                   .map((id) => {
                     const u = users.find((x) => x.id === id);
                     const isSelf = id === currentUser.id;
-                    const canLeaveGroup = isSelf && selected.memberIds.length > 1;
+                    /** Show Leave whenever you appear in the roster (including last member — backend deletes empty group). */
+                    const canLeaveGroup = isSelf;
                     const canRemoveOther = !isSelf && canShowAddMembers;
                     return (
                       <li
