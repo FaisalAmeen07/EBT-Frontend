@@ -11,9 +11,18 @@ function apiErrorMessage(error: unknown): string {
     if (d && typeof d === 'object' && d !== null && 'message' in d) {
       return String((d as { message: unknown }).message);
     }
-    return error.message;
+    // Axios may return non-standard error payloads; keep the message high-signal.
+    const status = error.response?.status;
+    const suffix = status ? ` (HTTP ${status})` : '';
+    return `${error.message}${suffix}`;
   }
-  return 'Something went wrong';
+  if (error instanceof Error) return error.message || 'Something went wrong';
+  try {
+    const s = typeof error === 'string' ? error : JSON.stringify(error);
+    return s?.trim() ? s : 'Something went wrong';
+  } catch {
+    return 'Something went wrong';
+  }
 }
   
 export async function loginWithApi(
@@ -25,6 +34,14 @@ export async function loginWithApi(
       API_PATHS.auth.login,
       { email: email.trim().toLowerCase(), password }
     );
+
+    // Deployed backend must return `token` + `user`. If it only returns `{ message: "Login successful" }`
+    // we cannot establish a session on the dashboard.
+    if (!data || typeof data !== 'object' || !('user' in data) || !('token' in data)) {
+      throw new Error(
+        'Login API response missing user/token. Redeploy backend to return { token, user }.'
+      );
+    }
     return { ok: true, user: mapLoginUserToStore(data.user), token: data.token };
   } catch (e) {
     return { ok: false, error: apiErrorMessage(e) };
