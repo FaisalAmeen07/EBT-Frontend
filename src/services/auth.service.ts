@@ -15,7 +15,7 @@ function apiErrorMessage(error: unknown): string {
   }
   return 'Something went wrong';
 }
-
+  
 export async function loginWithApi(
   email: string,
   password: string
