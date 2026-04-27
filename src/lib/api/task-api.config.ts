@@ -4,20 +4,35 @@ import { ACCESS_TOKEN_COOKIE } from '@/lib/api/axios.config';
 
 /** Local dev only when `NEXT_PUBLIC_TASK_API_URL` is unset. Production must set the env var (e.g. Render HTTPS URL). */
 const DEFAULT_TASK_DEV = 'http://localhost:5001';
+/** Production fallback when env var is missing (Render). */
+const DEFAULT_TASK_PROD = 'https://taskmanagment-backend-34i7.onrender.com';
 
 function resolveTaskBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_TASK_API_URL?.trim() ?? '';
   const normalized = raw.replace(/\/$/, '');
-  if (normalized) return normalized;
+  if (normalized) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalized)
+    ) {
+      console.error(
+        `[task-api] NEXT_PUBLIC_TASK_API_URL is set to a localhost URL (${normalized}) in production — falling back to ${DEFAULT_TASK_PROD}. Fix the Production env var and redeploy.`
+      );
+      return DEFAULT_TASK_PROD;
+    }
+    return normalized;
+  }
+
   if (process.env.NODE_ENV === 'production') {
     console.error(
-      '[task-api] NEXT_PUBLIC_TASK_API_URL is missing. On Vercel add it: https://taskmanagment-backend-34i7.onrender.com (no trailing slash).'
+      `[task-api] NEXT_PUBLIC_TASK_API_URL is missing — using ${DEFAULT_TASK_PROD}. Set it in Vercel env vars (no trailing slash).`
     );
-  } else {
-    console.warn(
-      `[task-api] NEXT_PUBLIC_TASK_API_URL is unset — using ${DEFAULT_TASK_DEV}. For deployed task API set .env.local, e.g. https://taskmanagment-backend-34i7.onrender.com`
-    );
+    return DEFAULT_TASK_PROD;
   }
+
+  console.warn(
+    `[task-api] NEXT_PUBLIC_TASK_API_URL is unset — using ${DEFAULT_TASK_DEV}. For deployed task API set .env.local, e.g. ${DEFAULT_TASK_PROD}`
+  );
   return DEFAULT_TASK_DEV;
 }
 

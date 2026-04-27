@@ -9,7 +9,7 @@ import {
   isThreadVisibleToViewer,
   canAddToHrGroup,
   canAddToTlGroup,
-  canAddToOfficialGroup,
+  canAddToGroup,
   resolveMessageRecipients,
   migrateChatThreadsForReadReceipts,
   teamGroupChatId,
@@ -86,10 +86,15 @@ function mergeTeamGroupChat(threads: ChatThread[], teamName: string, users: User
 
 export function canManageGroupSettings(thread: ChatThread, user: User | null): boolean {
   if (!user || thread.kind !== 'group') return false;
-  if (thread.scope === 'official') return user.role === 'Admin';
-  if (thread.scope === 'hr_group') return user.role === 'HR';
+  if (thread.scope === 'group') return user.role === 'Admin' || thread.createdById === user.id;
+  if (thread.scope === 'hr_group') return user.role === 'HR' || user.role === 'Admin' || thread.createdById === user.id;
   if (thread.scope === 'tl_group') {
-    return user.role === 'HR' || thread.createdById === user.id;
+    return (
+      user.role === 'HR' ||
+      user.role === 'Admin' ||
+      user.role === 'Team Leader' ||
+      thread.createdById === user.id
+    );
   }
   return false;
 }
@@ -462,6 +467,10 @@ interface AppState {
   syncChatThreads: () => Promise<{ ok: true } | { ok: false; error?: string }>;
   /** Fetch messages for a chatId (on open) from chat-backend. */
   syncChatMessages: (chatId: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
+  searchChatMessages: (
+    chatId: string,
+    q: string
+  ) => Promise<{ ok: true; data: ChatMessage[] } | { ok: false; error?: string }>;
   sendChatMessage: (
     chatId: string,
     input: {
@@ -486,13 +495,14 @@ interface AppState {
   createGroupChat: (input: {
     name: string;
     memberIds: string[];
-    scope: 'official' | 'hr_group' | 'tl_group';
+    scope: 'group' | 'hr_group' | 'tl_group';
   }) => Promise<{ ok: true; chatId: string } | { ok: false; error?: string }>;
   addMembersToGroup: (chatId: string, userIds: string[]) => Promise<{ ok: true } | { ok: false; error?: string }>;
   removeMembersFromGroup: (
     chatId: string,
     userIds: string[]
   ) => Promise<{ ok: true } | { ok: false; error?: string }>;
+  leaveGroupChat: (chatId: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
   updateGroupChat: (
     chatId: string,
     input: { name?: string; avatarUrl?: string | null }
@@ -1717,6 +1727,44 @@ export const useStore = create<AppState>()(
         }
       },
 
+      searchChatMessages: async (chatId, q) => {
+        const { currentUser } = get();
+        if (!currentUser) return { ok: false, error: 'Not signed in' };
+        const query = q.trim();
+        if (!query) return { ok: true, data: [] };
+        try {
+          const u = new URL(`${resolveChatBaseURL()}${API_PATHS.chat.searchMessages(chatId)}`);
+          u.searchParams.set('q', query);
+          u.searchParams.set('limit', '50');
+          const r = await fetch(u.toString(), {
+            method: 'GET',
+            headers: { 'x-user-id': currentUser.id },
+            credentials: 'include',
+          });
+          const json = await r.json();
+          if (!r.ok || !json?.success) return { ok: false, error: json?.message || 'Search failed' };
+          const msgs: ChatMessage[] = (json.data || []).map((m: any) => ({
+            id: String(m.id),
+            chatId: String(m.chatId ?? chatId),
+            senderId: m.senderId ? String(m.senderId) : undefined,
+            authorId: String(m.authorId),
+            body: String(m.body ?? ''),
+            createdAt: String(m.createdAt),
+            receiverId: m.receiverId ?? null,
+            groupId: m.groupId ?? null,
+            readByUserIds: Array.isArray(m.readByUserIds) ? m.readByUserIds.map(String) : [],
+            ...(m.attachment ? { attachment: m.attachment as ChatAttachment } : {}),
+            ...(m.editedAt ? { editedAt: String(m.editedAt) } : {}),
+            ...(m.deleted ? { deleted: true } : {}),
+            ...(m.replyToId ? { replyToId: String(m.replyToId) } : {}),
+            ...(m.forwardedFrom ? { forwardedFrom: m.forwardedFrom } : {}),
+          }));
+          return { ok: true, data: msgs };
+        } catch (e: any) {
+          return { ok: false, error: e?.message || 'Network error' };
+        }
+      },
+
       sendChatMessage: async (chatId, input) => {
         const { currentUser, users, chatThreads } = get();
         if (!currentUser) return { ok: false, error: 'Not signed in' };
@@ -1966,19 +2014,23 @@ export const useStore = create<AppState>()(
         const trimmed = name.trim();
         if (!trimmed) return { ok: false, error: 'Name required' };
 
-        if (scope === 'official') {
-          if (currentUser.role !== 'Admin') return { ok: false, error: 'Only Admin can create official groups' };
+        if (scope === 'group') {
+          if (currentUser.role !== 'Admin' && currentUser.role !== 'HR' && currentUser.role !== 'Team Leader') {
+            return { ok: false, error: 'Not allowed to create groups' };
+          }
           const ids = [...new Set([currentUser.id, ...memberIds])];
           for (const id of ids) {
             const u = users.find((x) => x.id === id);
-            if (!u || !canAddToOfficialGroup(u)) return { ok: false, error: 'Invalid member' };
+            if (!u || !canAddToGroup(u)) return { ok: false, error: 'Invalid member' };
           }
         } else if (scope === 'hr_group') {
-          if (currentUser.role !== 'HR') return { ok: false, error: 'Only HR can create HR groups' };
+          if (currentUser.role !== 'HR' && currentUser.role !== 'Admin')
+            return { ok: false, error: 'Only HR or Admin can create HR groups' };
           const ids = [...new Set([currentUser.id, ...memberIds])];
           for (const id of ids) {
             const u = users.find((x) => x.id === id);
-            if (!u || !canAddToHrGroup(u)) return { ok: false, error: 'Members must be HR, Team Leader, or Employee' };
+            if (!u || !canAddToHrGroup(u))
+              return { ok: false, error: 'Members must be Admin, HR, Team Leader, or Employee' };
           }
         } else if (scope === 'tl_group') {
           if (currentUser.role !== 'Team Leader') return { ok: false, error: 'Only Team Leaders can create TL groups' };
@@ -2026,17 +2078,17 @@ export const useStore = create<AppState>()(
 
         const unique = [...new Set(userIds)];
 
-        if (thread.scope === 'official') {
-          if (currentUser.role !== 'Admin') {
-            return { ok: false, error: 'Only Admin can add members to official groups' };
+        if (thread.scope === 'group') {
+          if (thread.createdById !== currentUser.id) {
+            return { ok: false, error: 'Only the group creator can add members' };
           }
           for (const id of unique) {
             const u = users.find((x) => x.id === id);
-            if (!u || !canAddToOfficialGroup(u)) return { ok: false, error: 'Invalid member' };
+            if (!u || !canAddToGroup(u)) return { ok: false, error: 'Invalid member' };
           }
         } else if (thread.scope === 'hr_group') {
-          if (currentUser.role !== 'HR') {
-            return { ok: false, error: 'Only HR can add members to HR groups' };
+          if (currentUser.role !== 'HR' && currentUser.role !== 'Admin') {
+            return { ok: false, error: 'Only HR or Admin can add members to HR groups' };
           }
           for (const id of unique) {
             const u = users.find((x) => x.id === id);
@@ -2083,7 +2135,7 @@ export const useStore = create<AppState>()(
         const thread = chatThreads.find((t) => t.id === chatId);
         if (!thread || thread.kind !== 'group') return { ok: false, error: 'Not a group' };
 
-        const unique = [...new Set(userIds)].filter(Boolean);
+        const unique = [...new Set(userIds.map(String))].map((x) => x.trim()).filter(Boolean);
         if (unique.length === 0) return { ok: false, error: 'No members selected' };
 
         for (const id of unique) {
@@ -2093,26 +2145,21 @@ export const useStore = create<AppState>()(
         }
 
         const nextMembers = thread.memberIds.filter((id) => !unique.includes(id));
+        const isSelfOnlyLeave = unique.length === 1 && unique[0] === currentUser.id;
         if (nextMembers.length < 1) {
+          // If the last remaining member leaves, delete the group (creator only).
+          if (isSelfOnlyLeave && thread.createdById === currentUser.id) {
+            const del = await get().deleteGroupChat(chatId);
+            if (!del.ok) return del;
+            return { ok: true };
+          }
           return { ok: false, error: 'The group must keep at least one member.' };
         }
 
         const removingOthers = unique.some((id) => id !== currentUser.id);
         if (removingOthers) {
-          if (thread.scope === 'official') {
-            if (currentUser.role !== 'Admin') {
-              return { ok: false, error: 'Only Admin can remove members from official groups' };
-            }
-          } else if (thread.scope === 'hr_group') {
-            if (currentUser.role !== 'HR') {
-              return { ok: false, error: 'Only HR can remove members from HR groups' };
-            }
-          } else if (thread.scope === 'tl_group') {
-            if (currentUser.role !== 'Team Leader') {
-              return { ok: false, error: 'Only Team Leaders can remove members from these groups' };
-            }
-          } else {
-            return { ok: false, error: 'Cannot remove members from this chat' };
+          if (!canManageGroupSettings(thread, currentUser)) {
+            return { ok: false, error: 'You do not have permission to remove members' };
           }
         } else {
           if (!unique.includes(currentUser.id)) {
@@ -2122,21 +2169,51 @@ export const useStore = create<AppState>()(
 
         try {
           const r = await fetch(`${resolveChatBaseURL()}${API_PATHS.chat.removeMembers(chatId)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.id },
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.id, 'x-user-role': currentUser.role },
             credentials: 'include',
             body: JSON.stringify({ memberIds: unique }),
           });
           const json = await r.json();
           if (!r.ok || !json?.success) return { ok: false, error: json?.message || 'Could not remove members' };
           const t = json.data;
-          set({
-            chatThreads: chatThreads.map((x) =>
+          // Self-leave: remove the group locally so it disappears immediately.
+          if (isSelfOnlyLeave) {
+            set((state) => ({ chatThreads: state.chatThreads.filter((x) => x.id !== chatId) }));
+            void get().syncChatThreads();
+            return { ok: true };
+          }
+          set((state) => ({
+            chatThreads: state.chatThreads.map((x) =>
               x.id === chatId
-                ? { ...x, memberIds: Array.isArray(t.memberIds) ? t.memberIds.map(String) : nextMembers }
+                ? {
+                    ...x,
+                    memberIds: Array.isArray(t?.memberIds) ? t.memberIds.map(String) : nextMembers,
+                  }
                 : x
             ),
+          }));
+          void get().syncChatThreads();
+          return { ok: true };
+        } catch (e: any) {
+          return { ok: false, error: e?.message || 'Network error' };
+        }
+      },
+
+      leaveGroupChat: async (chatId) => {
+        const { currentUser, chatThreads } = get();
+        if (!currentUser) return { ok: false, error: 'Not signed in' };
+        const thread = chatThreads.find((t) => t.id === chatId);
+        if (!thread || thread.kind !== 'group') return { ok: false, error: 'Not a group' };
+        try {
+          const r = await fetch(`${resolveChatBaseURL()}${API_PATHS.chat.leaveGroup(chatId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.id },
+            credentials: 'include',
           });
+          const json = await r.json();
+          if (!r.ok || !json?.success) return { ok: false, error: json?.message || 'Could not leave group' };
+          set({ chatThreads: chatThreads.filter((x) => x.id !== chatId) });
           return { ok: true };
         } catch (e: any) {
           return { ok: false, error: e?.message || 'Network error' };
@@ -2190,9 +2267,6 @@ export const useStore = create<AppState>()(
         if (!thread || thread.kind !== 'group') return { ok: false, error: 'Not a group' };
         if (!canDeleteGroup(thread, currentUser)) {
           return { ok: false, error: 'You cannot delete this group' };
-        }
-        if (thread.scope === 'official' && thread.id === 'g-official-1') {
-          return { ok: false, error: 'This channel cannot be deleted' };
         }
         try {
           const r = await fetch(`${resolveChatBaseURL()}${API_PATHS.chat.deleteGroup(chatId)}`, {

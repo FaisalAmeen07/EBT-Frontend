@@ -1,6 +1,6 @@
 import type { Role, User } from '@/lib/store';
 
-export type ChatScope = 'dm' | 'official' | 'hr_group' | 'tl_group';
+export type ChatScope = 'dm' | 'group' | 'hr_group' | 'tl_group';
 
 /** Client-side attachment (data URL); demo / local persistence only. */
 export interface ChatAttachment {
@@ -127,10 +127,10 @@ export function teamGroupChatId(teamName: string): string {
 /** DM permission matrix (From → To). Pending users cannot DM. */
 export function canDm(from: Role, to: Role): boolean {
   if (from === 'Pending User' || to === 'Pending User') return false;
-  if (from === 'Admin') return to === 'HR' || to === 'Team Leader';
+  if (from === 'Admin') return to === 'HR' || to === 'Team Leader' || to === 'Employee';
   if (from === 'HR') return to === 'Admin' || to === 'Team Leader' || to === 'Employee';
   if (from === 'Team Leader') return to === 'HR' || to === 'Employee';
-  if (from === 'Employee') return to === 'HR' || to === 'Team Leader';
+  if (from === 'Employee') return to === 'Admin' || to === 'HR' || to === 'Team Leader';
   return false;
 }
 
@@ -191,18 +191,15 @@ export function isThreadVisibleToViewer(
     return thread.memberIds.includes(viewer.id);
   }
 
-  // Official groups: visible to everyone (not pending); membership controls posting via `canSendInThread`.
-  if (thread.scope === 'official') return true;
-
   if (!thread.memberIds.includes(viewer.id)) return false;
 
+  if (thread.scope === 'group') return true;
+
   if (thread.scope === 'hr_group') {
-    if (viewer.role === 'Admin') return false;
     return true;
   }
 
   if (thread.scope === 'tl_group') {
-    if (viewer.role === 'Admin') return false;
     return true;
   }
 
@@ -216,37 +213,33 @@ export function canSendInThread(
   users: User[]
 ): boolean {
   if (user.role === 'Pending User') return false;
-  // Posting requires membership (official broadcast is read-only for users not in `memberIds`).
+  // Posting requires membership.
   if (!thread.memberIds.includes(user.id)) return false;
 
   if (thread.kind === 'dm') {
     const otherId = thread.memberIds.find((id) => id !== user.id);
     if (!otherId) return false;
     const otherRole = roleOf(otherId, users);
+    const otherUser = users.find((u) => u.id === otherId);
     // In some flows the DM thread can exist before the full user roster is hydrated.
     // Avoid disabling chat input for a few seconds due to missing local role data.
     if (!otherRole) return true;
-    return canDm(user.role, otherRole);
+    if (!otherUser) return canDm(user.role, otherRole);
+    return canDmPair(user, otherUser);
   }
 
   const r = user.role;
 
-  if (thread.scope === 'official') {
-    return r === 'Admin' || r === 'HR' || r === 'Team Leader';
-  }
+  if (thread.scope === 'group') return true;
 
   if (thread.scope === 'hr_group') {
-    if (r === 'Admin') return false;
-    if (r === 'HR' || r === 'Team Leader') return true;
-    if (r === 'Employee') return true;
-    return false;
+    // Same access as HR: Admin can participate if they're a member.
+    return r === 'Admin' || r === 'HR' || r === 'Team Leader' || r === 'Employee';
   }
 
   if (thread.scope === 'tl_group') {
-    if (r === 'Admin') return false;
-    if (r === 'HR' || r === 'Team Leader') return true;
-    if (r === 'Employee') return true;
-    return false;
+    // Same access as HR: Admin can participate if they're a member.
+    return r === 'Admin' || r === 'HR' || r === 'Team Leader' || r === 'Employee';
   }
 
   return false;
@@ -257,16 +250,23 @@ export function canDmPair(viewer: User, target: User): boolean {
   if (!viewer || !target || viewer.role === 'Pending User' || target.role === 'Pending User') {
     return false;
   }
-  if (canDm(viewer.role, target.role)) return true;
-  if (
-    viewer.role === 'Employee' &&
-    target.role === 'Employee' &&
-    viewer.team &&
-    viewer.team === target.team
-  ) {
-    return true;
+  if (!canDm(viewer.role, target.role)) return false;
+
+  // Employee restriction:
+  // - Employees may DM Admin/HR.
+  // - Employees may DM only their Team Leader (same team).
+  // - Employees may not DM other employees.
+  if (viewer.role === 'Employee') {
+    if (target.role === 'Admin' || target.role === 'HR') return true;
+    if (target.role === 'Team Leader') {
+      const vt = viewer.team?.trim();
+      const tt = target.team?.trim();
+      return !!vt && !!tt && vt === tt;
+    }
+    return false;
   }
-  return false;
+
+  return true;
 }
 
 /** Users that can be picked as DM targets for `viewer`. */
@@ -280,7 +280,9 @@ export function dmTargetUserIds(viewer: User, users: User[]): string[] {
 
 /** Who can be added to a new HR-scoped group (creator is HR). */
 export function canAddToHrGroup(user: User): boolean {
-  return user.role === 'HR' || user.role === 'Team Leader' || user.role === 'Employee';
+  return (
+    user.role === 'Admin' || user.role === 'HR' || user.role === 'Team Leader' || user.role === 'Employee'
+  );
 }
 
 /** Who can be added to a new TL-scoped group (creator is TL). */
@@ -288,12 +290,7 @@ export function canAddToTlGroup(user: User): boolean {
   return user.role === 'HR' || user.role === 'Team Leader' || user.role === 'Employee';
 }
 
-/** Who can be added to official group (Admin managing). */
-export function canAddToOfficialGroup(user: User): boolean {
+/** Who can be added to a normal group chat. */
+export function canAddToGroup(user: User): boolean {
   return user.role !== 'Pending User';
-}
-
-/** Seeded official channel for first load / migration. */
-export function createDefaultChatThreads(): ChatThread[] {
-  return [];
 }

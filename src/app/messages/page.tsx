@@ -7,6 +7,7 @@ import {
   Users,
   ChevronLeft,
   X,
+  Search,
   Lock,
   Hash,
   SquarePen,
@@ -29,7 +30,7 @@ import {
   isThreadVisibleToViewer,
   canSendInThread,
   dmTargetUserIds,
-  canAddToOfficialGroup,
+  canAddToGroup,
   canAddToHrGroup,
   canAddToTlGroup,
   chatThreadTitle,
@@ -169,6 +170,7 @@ export default function MessagesPage() {
     chatThreads,
     syncChatThreads,
     syncChatMessages,
+    searchChatMessages,
     sendChatMessage,
     editChatMessage,
     deleteChatMessage,
@@ -177,6 +179,7 @@ export default function MessagesPage() {
     createGroupChat,
     addMembersToGroup,
     removeMembersFromGroup,
+    leaveGroupChat,
     updateGroupChat,
     deleteGroupChat,
     markChatRead,
@@ -187,6 +190,7 @@ export default function MessagesPage() {
       chatThreads: s.chatThreads,
       syncChatThreads: s.syncChatThreads,
       syncChatMessages: s.syncChatMessages,
+      searchChatMessages: s.searchChatMessages,
       sendChatMessage: s.sendChatMessage,
       editChatMessage: s.editChatMessage,
       deleteChatMessage: s.deleteChatMessage,
@@ -195,6 +199,7 @@ export default function MessagesPage() {
       createGroupChat: s.createGroupChat,
       addMembersToGroup: s.addMembersToGroup,
       removeMembersFromGroup: s.removeMembersFromGroup,
+      leaveGroupChat: s.leaveGroupChat,
       updateGroupChat: s.updateGroupChat,
       deleteGroupChat: s.deleteGroupChat,
       markChatRead: s.markChatRead,
@@ -205,6 +210,13 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState('');
   const [errorHint, setErrorHint] = useState<string | null>(null);
   const [dmOpen, setDmOpen] = useState(false);
+  const [dmSearch, setDmSearch] = useState('');
+  const [msgSearchOpen, setMsgSearchOpen] = useState(false);
+  const [msgSearchQ, setMsgSearchQ] = useState('');
+  const [msgSearchLoading, setMsgSearchLoading] = useState(false);
+  const [msgSearchResults, setMsgSearchResults] = useState<ChatMessage[]>([]);
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadSearchQ, setThreadSearchQ] = useState('');
   const [groupOpen, setGroupOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
@@ -221,19 +233,27 @@ export default function MessagesPage() {
   const listEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupAvatarInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const userName = (id: string) => users.find((u) => u.id === id)?.name ?? 'Unknown';
 
   const visibleThreads = useMemo(() => {
     if (!currentUser) return [];
     const filtered = chatThreads.filter((t) => isThreadVisibleToViewer(t, currentUser, users));
-    const official = filtered.filter((t) => t.kind === 'group' && t.scope === 'official');
-    const rest = filtered.filter((t) => !(t.kind === 'group' && t.scope === 'official'));
     const byActivity = (a: ChatThread, b: ChatThread) => lastActivityMs(b) - lastActivityMs(a);
-    official.sort(byActivity);
-    rest.sort(byActivity);
-    return [...official, ...rest];
+    return [...filtered].sort(byActivity);
   }, [chatThreads, currentUser, users]);
+
+  const visibleThreadsFiltered = useMemo(() => {
+    const q = threadSearchQ.trim().toLowerCase();
+    if (!q) return visibleThreads;
+    return visibleThreads.filter((t) => {
+      const title = chatThreadTitle(t, currentUser?.id ?? '', userName).toLowerCase();
+      const last = t.messages[t.messages.length - 1];
+      const preview = last ? messageSnippet(last).toLowerCase() : '';
+      return title.includes(q) || preview.includes(q);
+    });
+  }, [visibleThreads, threadSearchQ, currentUser?.id]);
 
   const selected = useMemo(
     () => visibleThreads.find((t) => t.id === selectedId) ?? visibleThreads[0] ?? null,
@@ -389,10 +409,33 @@ export default function MessagesPage() {
   };
 
   const dmTargets = currentUser ? dmTargetUserIds(currentUser, users) : [];
+  const dmTargetsFiltered = useMemo(() => {
+    const q = dmSearch.trim().toLowerCase();
+    if (!q) return dmTargets;
+    return dmTargets.filter((id) => {
+      const u = users.find((x) => x.id === id);
+      if (!u) return false;
+      return `${u.name ?? ''} ${u.role ?? ''}`.toLowerCase().includes(q);
+    });
+  }, [dmTargets, users, dmSearch]);
 
-  const groupScope = (): 'official' | 'hr_group' | 'tl_group' | null => {
+  const runMessageSearch = async () => {
+    if (!selected) return;
+    setMsgSearchLoading(true);
+    setErrorHint(null);
+    const r = await searchChatMessages(selected.id, msgSearchQ);
+    setMsgSearchLoading(false);
+    if (!r.ok) {
+      setMsgSearchResults([]);
+      setErrorHint(r.error ?? 'Search failed');
+      return;
+    }
+    setMsgSearchResults(r.data);
+  };
+
+  const groupScope = (): 'group' | 'hr_group' | 'tl_group' | null => {
     if (!currentUser) return null;
-    if (currentUser.role === 'Admin') return 'official';
+    if (currentUser.role === 'Admin') return 'group';
     if (currentUser.role === 'HR') return 'hr_group';
     if (currentUser.role === 'Team Leader') return 'tl_group';
     return null;
@@ -409,7 +452,7 @@ export default function MessagesPage() {
     if (!currentUser || u.id === currentUser.id) return false;
     const sc = groupScope();
     if (!sc) return false;
-    if (sc === 'official') return canAddToOfficialGroup(u);
+    if (sc === 'group') return canAddToGroup(u);
     if (sc === 'hr_group') return canAddToHrGroup(u);
     return canAddToTlGroup(u);
   });
@@ -418,7 +461,7 @@ export default function MessagesPage() {
     if (!selected || selected.kind !== 'group' || !currentUser) return [];
     return users.filter((u) => {
       if (u.id === currentUser.id || selected.memberIds.includes(u.id)) return false;
-      if (selected.scope === 'official') return canAddToOfficialGroup(u);
+      if (selected.scope === 'group') return canAddToGroup(u);
       if (selected.scope === 'hr_group') return canAddToHrGroup(u);
       if (selected.scope === 'tl_group') return canAddToTlGroup(u);
       return false;
@@ -427,8 +470,8 @@ export default function MessagesPage() {
 
   const canShowAddMembers =
     selected?.kind === 'group' &&
-    ((selected.scope === 'official' && currentUser?.role === 'Admin') ||
-      (selected.scope === 'hr_group' && currentUser?.role === 'HR') ||
+    ((selected.scope === 'group' && selected.createdById === currentUser?.id) ||
+      (selected.scope === 'hr_group' && (currentUser?.role === 'HR' || currentUser?.role === 'Admin')) ||
       (selected.scope === 'tl_group' && currentUser?.role === 'Team Leader'));
 
   const forwardTargets = useMemo(() => {
@@ -503,11 +546,14 @@ export default function MessagesPage() {
       : `Remove ${u?.name ?? 'this person'} from the group?`;
     if (!window.confirm(msg)) return;
     setErrorHint(null);
-    const r = await removeMembersFromGroup(selected.id, [userId]);
+    const r = isSelf ? await leaveGroupChat(selected.id) : await removeMembersFromGroup(selected.id, [userId]);
     if (!r.ok) {
       setErrorHint(r.error ?? 'Could not update members');
       return;
     }
+    // Force-refresh thread state so the member list updates immediately.
+    await syncChatThreads();
+    await syncChatMessages(selected.id);
     if (isSelf) {
       setGroupInfoOpen(false);
       setSelectedId(null);
@@ -557,7 +603,25 @@ export default function MessagesPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setThreadSearchOpen((v) => {
+                      const next = !v;
+                      if (!next) setThreadSearchQ('');
+                      return next;
+                    });
+                  }}
+                  className={`rounded-xl p-2 transition ${
+                    threadSearchOpen ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                  }`}
+                  aria-label="Search chats"
+                  title="Search chats"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     setErrorHint(null);
+                    setDmSearch('');
                     setDmOpen(true);
                   }}
                   className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
@@ -582,11 +646,21 @@ export default function MessagesPage() {
                 )}
               </div>
             </div>
+            {threadSearchOpen && (
+              <div className="shrink-0 border-b border-slate-200/70 bg-slate-100 px-3 pb-3">
+                <input
+                  value={threadSearchQ}
+                  onChange={(e) => setThreadSearchQ(e.target.value)}
+                  placeholder="Search chats…"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+            )}
             <div className="scrollbar-hide min-h-0 flex-1 basis-0 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-slate-100 px-2 pb-3 pt-1">
-              {visibleThreads.length === 0 ? (
+              {visibleThreadsFiltered.length === 0 ? (
                 <p className="p-6 text-center text-sm text-slate-500">No conversations yet.</p>
               ) : (
-                visibleThreads.map((t) => {
+                visibleThreadsFiltered.map((t) => {
                   const active = selected?.id === t.id;
                   const last = t.messages[t.messages.length - 1];
                   const unread = unreadCountForThread(t, currentUser.id);
@@ -697,8 +771,8 @@ export default function MessagesPage() {
                       <p className="truncate text-[10px] font-bold uppercase tracking-widest text-slate-400">
                         {selected.teamKey
                           ? `Team chat · ${selected.teamKey}`
-                          : selected.scope === 'official'
-                            ? 'Official · everyone'
+                        : selected.scope === 'group'
+                          ? 'Group'
                             : selected.scope === 'hr_group'
                               ? 'HR group'
                               : 'Team group'}
@@ -706,6 +780,19 @@ export default function MessagesPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      aria-label="Search messages"
+                      onClick={() => {
+                        setMsgSearchQ('');
+                        setMsgSearchResults([]);
+                        setMsgSearchOpen(true);
+                        setErrorHint(null);
+                      }}
+                    >
+                      <Search className="h-5 w-5" />
+                    </button>
                     {selected.kind === 'group' && (
                       <button
                         type="button"
@@ -743,7 +830,12 @@ export default function MessagesPage() {
                         !prev || !isSameDay(new Date(prev.createdAt), new Date(m.createdAt));
                       const d = new Date(m.createdAt);
                       return (
-                        <div key={m.id}>
+                        <div
+                          key={m.id}
+                          ref={(el) => {
+                            messageRefs.current[m.id] = el;
+                          }}
+                        >
                           {showDay && (
                             <div className="my-4 flex justify-center">
                               <span className="rounded-full bg-slate-200/80 px-4 py-1 text-[11px] font-semibold text-slate-500">
@@ -939,9 +1031,6 @@ export default function MessagesPage() {
                 <div className="shrink-0 border-t border-slate-100/70 bg-slate-50 px-4 py-3 sm:px-8 sm:py-4">
                   {errorHint && (
                     <p className="mb-2 text-xs font-medium text-rose-600">{errorHint}</p>
-                  )}
-                  {!canSend && selected.kind === 'group' && selected.scope === 'official' && (
-                    <p className="mb-2 text-xs text-slate-500">Read-only for employees in official channels.</p>
                   )}
                   <div className="mx-auto w-full min-w-0 max-w-3xl">
                     <input
@@ -1189,7 +1278,7 @@ export default function MessagesPage() {
                     const u = users.find((x) => x.id === id);
                     const isSelf = id === currentUser.id;
                     const canLeaveGroup = isSelf && selected.memberIds.length > 1;
-                    const canRemoveOther = !isSelf && canShowAddMembers;
+                    const canRemoveOther = !isSelf && canManageGroupSettings(selected, currentUser);
                     return (
                       <li
                         key={id}
@@ -1376,8 +1465,21 @@ export default function MessagesPage() {
             {dmTargets.length === 0 ? (
               <p className="text-sm text-slate-500">No allowed contacts for your role.</p>
             ) : (
-              <ul className="scrollbar-hide max-h-64 space-y-1 overflow-y-auto">
-                {dmTargets.map((id) => {
+              <>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Search
+                </label>
+                <input
+                  value={dmSearch}
+                  onChange={(e) => setDmSearch(e.target.value)}
+                  placeholder="Type a name or role…"
+                  className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                />
+                <ul className="scrollbar-hide mt-4 max-h-64 space-y-1 overflow-y-auto">
+                  {dmTargetsFiltered.length === 0 ? (
+                    <li className="px-2 py-6 text-center text-sm text-slate-500">No matches.</li>
+                  ) : (
+                    dmTargetsFiltered.map((id) => {
                   const u = users.find((x) => x.id === id);
                   if (!u) return null;
                   return (
@@ -1401,8 +1503,10 @@ export default function MessagesPage() {
                       </button>
                     </li>
                   );
-                })}
-              </ul>
+                    })
+                  )}
+                </ul>
+              </>
             )}
           </div>
         </div>
@@ -1470,6 +1574,90 @@ export default function MessagesPage() {
             >
               Create
             </button>
+          </div>
+        </div>
+      )}
+
+      {msgSearchOpen && selected && (
+        <div
+          className="fixed inset-0 z-[110] flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
+          role="presentation"
+          onClick={(e) => e.target === e.currentTarget && setMsgSearchOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900">Search in chat</h2>
+              <button
+                type="button"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                onClick={() => setMsgSearchOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Query</label>
+            <div className="mt-1 flex gap-2">
+              <input
+                value={msgSearchQ}
+                onChange={(e) => setMsgSearchQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void runMessageSearch();
+                }}
+                placeholder="Search text…"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+              />
+              <button
+                type="button"
+                onClick={() => void runMessageSearch()}
+                disabled={msgSearchLoading || !msgSearchQ.trim()}
+                className="shrink-0 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {msgSearchLoading ? 'Searching…' : 'Search'}
+              </button>
+            </div>
+
+            <div className="mt-4">
+              {msgSearchResults.length === 0 ? (
+                <p className="text-sm text-slate-500">No results.</p>
+              ) : (
+                <ul className="scrollbar-hide max-h-80 space-y-1 overflow-y-auto">
+                  {msgSearchResults.map((m) => {
+                    const author = users.find((u) => u.id === m.authorId);
+                    const label = author?.name ?? (m.authorId === currentUser?.id ? 'You' : 'Unknown');
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          className="flex w-full flex-col gap-1 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50"
+                          onClick={() => {
+                            const el = messageRefs.current[m.id];
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              setMsgSearchOpen(false);
+                            } else {
+                              // Message isn't in current loaded window; keep modal open for now.
+                              setErrorHint('Message not in the loaded list yet. Scroll up to load more, then search again.');
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-slate-700">{label}</span>
+                            <span className="text-[11px] font-medium text-slate-400">
+                              {format(new Date(m.createdAt), 'MMM d, h:mm a')}
+                            </span>
+                          </div>
+                          <p className="line-clamp-2 text-sm text-slate-900">{messageSnippet(m) || '—'}</p>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       )}

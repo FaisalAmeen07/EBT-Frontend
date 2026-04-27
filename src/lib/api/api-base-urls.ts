@@ -60,7 +60,9 @@ export const API_PATHS = {
     deleteGroup: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}`,
     addMembers: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/members:add`,
     removeMembers: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/members:remove`,
+    leaveGroup: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/leave`,
     messages: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/messages`,
+    searchMessages: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/messages/search`,
     message: (chatId: string, messageId: string) =>
       `/api/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
     markRead: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/read`,
