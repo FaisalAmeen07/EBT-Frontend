@@ -19,6 +19,7 @@ export default function ForgotPasswordView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [email, setEmail] = useState('');
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -81,7 +82,7 @@ export default function ForgotPasswordView() {
   const handleResend = async () => {
     setError(null);
     setSuccess(null);
-    setLoading(true);
+    setResending(true);
     try {
       const res = await forgotPasswordApi(submittedEmail);
       if (!res.ok) {
@@ -91,7 +92,7 @@ export default function ForgotPasswordView() {
       setOtp('');
       setSuccess(res.message || 'Code resent. Check your email.');
     } finally {
-      setLoading(false);
+      setResending(false);
     }
   };
 
@@ -174,7 +175,7 @@ export default function ForgotPasswordView() {
             </div>
             <button
               type="submit"
-              disabled={loading || otp.length !== 6}
+              disabled={loading || resending || otp.length !== 6}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <KeyRound className="h-5 w-5" />}
@@ -184,11 +185,11 @@ export default function ForgotPasswordView() {
 
           <button
             type="button"
-            disabled={loading}
+            disabled={loading || resending}
             onClick={handleResend}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+            <RefreshCw className={`h-4 w-4 ${resending ? 'animate-spin' : ''}`} aria-hidden />
             Resend code
           </button>
         </div>

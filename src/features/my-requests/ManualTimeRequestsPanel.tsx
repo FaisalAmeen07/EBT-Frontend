@@ -3,7 +3,6 @@
 import { format } from 'date-fns';
 import { Send, Plus } from 'lucide-react';
 import type { ManualTimeRequest } from '@/lib/store';
-import { RequestsContentCard } from '@/components/requests/RequestsHubShell';
 import { FIELD_CLASS, FIELD_CLASS_NEUTRAL, PRIMARY_ACTION_BTN_CLASS } from './constants';
 import { manualEmptyMessage } from './copy';
 import type { RequestStatusFilter } from './types';
@@ -70,11 +69,10 @@ export function ManualTimeRequestsPanel({
         </button>
       </div>
 
-      <RequestsContentCard>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80">
+      <div className="overflow-x-auto rounded-2xl bg-white">
+        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-white">
                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
                   Date
                 </th>
@@ -84,44 +82,43 @@ export function ManualTimeRequestsPanel({
                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
                   Status
                 </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-6 py-20 text-center text-sm font-medium text-slate-500">
+                  {manualEmptyMessage(manualStatusFilter, totalCount)}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-6 py-16 text-center text-sm font-medium text-slate-500">
-                    {manualEmptyMessage(manualStatusFilter, totalCount)}
+            ) : (
+              rows.map((req) => (
+                <tr key={req.id} className="transition-colors hover:bg-slate-50">
+                  <td className="px-4 py-5 font-medium text-slate-900 sm:px-6">
+                    {format(new Date(req.date), 'MMM d, yyyy')}
+                  </td>
+                  <td className="px-4 py-5 text-sm text-slate-600 sm:px-6">
+                    {req.clockInTime} – {req.clockOutTime}
+                    {req.breakInTime && req.breakOutTime ? (
+                      <span className="block text-xs text-slate-400">
+                        Break: {req.breakInTime}-{req.breakOutTime}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-5 sm:px-6">
+                    <RequestStatusBadge status={req.status} />
+                    {req.status === 'Rejected' && req.feedback ? (
+                      <p className="mt-2 max-w-xs rounded-lg border border-rose-100 bg-rose-50 p-2 text-xs text-rose-800">
+                        {req.feedback}
+                      </p>
+                    ) : null}
                   </td>
                 </tr>
-              ) : (
-                rows.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-5 font-medium text-slate-900 sm:px-6">
-                      {format(new Date(req.date), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-4 py-5 text-sm text-slate-600 sm:px-6">
-                      {req.clockInTime} – {req.clockOutTime}
-                      {req.breakInTime && req.breakOutTime ? (
-                        <span className="block text-xs text-slate-400">
-                          Break: {req.breakInTime}-{req.breakOutTime}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-5 sm:px-6">
-                      <RequestStatusBadge status={req.status} />
-                      {req.status === 'Rejected' && req.feedback ? (
-                        <p className="mt-2 max-w-xs rounded-lg border border-rose-100 bg-rose-50 p-2 text-xs text-rose-800">
-                          {req.feedback}
-                        </p>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </RequestsContentCard>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <RequestModal
         open={formOpen}

@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useStore, useShallow } from '@/lib/store';
-import type { RequestsHubTab } from '@/components/requests/RequestsHubShell';
 import type { ReviewStatusFilter } from './constants';
 
 export function useRequestManagementController() {
@@ -30,7 +29,7 @@ export function useRequestManagementController() {
     }))
   );
 
-  const activeTab = useMemo((): RequestsHubTab => {
+  const activeTab = useMemo((): 'leave' | 'manual' => {
     const t = searchParams.get('tab');
     return t === 'manual' ? 'manual' : 'leave';
   }, [searchParams]);
@@ -85,7 +84,7 @@ export function useRequestManagementController() {
   const canReviewLeave = currentUser?.role === 'Admin' || currentUser?.role === 'HR';
   const canReviewManual = currentUser?.role === 'Admin' || currentUser?.role === 'HR';
 
-  const onTabChange = (tab: RequestsHubTab) => {
+  const onTabChange = (tab: 'leave' | 'manual') => {
     const q = new URLSearchParams(searchParams.toString());
     q.set('tab', tab);
     const qs = q.toString();

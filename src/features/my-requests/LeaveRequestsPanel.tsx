@@ -3,7 +3,6 @@
 import { format } from 'date-fns';
 import { Send, Plus } from 'lucide-react';
 import type { LeaveRequest, LeaveType } from '@/lib/store';
-import { RequestsContentCard } from '@/components/requests/RequestsHubShell';
 import { PRIMARY_ACTION_BTN_CLASS, FIELD_CLASS } from './constants';
 import { leaveEmptyMessage } from './copy';
 import type { RequestStatusFilter } from './types';
@@ -62,11 +61,10 @@ export function LeaveRequestsPanel({
         </button>
       </div>
 
-      <RequestsContentCard>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80">
+      <div className="overflow-x-auto rounded-2xl bg-white">
+        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-white">
                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
                   Type
                 </th>
@@ -76,36 +74,34 @@ export function LeaveRequestsPanel({
                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
                   Status
                 </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-6 py-20 text-center text-sm font-medium text-slate-500">
+                  {leaveEmptyMessage(LeavetatusFilter, totalCount)}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-6 py-16 text-center text-sm font-medium text-slate-500">
-                    {leaveEmptyMessage(LeavetatusFilter, totalCount)}
+            ) : (
+              rows.map((leave) => (
+                <tr key={leave.id} className="transition-colors hover:bg-slate-50">
+                  <td className="px-4 py-5 sm:px-6">
+                    <span className="font-semibold text-slate-900">{leave.type}</span>
+                    <p className="mt-1 line-clamp-2 max-w-xs text-xs text-slate-500">{leave.reason || '—'}</p>
+                  </td>
+                  <td className="px-4 py-5 text-sm text-slate-600 sm:px-6">
+                    {format(new Date(leave.startDate), 'MMM d, yyyy')} – {format(new Date(leave.endDate), 'MMM d, yyyy')}
+                  </td>
+                  <td className="px-4 py-5 sm:px-6">
+                    <RequestStatusBadge status={leave.status} />
                   </td>
                 </tr>
-              ) : (
-                rows.map((leave) => (
-                  <tr key={leave.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-5 sm:px-6">
-                      <span className="font-semibold text-slate-900">{leave.type}</span>
-                      <p className="mt-1 line-clamp-2 max-w-xs text-xs text-slate-500">{leave.reason || '—'}</p>
-                    </td>
-                    <td className="px-4 py-5 text-sm text-slate-600 sm:px-6">
-                      {format(new Date(leave.startDate), 'MMM d, yyyy')} –{' '}
-                      {format(new Date(leave.endDate), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-4 py-5 sm:px-6">
-                      <RequestStatusBadge status={leave.status} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </RequestsContentCard>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <RequestModal open={formOpen} onClose={onCloseModal} title="Apply for leave" titleId="leave-modal-title">
         <form className="space-y-4" onSubmit={onSubmit}>

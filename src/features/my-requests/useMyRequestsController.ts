@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStore, useShallow, type LeaveType } from '@/lib/store';
 import { toast } from '@/lib/toast';
-import type { RequestsHubTab } from '@/components/requests/RequestsHubShell';
 import type { RequestStatusFilter } from './types';
 
 export function useMyRequestsController() {
@@ -19,7 +18,7 @@ export function useMyRequestsController() {
     }))
   );
 
-  const [activeTab, setActiveTab] = useState<RequestsHubTab>('leave');
+  const [activeTab, setActiveTab] = useState<'leave' | 'manual'>('leave');
   const [LeavetatusFilter, setLeavetatusFilter] = useState<RequestStatusFilter>('Pending');
   const [manualStatusFilter, setManualStatusFilter] = useState<RequestStatusFilter>('Pending');
   const [leaveFormOpen, setLeaveFormOpen] = useState(false);
@@ -41,14 +40,12 @@ export function useMyRequestsController() {
   useEffect(() => {
     if (tabParam === 'manual') {
       setActiveTab('manual');
-      setManualFormOpen(true);
     } else if (tabParam === 'leave') {
       setActiveTab('leave');
-      setLeaveFormOpen(true);
     }
   }, [tabParam]);
 
-  const handleTabChange = (tab: RequestsHubTab) => {
+  const handleTabChange = (tab: 'leave' | 'manual') => {
     setActiveTab(tab);
     setLeaveFormOpen(false);
     setManualFormOpen(false);

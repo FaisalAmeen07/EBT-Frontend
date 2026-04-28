@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { AttendanceHubShell } from '@/components/attendance/AttendanceHubShell';
 import { GlobalAttendanceLog } from '@/components/attendance/GlobalAttendanceLog';
 import { ManualTimesheetLog } from '@/components/attendance/ManualTimesheetLog';
 import { DailyAttendanceRoster } from '@/components/attendance/DailyAttendanceRoster';
@@ -22,6 +21,8 @@ import {
   Hash,
 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 // ─── PERSONAL ATTENDANCE (Employee + TL “My attendance” tab) ───
 function EmployeeTimesheetView() {
@@ -124,20 +125,20 @@ function EmployeeTimesheetView() {
 
   return (
     <div className="space-y-8">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm shadow-slate-200/40">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/40 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
         <div className="relative border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 px-6 py-6 sm:px-8">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-slate-400" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500" />
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <h1 className="flex flex-wrap items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/25">
-                  <Clock className="h-5 w-5" aria-hidden />
+              <h1 className="flex flex-wrap items-center gap-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-[0_10px_30px_rgba(37,99,235,0.25)]">
+                  <Clock className="h-6 w-6" aria-hidden />
                 </span>
-                My Attendance
+                <span>My attendance</span>
               </h1>
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-              <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50/90 p-1 shadow-inner">
+              <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50/90 p-1 shadow-inner">
                 {(
                   [
                     ['today', 'Today'],
@@ -149,16 +150,19 @@ function EmployeeTimesheetView() {
                     key={key}
                     type="button"
                     onClick={() => setAttendanceWindow(key)}
-                    className={`rounded-lg px-3.5 py-2 text-xs font-bold transition sm:px-4 ${
-                      attendanceWindow === key ? 'bg-white text-blue-700 shadow-sm ring-1 ring-slate-200/80' : 'text-slate-500 hover:text-slate-800'
-                    }`}
+                    className={cn(
+                      'rounded-xl px-3.5 py-2 text-xs font-bold transition sm:px-4',
+                      attendanceWindow === key
+                        ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+                        : 'text-slate-500 hover:text-slate-900'
+                    )}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-2 shadow-sm">
-                <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+                <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div className="pr-3">
@@ -176,49 +180,49 @@ function EmployeeTimesheetView() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="relative z-10">
-            <span className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-4">
+            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Total hours ({rangeLabelShort})
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-slate-800 tracking-tighter">{totalHoursInRange.toFixed(1)}</span>
+              <span className="text-3xl font-extrabold tracking-tight text-slate-900">{totalHoursInRange.toFixed(1)}</span>
               <span className="text-slate-400 font-medium tracking-tight">hours</span>
             </div>
           </div>
-          <TrendingUp className="absolute -bottom-4 -right-4 w-24 h-24 text-blue-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <TrendingUp className="absolute -bottom-5 -right-5 h-24 w-24 text-blue-50" />
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="relative z-10">
-            <span className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-4">
+            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Overtime ({rangeLabelShort})
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-indigo-600 tracking-tighter">{totalOvertimeInRange.toFixed(1)}</span>
+              <span className="text-3xl font-extrabold tracking-tight text-indigo-700">{totalOvertimeInRange.toFixed(1)}</span>
               <span className="text-slate-400 font-medium tracking-tight">hours</span>
             </div>
           </div>
-          <ArrowRight className="absolute -bottom-4 -right-4 w-24 h-24 text-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity rotate-[-45deg]" />
+          <ArrowRight className="absolute -bottom-5 -right-5 h-24 w-24 rotate-[-45deg] text-indigo-50" />
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="relative z-10">
-            <span className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-4">
+            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Late marks ({rangeLabelShort})
             </span>
             <div className="flex items-baseline gap-2">
-              <span className={`text-4xl font-bold tracking-tighter ${totalLateMarks > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{totalLateMarks}</span>
+              <span className={`text-3xl font-extrabold tracking-tight ${totalLateMarks > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{totalLateMarks}</span>
               <span className="text-slate-400 font-medium tracking-tight">instances</span>
             </div>
           </div>
-          <AlertCircle className="absolute -bottom-4 -right-4 w-24 h-24 text-rose-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <AlertCircle className="absolute -bottom-5 -right-5 h-24 w-24 text-rose-50" />
         </div>
       </div>
 
       {/* Clock history — polished table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
         <div className="relative border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 px-5 py-5 sm:px-8 sm:py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
@@ -244,10 +248,10 @@ function EmployeeTimesheetView() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="max-h-[70vh] overflow-auto">
           <table className="w-full min-w-[640px] border-collapse text-left">
-            <thead>
-              <tr className="bg-blue-600 text-white">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-slate-900 text-white">
                 <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider sm:px-8">
                   Date
                 </th>
@@ -384,7 +388,9 @@ function EmployeeTimesheetView() {
 
 export function TimesheetPageClient() {
   const currentUser = useStore((s) => s.currentUser);
-  const { tabs, activeTab, setTab } = useTimesheetTab(currentUser?.role);
+  const { tabs, activeTab } = useTimesheetTab(currentUser?.role);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   if (!currentUser || currentUser.role === 'Pending User') {
     return (
@@ -408,10 +414,36 @@ export function TimesheetPageClient() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-0">
-      <AttendanceHubShell tabs={tabs} activeTab={activeTab} onTabChange={setTab}>
-        {tabBody}
-      </AttendanceHubShell>
+    <div className="min-h-full bg-[#f6f8fb] pb-14">
+      <div className="mx-auto max-w-6xl px-4">
+        {/* Route-level tabs (under global navbar) */}
+        <div className="pt-6">
+          <div className="border-b border-slate-200">
+            <nav className="flex flex-wrap gap-8" aria-label="Attendance sections">
+              {tabs.map(({ id, label }) => (
+                <Link
+                  key={id}
+                  href={{
+                    pathname,
+                    query: { ...Object.fromEntries(searchParams.entries()), tab: id },
+                  }}
+                  className={cn(
+                    '-mb-px border-b-[3px] pb-3 text-sm font-semibold transition-colors',
+                    activeTab === id
+                      ? 'border-indigo-600 text-slate-900'
+                      : 'border-transparent text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Single content area (no extra nested white card wrapper) */}
+        <div className="pt-6">{tabBody}</div>
+      </div>
     </div>
   );
 }

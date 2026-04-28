@@ -86,6 +86,7 @@ export function EmployeesManagementPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [busyRole, setBusyRole] = useState<Role | null>(null);
   const [busy, setBusy] = useState(false);
 
   const loadUsers = useCallback(async () => {
@@ -142,7 +143,7 @@ export function EmployeesManagementPage() {
       return;
     }
     setActionError(null);
-    setBusy(true);
+    setBusyRole(newRole);
     try {
       if (user.role === 'Pending User') {
         await approveUserApi(Number(user.id), frontendRoleToApiRole(newRole));
@@ -154,7 +155,7 @@ export function EmployeesManagementPage() {
     } catch (e) {
       setActionError(apiErrorMessage(e));
     } finally {
-      setBusy(false);
+      setBusyRole(null);
     }
   };
 
@@ -198,7 +199,7 @@ export function EmployeesManagementPage() {
             <button
               type="button"
               onClick={() => void loadUsers()}
-              disabled={loading || busy}
+              disabled={loading || busy || !!busyRole}
               className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 sm:self-auto"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -342,7 +343,7 @@ export function EmployeesManagementPage() {
                           setActionError(null);
                           setEditingUser(user);
                         }}
-                        disabled={busy}
+                        disabled={busy || !!busyRole}
                         className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white shadow-md shadow-blue-200/50 transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 min-[360px]:flex-initial"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
@@ -351,7 +352,7 @@ export function EmployeesManagementPage() {
                       <button
                         type="button"
                         onClick={() => void handleDeleteUser(user.id, user.name)}
-                        disabled={busy || currentUser?.id === user.id}
+                        disabled={busy || !!busyRole || currentUser?.id === user.id}
                         className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                         title="Remove user"
                       >
@@ -414,7 +415,7 @@ export function EmployeesManagementPage() {
                   <button
                     key={r}
                     type="button"
-                    disabled={busy}
+                    disabled={!!busyRole}
                     onClick={() => void submitRoleChange(editingUser, r)}
                     className={`flex w-full items-center justify-between rounded-2xl border px-6 py-4 text-sm font-bold transition disabled:opacity-50 ${
                       editingUser.role === r
@@ -423,7 +424,7 @@ export function EmployeesManagementPage() {
                     }`}
                   >
                     <span className="flex items-center gap-2">
-                      {busy ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
+                      {busyRole === r ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
                       {r}
                     </span>
                     {editingUser.role === r ? <Check className="h-4 w-4 text-blue-600" /> : null}

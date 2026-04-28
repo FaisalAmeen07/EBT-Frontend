@@ -1,7 +1,7 @@
 import type { Department } from '@/lib/store';
 
 const AUTH_INPUT_BASE =
-  'w-full border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-shadow';
+  'w-full border border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-shadow';
 
 /**
  * No `px-*` in base — it fights with `pl-*` for icon spacing. Left icon sits at left-3 (12px);

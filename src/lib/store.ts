@@ -589,8 +589,13 @@ export const useStore = create<AppState>()(
           breaks: [],
           lateMark: isClockInLate(clockInTime, attendanceDayOverrides),
         };
-        
-        set({ timesheets: [...timesheets, newEntry] });
+
+        // UX: Clock-in implies "Present" (stored as Available in this app's status enum).
+        set((s) => ({
+          timesheets: [...s.timesheets, newEntry],
+          currentUser: s.currentUser ? { ...s.currentUser, status: 'Available' } : s.currentUser,
+          users: s.users.map((u) => (u.id === currentUser.id ? { ...u, status: 'Available' } : u)),
+        }));
       },
       
       clockOut: () => {

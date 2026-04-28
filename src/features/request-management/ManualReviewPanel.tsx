@@ -3,7 +3,6 @@
 import { format } from 'date-fns';
 import { Check, X, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import type { ManualTimeRequest } from '@/lib/store';
-import { RequestsContentCard } from '@/components/requests/RequestsHubShell';
 
 type ManualReviewPanelProps = {
   rows: ManualTimeRequest[];
@@ -29,10 +28,9 @@ export function ManualReviewPanel({
   onRejectConfirm,
 }: ManualReviewPanelProps) {
   return (
-    <RequestsContentCard>
-      <table className="w-full border-collapse text-left text-sm">
+    <table className="w-full border-collapse text-left text-sm">
         <thead>
-          <tr className="border-b border-slate-100 bg-slate-50/80">
+          <tr className="border-b border-slate-200 bg-white">
             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
               Employee
             </th>
@@ -50,13 +48,13 @@ export function ManualReviewPanel({
         <tbody className="divide-y divide-slate-100">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={4} className="px-6 py-16 text-center text-sm font-medium text-slate-500">
+              <td colSpan={4} className="px-6 py-20 text-center text-sm font-medium text-slate-500">
                 No manual time requests found.
               </td>
             </tr>
           ) : (
             rows.map((req) => (
-              <tr key={req.id} className="hover:bg-slate-50/60">
+              <tr key={req.id} className="transition-colors hover:bg-slate-50">
                 <td className="px-4 py-5 sm:px-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600">
@@ -159,7 +157,6 @@ export function ManualReviewPanel({
             ))
           )}
         </tbody>
-      </table>
-    </RequestsContentCard>
+    </table>
   );
 }

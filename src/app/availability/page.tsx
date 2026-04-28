@@ -19,6 +19,13 @@ const BOARD_ROLES: Role[] = ['Employee', 'HR', 'Team Leader'];
 type BoardRoleFilter = 'all' | Role;
 type BoardStatusFilter = 'all' | 'Available' | 'Unavailable' | 'Leave';
 
+function displayStatusLabel(status?: string): string {
+  if (!status) return 'Not Set';
+  if (status === 'Available') return 'Present';
+  if (status === 'Unavailable') return 'Absent';
+  return status;
+}
+
 function toDateInputValue(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -191,7 +198,13 @@ function AdminAvailabilityBoard() {
             >
               All
             </button>
-            {(['Available', 'Unavailable', 'Leave'] as const).map((s) => (
+            {(
+              [
+                { value: 'Available' as const, label: 'Present' },
+                { value: 'Unavailable' as const, label: 'Absent' },
+                { value: 'Leave' as const, label: 'Leave' },
+              ] as const
+            ).map(({ value: s, label }) => (
               <button
                 key={s}
                 type="button"
@@ -210,7 +223,7 @@ function AdminAvailabilityBoard() {
                         : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
                 }`}
               >
-                {s}
+                {label}
               </button>
             ))}
           </div>
@@ -260,7 +273,7 @@ function AdminAvailabilityBoard() {
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">Status</span>
                     </div>
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shrink-0 ${accent.badge}`}>
-                      {user.status || 'Not Set'}
+                      {displayStatusLabel(user.status)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 backdrop-blur-sm px-3.5 py-3 border border-slate-100/80">
@@ -452,12 +465,21 @@ function EmployeeAvailabilityView() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto w-full space-y-8 pb-12 px-4 sm:px-6">
-      <header className="">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">My availability</h1>
-      </header>
+    <div className="min-h-full bg-slate-50 pb-14">
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 pt-6 sm:px-6">
+        <header className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">My availability</h1>
+          </div>
+          <div className="hidden shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex">
+            <CalendarClock className="h-5 w-5 text-indigo-600" />
+            <span className="text-sm font-semibold text-slate-800">
+              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        </header>
 
-      <section className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-8">
         <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
           <Activity className="w-5 h-5 text-emerald-500 shrink-0" />
           Current status
@@ -480,8 +502,14 @@ function EmployeeAvailabilityView() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {(['Available', 'Unavailable', 'Leave'] as const).map((s) => {
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {(
+              [
+                { value: 'Available' as const, label: 'Present' },
+                { value: 'Unavailable' as const, label: 'Absent' },
+                { value: 'Leave' as const, label: 'Leave' },
+              ] as const
+            ).map(({ value: s, label }) => {
             const active =
               s === 'Available'
                 ? 'ring-2 ring-emerald-500/40 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white shadow-md shadow-emerald-100/50'
@@ -506,14 +534,14 @@ function EmployeeAvailabilityView() {
                   status === s ? `${active} text-slate-900` : idle
                 }`}
               >
-                <span className="text-xs font-black uppercase tracking-widest">{s}</span>
+                <span className="text-xs font-black uppercase tracking-widest">{label}</span>
               </button>
             );
           })}
         </div>
-      </section>
+        </section>
 
-      <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
         <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -689,7 +717,8 @@ function EmployeeAvailabilityView() {
             );
           })}
         </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

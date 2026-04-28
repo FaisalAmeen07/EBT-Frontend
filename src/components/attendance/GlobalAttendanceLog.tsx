@@ -264,9 +264,9 @@ export function GlobalAttendanceLog() {
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="max-h-[70vh] overflow-auto">
           <table className="w-full min-w-[800px] border-collapse text-left text-sm">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-blue-600 text-white">
                 <th className="w-10 px-3 py-3">
                   <input

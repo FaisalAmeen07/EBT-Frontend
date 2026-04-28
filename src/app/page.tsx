@@ -39,6 +39,12 @@ import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subDays, 
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
+function availabilityStatusLabel(status: string | undefined): string {
+  if (status === 'Available') return 'Present';
+  if (status === 'Unavailable') return 'Absent';
+  return status || 'N/A';
+}
+
 // ─── ROUTER ────────────────────────────────────────────────────────
 export default function Dashboard() {
   const currentUser = useStore((s) => s.currentUser);
@@ -1023,7 +1029,7 @@ function HRDashboard() {
                     member.status === 'Available' ? 'text-emerald-600 bg-emerald-50' :
                     member.status === 'Leave' ? 'text-rose-600 bg-rose-50' :
                     'text-slate-400 bg-slate-50'
-                  }`}>{member.status || 'N/A'}</span>
+                  }`}>{availabilityStatusLabel(member.status)}</span>
                 </div>
               );
             })}

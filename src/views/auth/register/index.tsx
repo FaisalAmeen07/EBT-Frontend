@@ -108,7 +108,7 @@ export default function RegisterView() {
               placeholder="Your name"
             />
           </div>
-          {fieldError.name ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.name}</p> : null}
+
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
@@ -125,7 +125,7 @@ export default function RegisterView() {
               placeholder="you@company.com"
             />
           </div>
-          {fieldError.email ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.email}</p> : null}
+
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
@@ -147,7 +147,7 @@ export default function RegisterView() {
               placeholder="03000000000"
             />
           </div>
-          {fieldError.phone ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.phone}</p> : null}
+
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
@@ -167,9 +167,7 @@ export default function RegisterView() {
               ))}
             </select>
           </div>
-          {fieldError.department ? (
-            <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.department}</p>
-          ) : null}
+
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
@@ -194,9 +192,7 @@ export default function RegisterView() {
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          {fieldError.password ? (
-            <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.password}</p>
-          ) : null}
+
         </div>
         <button
           type="submit"

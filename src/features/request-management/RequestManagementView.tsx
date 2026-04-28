@@ -1,7 +1,6 @@
 'use client';
 
-import { Search } from 'lucide-react';
-import { RequestsHubShell } from '@/components/requests/RequestsHubShell';
+import Link from 'next/link';
 import { REVIEW_STATUS_OPTIONS, getRequestManagementSectionTitle } from './constants';
 import type { ReviewStatusFilter } from './constants';
 import { useMemo } from 'react';
@@ -9,9 +8,13 @@ import { LeaveReviewPanel } from './LeaveReviewPanel';
 import { ManualReviewPanel } from './ManualReviewPanel';
 import { useRequestManagementController } from './useRequestManagementController';
 import { toast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export function RequestManagementView() {
   const c = useRequestManagementController();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const sectionTitle = useMemo(
     () => getRequestManagementSectionTitle(c.activeTab, c.statusFilter),
@@ -19,73 +22,112 @@ export function RequestManagementView() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-12">
-      <RequestsHubShell
-        activeTab={c.activeTab}
-        onTabChange={c.onTabChange}
-        sectionTitle={sectionTitle}
-        statusValue={c.statusFilter}
-        onStatusChange={(v) => c.setStatusFilter(v as ReviewStatusFilter)}
-        statusOptions={REVIEW_STATUS_OPTIONS}
-      >
-        <>
-          <div className="mb-4 flex justify-end">
-            <div className="flex w-full max-w-sm items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
-              <input
-                type="search"
-                placeholder="Search employee..."
-                value={c.searchTerm}
-                onChange={(e) => c.setSearchTerm(e.target.value)}
-                className="w-full border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-              />
+    <div className="min-h-full bg-slate-50 pb-14">
+      <div className="mx-auto max-w-6xl px-4">
+        {/* Clean route-level tabs (underline) */}
+        <div className="pt-6">
+          <div className="border-b border-slate-200">
+            <nav className="flex flex-wrap gap-8" aria-label="Request management sections">
+              {(
+                [
+                  { id: 'leave', label: 'Leave requests' },
+                  { id: 'manual', label: 'Manual time requests' },
+                ] as const
+              ).map((t) => (
+                <Link
+                  key={t.id}
+                  href={{
+                    pathname,
+                    query: { ...Object.fromEntries(searchParams.entries()), tab: t.id },
+                  }}
+                  className={cn(
+                    '-mb-px border-b-[3px] pb-3 text-sm font-semibold transition-colors',
+                    c.activeTab === t.id
+                      ? 'border-indigo-600 text-slate-900'
+                      : 'border-transparent text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Minimal header controls (no card) */}
+        <div className="pt-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-base font-semibold text-slate-900">{sectionTitle}</h2>
+
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative w-fit">
+                <select
+                  value={c.statusFilter}
+                  onChange={(e) => c.setStatusFilter(e.target.value as ReviewStatusFilter)}
+                  className="h-10 w-auto cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-4 pr-10 text-sm font-medium text-slate-800 outline-none transition hover:border-slate-300 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/10"
+                >
+                  {REVIEW_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  ▾
+                </span>
+              </div>
             </div>
           </div>
+        </div>
 
-          {c.activeTab === 'leave' && (
-            <LeaveReviewPanel
-              rows={c.sortedLeave}
-              getUsername={c.getUsername}
-              canReview={c.canReviewLeave}
-              onApprove={(id) => {
-                c.updateLeavetatus(id, 'Approved');
-                toast('Leave approved!');
-              }}
-              onReject={(id) => {
-                c.updateLeavetatus(id, 'Rejected');
-                toast('Leave rejected!');
-              }}
-            />
-          )}
-
-          {c.activeTab === 'manual' && (
-            <ManualReviewPanel
-              rows={c.sortedManual}
-              getUsername={c.getUsername}
-              canReview={c.canReviewManual}
-              activeRejectId={c.activeRejectId}
-              rejectFeedback={c.rejectFeedback}
-              setRejectFeedback={c.setRejectFeedback}
-              setActiveRejectId={c.setActiveRejectId}
-              onApprove={(id) => {
-                c.approveManualTimeRequest(id);
-                toast('Manual time approved!');
-              }}
-              onRejectConfirm={(id) => {
-                const trimmed = c.rejectFeedback.trim();
-                if (!trimmed) {
-                  toast('Feedback is required.', 'error');
-                  return;
-                }
-                c.rejectManualTimeRequest(id, trimmed);
-                toast('Manual time rejected!');
-                c.setActiveRejectId(null);
-                c.setRejectFeedback('');
-              }}
-            />
-          )}
-        </>
-      </RequestsHubShell>
+        {/* Flat table (no card) */}
+        <div className="pt-4">
+          <div className="overflow-x-auto">
+            <div className="min-w-[720px] rounded-2xl bg-white">
+              {c.activeTab === 'leave' ? (
+                <LeaveReviewPanel
+                  rows={c.sortedLeave}
+                  getUsername={c.getUsername}
+                  canReview={c.canReviewLeave}
+                  onApprove={(id) => {
+                    c.updateLeavetatus(id, 'Approved');
+                    toast('Leave approved!');
+                  }}
+                  onReject={(id) => {
+                    c.updateLeavetatus(id, 'Rejected');
+                    toast('Leave rejected!');
+                  }}
+                />
+              ) : (
+                <ManualReviewPanel
+                  rows={c.sortedManual}
+                  getUsername={c.getUsername}
+                  canReview={c.canReviewManual}
+                  activeRejectId={c.activeRejectId}
+                  rejectFeedback={c.rejectFeedback}
+                  setRejectFeedback={c.setRejectFeedback}
+                  setActiveRejectId={c.setActiveRejectId}
+                  onApprove={(id) => {
+                    c.approveManualTimeRequest(id);
+                    toast('Manual time approved!');
+                  }}
+                  onRejectConfirm={(id) => {
+                    const trimmed = c.rejectFeedback.trim();
+                    if (!trimmed) {
+                      toast('Feedback is required.', 'error');
+                      return;
+                    }
+                    c.rejectManualTimeRequest(id, trimmed);
+                    toast('Manual time rejected!');
+                    c.setActiveRejectId(null);
+                    c.setRejectFeedback('');
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
