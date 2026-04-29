@@ -21,7 +21,6 @@ import {
   Coffee,
   LayoutDashboard,
   ChevronRight,
-  ClipboardList,
   MapPin,
 } from 'lucide-react';
 import { performClockInWithPolicies } from '@/lib/clockInPolicies';
@@ -31,6 +30,7 @@ import {
   dateKeyLocal,
   dayAttendanceStatus,
   filterUsersForAttendanceViewer,
+  getOfficeEndForDay,
   getOfficeStartForDay,
   isClockInLate,
  type DayAttendanceUiStatus,
@@ -497,7 +497,6 @@ function AdminDashboard() {
     timesheets,
     tasks,
     Leave,
-    manualTimeRequests,
     adhocShiftsEnabled,
     geoFencingEnabled,
     geoFencingUseGlobalRadius,
@@ -513,7 +512,6 @@ function AdminDashboard() {
       timesheets: s.timesheets,
       tasks: s.tasks,
       Leave: s.Leave,
-      manualTimeRequests: s.manualTimeRequests,
       adhocShiftsEnabled: s.adhocShiftsEnabled,
       geoFencingEnabled: s.geoFencingEnabled,
       geoFencingUseGlobalRadius: s.geoFencingUseGlobalRadius,
@@ -533,24 +531,11 @@ function AdminDashboard() {
 
   const activeEmployees = timesheets.filter(t => !t.clockOut).length;
   const pendingLeave = Leave.filter(l => l.status === 'Pending').length;
-  const pendingManual = manualTimeRequests.filter(r => r.status === 'Pending').length;
   const overdueTasksCount = tasks.filter(
     t =>
       !isTeamLeaderCreatedTask(t, users) && t.status !== 'Approved' && new Date(t.deadline) < now
   ).length;
   const pendingUsers = users.filter(u => u.role === 'Pending User').length;
-
-  const needsAttentionItems = useMemo(() => {
-    const items: { label: string; count: number; href: string }[] = [];
-    if (pendingLeave > 0) items.push({ label: 'Pending leave requests', count: pendingLeave, href: '/request-management?tab=leave' });
-    if (pendingManual > 0)
-      items.push({ label: 'Pending manual time requests', count: pendingManual, href: '/request-management?tab=manual' });
-    if (pendingUsers > 0)
-      items.push({ label: 'Pending user registrations', count: pendingUsers, href: '/admin/employees-management' });
-    if (overdueTasksCount > 0)
-      items.push({ label: 'Overdue tasks', count: overdueTasksCount, href: '/project-manager' });
-    return items;
-  }, [pendingLeave, pendingManual, pendingUsers, overdueTasksCount]);
 
   const workforceUsers = useMemo(
     () => users.filter(u => u.role !== 'Pending User'),
@@ -600,14 +585,17 @@ function AdminDashboard() {
     0,
     0
   );
+  const officeEndParts = getOfficeEndForDay(now, attendanceDayOverrides);
+  const officeEndToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    officeEndParts.hour,
+    officeEndParts.minute,
+    0,
+    0
+  );
   const hasOverrideToday = !!attendanceDayOverrides[dateKeyLocal(now)];
-
-  const availabilityClass = (status: string | undefined) =>
-    status === 'Available'
-      ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-      : status === 'Leave'
-        ? 'bg-rose-50 text-rose-700 border-rose-100'
-        : 'bg-slate-50 text-slate-500 border-slate-100';
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-12">
@@ -661,44 +649,6 @@ function AdminDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-indigo-100/80 bg-gradient-to-br from-indigo-50/50 via-white to-white p-6 shadow-sm ring-1 ring-indigo-100/60">
-          <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200/50">
-              <ClipboardList className="h-4 w-4" aria-hidden />
-            </span>
-            Needs attention
-          </h2>
-          <p className="mt-1 text-xs text-slate-500">Open items that need a decision or follow-up.</p>
-          {needsAttentionItems.length === 0 ? (
-            <div className="mt-6 flex flex-col items-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-10 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                <CheckCircle2 className="h-6 w-6" aria-hidden />
-              </span>
-              <p className="mt-3 text-sm font-medium text-slate-700">All clear</p>
-              <p className="mt-0.5 text-xs text-slate-500">No pending admin actions right now.</p>
-            </div>
-          ) : (
-            <ul className="mt-5 space-y-2">
-              {needsAttentionItems.map((row) => (
-                <li key={row.href}>
-                  <Link
-                    href={row.href}
-                    className="group flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white/90 px-4 py-3.5 text-sm font-medium text-slate-800 shadow-sm transition hover:border-indigo-200 hover:bg-white hover:shadow-md"
-                  >
-                    <span className="min-w-0">{row.label}</span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-indigo-800">
-                        {row.count}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-indigo-600" aria-hidden />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
         <div className="overflow-hidden rounded-2xl border border-sky-100/80 bg-gradient-to-br from-sky-50/40 via-white to-white p-6 shadow-sm ring-1 ring-sky-100/50">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -789,8 +739,17 @@ function AdminDashboard() {
                 ) : null}
               </div>
               <div className="rounded-xl border border-slate-100 bg-white/80 px-4 py-3 shadow-sm">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Office start</span>
-                <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{format(officeStartToday, 'h:mm a')}</p>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Office shift</span>
+                <div className="mt-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Start</p>
+                    <p className="text-lg font-bold tabular-nums text-slate-900">{format(officeStartToday, 'h:mm a')}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">End</p>
+                    <p className="text-lg font-bold tabular-nums text-slate-900">{format(officeEndToday, 'h:mm a')}</p>
+                  </div>
+                </div>
                 {hasOverrideToday ? (
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-indigo-700">Company override today</p>
                 ) : (
@@ -809,152 +768,6 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-md shadow-slate-200/30 sm:rounded-[2.5rem]">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50/90 to-white px-6 py-5 sm:px-8">
-          <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-bold text-slate-800">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200/40">
-              <Activity className="h-4 w-4" aria-hidden />
-            </span>
-            <span>Live employee status</span>
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-slate-600">
-              {workforceCount}
-            </span>
-          </h2>
-          <p className="mt-1 text-xs text-slate-500">Availability and active clock-in session.</p>
-        </div>
-
-        {workforceCount === 0 ? (
-          <div className="px-6 py-16 text-center sm:px-8">
-            <p className="text-sm font-medium text-slate-600">No active workforce users yet.</p>
-            <p className="mt-1 text-xs text-slate-400">
-              Approve pending registrations or add users from{' '}
-              <Link href="/admin" className="font-semibold text-blue-600 hover:underline">
-                Admin control
-              </Link>
-              .
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop / tablet: table */}
-            <div className="hidden max-h-[400px] overflow-x-auto overflow-y-auto md:block">
-              <table className="w-full min-w-[640px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-white">
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:px-8">
-                      Team member
-                    </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Role / team
-                    </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Availability
-                    </th>
-                    <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:px-8">
-                      Session
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workforceUsers.map(user => {
-                    const isActive = timesheets.some(t => t.userId === user.id && !t.clockOut);
-                    return (
-                      <tr
-                        key={user.id}
-                        className="border-b border-slate-50 transition-colors last:border-0 hover:bg-slate-50/80"
-                      >
-                        <td className="px-6 py-4 sm:px-8">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">
-                              {user.name.charAt(0)}
-                            </div>
-                            <span className="font-semibold text-slate-900">{user.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="text-sm text-slate-700">
-                            {user.role}
-                            {user.team ? (
-                              <>
-                                <span className="text-slate-300"> · </span>
-                                {user.team}
-                              </>
-                            ) : (
-                              <span className="text-slate-400"> · —</span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${availabilityClass(user.status)}`}
-                          >
-                            {user.status || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right sm:px-8">
-                          {isActive ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-800">
-                              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                              Working
-                            </span>
-                          ) : (
-                            <span className="inline-flex rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-[10px] font-bold text-slate-400">
-                              Offline
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile: cards */}
-            <div className="space-y-3 p-5 md:hidden">
-              {workforceUsers.map(user => {
-                const isActive = timesheets.some(t => t.userId === user.id && !t.clockOut);
-                return (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-colors hover:border-slate-200 hover:bg-white"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">
-                        {user.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-slate-800">{user.name}</p>
-                        <p className="truncate text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                          {user.role}
-                          {user.team ? ` · ${user.team}` : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${availabilityClass(user.status)}`}
-                      >
-                        {user.status || 'N/A'}
-                      </span>
-                      {isActive ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                          Working
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-slate-100 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">
-                          Offline
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
     </div>
   );
 }

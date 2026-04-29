@@ -7,7 +7,7 @@ import { Eye, EyeOff, Loader2, Lock, LogIn, Mail } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import AuthShell from '@/views/auth/AuthShell';
 import { AuthAlerts } from '@/views/auth/AuthAlerts';
-import { AUTH_INPUT_CLASS } from '@/views/auth/authConstants';
+import { AUTH_INPUT_CLASS, AUTH_PRIMARY_BUTTON_CLASS, AUTH_SECONDARY_BUTTON_CLASS } from '@/views/auth/authConstants';
 import { commitSession } from '@/views/auth/authSession';
 import { loginWithApi } from '@/services/auth.service';
 import { validateEmail } from '@/lib/validation/authValidation';
@@ -119,20 +119,15 @@ export default function SignInView() {
             Forgot password?
           </Link>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-60 transition-all"
-        >
+        <button type="submit" disabled={loading} className={`${AUTH_PRIMARY_BUTTON_CLASS} w-full`}>
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
           Sign in
         </button>
-        <p className="text-center text-sm text-slate-500">
-          No account?{' '}
-          <Link href="/auth/register" className="font-bold text-blue-600 hover:underline">
+        <div className="flex justify-center pt-1">
+          <Link href="/auth/register" className={AUTH_SECONDARY_BUTTON_CLASS}>
             Register
           </Link>
-        </p>
+        </div>
       </form>
     </AuthShell>
   );

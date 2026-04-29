@@ -4,6 +4,7 @@ import type { TimesheetEntry, User } from '@/lib/store';
 /** Official shift start (local time). */
 export const OFFICE_START_HOUR = 9;
 export const OFFICE_START_MINUTE = 0;
+export const OFFICE_SHIFT_DURATION_MINUTES = 9 * 60;
 
 /** Late if clock-in is at or after start + this many minutes (9:15). */
 export const LATE_AFTER_MINUTES = 15;
@@ -11,8 +12,13 @@ export const LATE_AFTER_MINUTES = 15;
 /** Absent if there is still no clock-in by start + this many minutes (9:45). */
 export const ABSENT_AFTER_MINUTES = 45;
 
-/** Admin-set office start for a calendar day (YYYY-MM-DD, local) — applies to all staff. */
-export type AttendanceDayOverride = { hour: number; minute: number };
+/** Admin-set office timings for a calendar day (YYYY-MM-DD, local) — applies to all staff. */
+export type AttendanceDayOverride = {
+  hour: number;
+  minute: number;
+  endHour?: number;
+  endMinute?: number;
+};
 export type AttendanceDayOverridesMap = Record<string, AttendanceDayOverride>;
 
 export function dateKeyLocal(d: Date): string {
@@ -34,6 +40,24 @@ export function getOfficeStartForDay(day: Date, overrides?: AttendanceDayOverrid
     return { hour, minute };
   }
   return { hour: OFFICE_START_HOUR, minute: OFFICE_START_MINUTE };
+}
+
+export function getOfficeEndForDay(day: Date, overrides?: AttendanceDayOverridesMap | null): {
+  hour: number;
+  minute: number;
+} {
+  const key = dateKeyLocal(day);
+  const o = overrides?.[key];
+  if (o && typeof o.endHour === 'number' && typeof o.endMinute === 'number') {
+    const hour = Math.min(23, Math.max(0, o.endHour));
+    const minute = Math.min(59, Math.max(0, o.endMinute));
+    return { hour, minute };
+  }
+
+  const start = getOfficeStartForDay(day, overrides);
+  const shiftEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), start.hour, start.minute, 0, 0);
+  shiftEnd.setMinutes(shiftEnd.getMinutes() + OFFICE_SHIFT_DURATION_MINUTES);
+  return { hour: shiftEnd.getHours(), minute: shiftEnd.getMinutes() };
 }
 
 function startMinutesForDay(day: Date, overrides?: AttendanceDayOverridesMap | null): number {

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, KeyRound, Loader2, Mail, RefreshCw, ShieldCheck } from 'lucide-react';
 import AuthShell from '@/views/auth/AuthShell';
 import { AuthAlerts } from '@/views/auth/AuthAlerts';
-import { AUTH_INPUT_CLASS } from '@/views/auth/authConstants';
+import { AUTH_INPUT_CLASS, AUTH_PRIMARY_BUTTON_CLASS, AUTH_SECONDARY_BUTTON_CLASS } from '@/views/auth/authConstants';
 import { forgotPasswordApi, verifyResetOtpApi } from '@/services/auth.service';
 import { validateEmail, validateOtp } from '@/lib/validation/authValidation';
 
@@ -135,7 +135,7 @@ export default function ForgotPasswordView() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 py-3.5 text-sm font-bold text-white hover:bg-blue-600 disabled:opacity-60"
+            className={`${AUTH_PRIMARY_BUTTON_CLASS} w-full`}
           >
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
             Send verification code
@@ -176,7 +176,7 @@ export default function ForgotPasswordView() {
             <button
               type="submit"
               disabled={loading || resending || otp.length !== 6}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
+              className={`${AUTH_PRIMARY_BUTTON_CLASS} w-full`}
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <KeyRound className="h-5 w-5" />}
               Verify code
@@ -187,7 +187,7 @@ export default function ForgotPasswordView() {
             type="button"
             disabled={loading || resending}
             onClick={handleResend}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            className={`${AUTH_SECONDARY_BUTTON_CLASS} w-full`}
           >
             <RefreshCw className={`h-4 w-4 ${resending ? 'animate-spin' : ''}`} aria-hidden />
             Resend code

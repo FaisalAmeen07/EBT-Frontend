@@ -16,44 +16,55 @@ export default function AuthShell({
   compact?: boolean;
 }) {
   const maxW = wide
-    ? 'max-w-[min(100%,24rem)] sm:max-w-lg lg:max-w-xl'
-    : 'max-w-[min(100%,24rem)] sm:max-w-md';
+    ? 'max-w-6xl'
+    : 'max-w-5xl';
 
   return (
     <div
-      className={`absolute inset-0 z-50 min-h-[100dvh] overflow-x-hidden overflow-y-auto overscroll-y-contain bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] sm:px-5 ${compact ? 'pt-4 sm:py-8' : 'pt-6 sm:py-10'}`}
+      className={`fixed inset-0 z-50 h-[100dvh] overflow-hidden bg-[#F2F4FC] px-3 sm:px-5 ${compact ? 'py-2.5 sm:py-4' : 'py-3 sm:py-5'}`}
     >
       <div
-        className={`mx-auto flex w-full flex-col justify-start sm:justify-center sm:py-0 ${compact ? 'min-h-0' : 'min-h-[calc(100dvh-3rem)] sm:min-h-0'}`}
+        className="mx-auto flex h-full w-full flex-col items-center justify-center"
       >
         <div className={`mx-auto w-full ${maxW}`}>
-          <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl backdrop-blur sm:rounded-3xl">
-            <div
-              className={`border-b border-slate-100 px-4 sm:px-8 ${compact ? 'pb-3 pt-5 sm:pb-4 sm:pt-6' : 'pb-5 pt-8 sm:pb-6 sm:pt-10'}`}
-            >
-              <div className="flex flex-col items-center">
-                <div
-                  className={`relative mx-auto w-full max-w-[min(100%,260px)] ${compact ? 'mb-2 h-8 sm:mb-2.5 sm:h-11' : 'mb-3 h-10 sm:mb-4 sm:h-14'}`}
-                >
+          <div className="max-h-full overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)]">
+            <div className="relative grid min-h-[min(90vh,42rem)] grid-cols-1 md:grid-cols-[minmax(280px,38%)_1fr]">
+              <aside className="relative hidden overflow-hidden bg-gradient-to-b from-[#0b4da6] via-[#1260c8] to-[#35a4ff] px-10 py-10 text-white md:flex md:items-center md:justify-center">
+                <div className="relative h-16 w-[220px]">
                   <Image
                     src={BRAND_LOGO_URL}
                     alt="Global Digital Care"
                     fill
-                    className="object-contain object-center"
-                    sizes="(max-width: 640px) 260px, 280px"
+                    className="object-contain"
+                    sizes="220px"
                     priority
                     draggable={false}
                   />
                 </div>
-                <h1
-                  className={`text-center font-bold text-slate-900 ${compact ? 'mt-1 text-lg sm:text-xl' : 'mt-1.5 text-xl sm:mt-2 sm:text-2xl'}`}
-                >
-                  {title}
-                </h1>
-              </div>
-            </div>
+              </aside>
 
-            <div className={`px-4 sm:px-8 ${compact ? 'py-4 sm:py-5' : 'py-6 sm:py-8'}`}>{children}</div>
+              <div className="pointer-events-none absolute inset-y-0 left-[calc(38%-8px)] z-10 hidden w-16 -translate-x-1/2 items-center justify-center md:flex">
+                <div className="flex h-full flex-col justify-around">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <span key={i} className="h-16 w-16 rounded-full bg-white shadow-none" />
+                  ))}
+                </div>
+              </div>
+
+              <section className="flex min-h-0 flex-col justify-center bg-white">
+                <div className={`px-6 text-center sm:px-10 ${compact ? 'pb-3 pt-5 sm:pb-4 sm:pt-6' : 'pb-5 pt-8 sm:pb-6 sm:pt-10'}`}>
+                  <div className="mx-auto flex w-full max-w-xl flex-col items-center">
+                    <h1 className={`font-semibold text-slate-900 ${compact ? 'mt-1 text-[1.9rem] sm:text-[2rem]' : 'mt-1 text-2xl sm:mt-2 sm:text-[2.15rem]'}`}>
+                      {title}
+                    </h1>
+                  </div>
+                </div>
+
+                <div className={`mx-auto w-full max-w-xl px-6 sm:px-10 ${compact ? 'py-3 sm:py-4' : 'py-5 sm:py-6'}`}>
+                  {children}
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>

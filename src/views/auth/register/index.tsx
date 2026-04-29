@@ -7,10 +7,14 @@ import { Eye, EyeOff, Loader2, Lock, Mail, Phone, User, Building2 } from 'lucide
 import type { Department } from '@/lib/store';
 import AuthShell from '@/views/auth/AuthShell';
 import { AuthAlerts } from '@/views/auth/AuthAlerts';
-import { AUTH_INPUT_COMPACT_CLASS, DEPARTMENTS } from '@/views/auth/authConstants';
+import {
+  AUTH_INPUT_COMPACT_CLASS,
+  AUTH_PRIMARY_BUTTON_CLASS,
+  AUTH_SECONDARY_BUTTON_CLASS,
+  DEPARTMENTS,
+} from '@/views/auth/authConstants';
 import { registerWithApi } from '@/services/auth.service';
 import {
-  passwordStrength,
   validateDepartment,
   validateEmail,
   validateName,
@@ -87,87 +91,100 @@ export default function RegisterView() {
           setError(null);
         }}
       />
-      <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-2.5">
-        <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
-            Full name
-          </label>
-          <div className="relative">
-            <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => {
-                const raw = e.target.value;
-                // English alphabets + spaces only
-                const cleaned = raw.replace(/[^A-Za-z\s]/g, '').replace(/\s+/g, ' ');
-                setName(cleaned);
-              }}
-              className={AUTH_INPUT_COMPACT_CLASS}
-              placeholder="Your name"
-            />
+      <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-3">
+        <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+          <div>
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+              Full name
+            </label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  // English alphabets + spaces only
+                  const cleaned = raw.replace(/[^A-Za-z\s]/g, '').replace(/\s+/g, ' ');
+                  setName(cleaned);
+                }}
+                className={AUTH_INPUT_COMPACT_CLASS}
+                placeholder="Your name"
+                aria-invalid={fieldError.name ? 'true' : 'false'}
+              />
+            </div>
+            {fieldError.name ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.name}</p> : null}
           </div>
-
+          <div>
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={AUTH_INPUT_COMPACT_CLASS}
+                placeholder="you@company.com"
+                aria-invalid={fieldError.email ? 'true' : 'false'}
+              />
+            </div>
+            {fieldError.email ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.email}</p> : null}
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
-            Email
-          </label>
-          <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={AUTH_INPUT_COMPACT_CLASS}
-              placeholder="you@company.com"
-            />
+        <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+          <div>
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+              Phone
+            </label>
+            <div className="relative">
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="tel"
+                autoComplete="tel"
+                required
+                value={phone}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  // Digits only (keep it simple and consistent)
+                  const cleaned = raw.replace(/\D/g, '').slice(0, 16);
+                  setPhone(cleaned);
+                }}
+                className={AUTH_INPUT_COMPACT_CLASS}
+                placeholder="03000000000"
+                aria-invalid={fieldError.phone ? 'true' : 'false'}
+              />
+            </div>
+            {fieldError.phone ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.phone}</p> : null}
           </div>
-
-        </div>
-        <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
-            Phone
-          </label>
-          <div className="relative">
-            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="tel"
-              required
-              value={phone}
-              onChange={(e) => {
-                const raw = e.target.value;
-                // Digits only (keep it simple and consistent)
-                const cleaned = raw.replace(/\D/g, '').slice(0, 16);
-                setPhone(cleaned);
-              }}
-              className={AUTH_INPUT_COMPACT_CLASS}
-              placeholder="03000000000"
-            />
+          <div>
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+              Department
+            </label>
+            <div className="relative">
+              <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <select
+                value={department}
+                onChange={(e) => setDepartment(e.target.value as Department)}
+                className={`${AUTH_INPUT_COMPACT_CLASS} cursor-pointer appearance-none`}
+                aria-invalid={fieldError.department ? 'true' : 'false'}
+              >
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {fieldError.department ? (
+              <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.department}</p>
+            ) : null}
           </div>
-
-        </div>
-        <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
-            Department
-          </label>
-          <div className="relative">
-            <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value as Department)}
-              className={`${AUTH_INPUT_COMPACT_CLASS} cursor-pointer appearance-none`}
-            >
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
@@ -179,10 +196,12 @@ export default function RegisterView() {
               type={showPw ? 'text' : 'password'}
               required
               minLength={8}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={`${AUTH_INPUT_COMPACT_CLASS} pr-11`}
               placeholder="Password"
+              aria-invalid={fieldError.password ? 'true' : 'false'}
             />
             <button
               type="button"
@@ -192,22 +211,21 @@ export default function RegisterView() {
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-
+          {fieldError.password ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.password}</p> : null}
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-0.5 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200/80 hover:bg-blue-700 disabled:opacity-60 sm:min-h-10 sm:rounded-xl sm:py-2.5 sm:shadow-lg"
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin sm:h-5 sm:w-5" /> : null}
-          Create account
-        </button>
-        <p className="text-center text-xs text-slate-500 sm:text-sm">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="font-bold text-blue-600 hover:underline">
+        <div className="flex flex-col items-center justify-center gap-2 pt-1 sm:flex-row">
+          <button
+            type="submit"
+            disabled={loading}
+            className={`${AUTH_PRIMARY_BUTTON_CLASS} min-w-[9rem]`}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {loading ? 'Signing up...' : 'Sign up'}
+          </button>
+          <Link href="/auth/login" className={`${AUTH_SECONDARY_BUTTON_CLASS} min-w-[9rem]`}>
             Sign in
           </Link>
-        </p>
+        </div>
       </form>
     </AuthShell>
   );

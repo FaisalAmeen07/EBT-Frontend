@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Lock } from 'lucide-react';
 import AuthShell from '@/views/auth/AuthShell';
 import { AuthAlerts } from '@/views/auth/AuthAlerts';
-import { AUTH_INPUT_CLASS } from '@/views/auth/authConstants';
+import { AUTH_INPUT_CLASS, AUTH_PRIMARY_BUTTON_CLASS } from '@/views/auth/authConstants';
 import { resetPasswordApi } from '@/services/auth.service';
 import { passwordStrength, validatePasswordStrong } from '@/lib/validation/authValidation';
 
@@ -130,7 +130,7 @@ export default function ResetPasswordView() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+          className={`${AUTH_PRIMARY_BUTTON_CLASS} w-full`}
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <KeyRound className="h-5 w-5" />}
           Update password

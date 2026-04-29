@@ -17,7 +17,7 @@ import {
 } from '@/lib/messaging';
 import { emitChatSocketEvent } from '@/lib/chat-socket';
 import { MAX_UPLOAD_FILE_BYTES } from '@/lib/file-upload-limits';
-import { clockInBlockedBeforeOfficeStart, isClockInLate } from '@/lib/attendanceRules';
+import { clockInBlockedBeforeOfficeStart, isClockInLate, type AttendanceDayOverride } from '@/lib/attendanceRules';
 import { API_PATHS } from '@/lib/api/api-base-urls';
 import { resolveChatBaseURL } from '@/lib/api/chat-api.config';
 import {
@@ -360,9 +360,15 @@ interface AppState {
     breakInTime?: string;
     breakOutTime?: string;
   }) => void;
-  /** Per calendar day (YYYY-MM-DD): company office start for all staff (late/absent from this time). Admin only. */
-  attendanceDayOverrides: Record<string, { hour: number; minute: number }>;
-  setAttendanceDayOverride: (date: string, hour: number, minute: number) => void;
+  /** Per calendar day (YYYY-MM-DD): company office shift timings for all staff. Admin only. */
+  attendanceDayOverrides: Record<string, AttendanceDayOverride>;
+  setAttendanceDayOverride: (
+    date: string,
+    hour: number,
+    minute: number,
+    endHour?: number,
+    endMinute?: number
+  ) => void;
   clearAttendanceDayOverride: (date: string) => void;
   /** When false, non-Admin users cannot use live Clock In (dashboard). Admin-only toggle in Time control. */
   adhocShiftsEnabled: boolean;
@@ -544,7 +550,7 @@ export const useStore = create<AppState>()(
       currentUser: null,
       users: [],
       timesheets: [],
-      attendanceDayOverrides: {} as Record<string, { hour: number; minute: number }>,
+      attendanceDayOverrides: {} as Record<string, AttendanceDayOverride>,
       adhocShiftsEnabled: true,
       geoFencingEnabled: false,
       geoFencingUseGlobalRadius: true,
@@ -669,13 +675,22 @@ export const useStore = create<AppState>()(
         set({ timesheets: updatedTimesheets });
       },
 
-      setAttendanceDayOverride: (date, hour, minute) => {
+      setAttendanceDayOverride: (date, hour, minute, endHour, endMinute) => {
         const { currentUser } = get();
         if (currentUser?.role !== 'Admin') return;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return;
+        if (endHour != null && (endHour < 0 || endHour > 23)) return;
+        if (endMinute != null && (endMinute < 0 || endMinute > 59)) return;
         set((s) => ({
-          attendanceDayOverrides: { ...s.attendanceDayOverrides, [date]: { hour, minute } },
+          attendanceDayOverrides: {
+            ...s.attendanceDayOverrides,
+            [date]: {
+              hour,
+              minute,
+              ...(endHour != null && endMinute != null ? { endHour, endMinute } : {}),
+            },
+          },
         }));
       },
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { useStore, useShallow } from '@/lib/store';
-import { ABSENT_AFTER_MINUTES, LATE_AFTER_MINUTES } from '@/lib/attendanceRules';
+import { ABSENT_AFTER_MINUTES, LATE_AFTER_MINUTES, getOfficeEndForDay } from '@/lib/attendanceRules';
 import { cn } from '@/lib/utils';
 import { Timer, CalendarClock, MapPin } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -82,25 +82,41 @@ export function TimeControlPage() {
 
   const [companyDay, setCompanyDay] = useState(todayDateInput());
   const [companyStartTime, setCompanyStartTime] = useState('09:00');
+  const [companyEndTime, setCompanyEndTime] = useState('18:00');
 
   const overrideList = useMemo(() => {
     return Object.entries(attendanceDayOverrides)
-      .map(([date, { hour, minute }]) => ({
-        date,
-        hour,
-        minute,
-        label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-      }))
+      .map(([date, row]) => {
+        const dayRef = new Date(date + 'T12:00:00');
+        const { hour, minute } = row;
+        const end = getOfficeEndForDay(dayRef, attendanceDayOverrides);
+        return {
+          date,
+          hour,
+          minute,
+          endHour: end.hour,
+          endMinute: end.minute,
+          label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+          endLabel: `${String(end.hour).padStart(2, '0')}:${String(end.minute).padStart(2, '0')}`,
+        };
+      })
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [attendanceDayOverrides]);
 
   const saveCompanyStart = () => {
     const [h, m] = companyStartTime.split(':').map((x) => parseInt(x, 10));
-    if (Number.isNaN(h) || Number.isNaN(m)) {
-      toast('Enter a valid office start time.', 'error');
+    const [eh, em] = companyEndTime.split(':').map((x) => parseInt(x, 10));
+    if (Number.isNaN(h) || Number.isNaN(m) || Number.isNaN(eh) || Number.isNaN(em)) {
+      toast('Enter valid office start/end times.', 'error');
       return;
     }
-    setAttendanceDayOverride(companyDay, h, m);
+    const startMinutes = h * 60 + m;
+    const endMinutes = eh * 60 + em;
+    if (endMinutes <= startMinutes) {
+      toast('Office end must be after office start.', 'error');
+      return;
+    }
+    setAttendanceDayOverride(companyDay, h, m, eh, em);
   };
 
   return (
@@ -120,7 +136,7 @@ export function TimeControlPage() {
             <CalendarClock className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-slate-900">Company office start by date (all staff)</h2>
+            <h2 className="text-base font-semibold text-slate-900">Company office shift by date (all staff)</h2>
 
           </div>
         </div>
@@ -142,6 +158,17 @@ export function TimeControlPage() {
               type="time"
               value={companyStartTime}
               onChange={(e) => setCompanyStartTime(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Office end
+            </label>
+            <input
+              type="time"
+              value={companyEndTime}
+              onChange={(e) => setCompanyEndTime(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
             />
           </div>
@@ -170,6 +197,8 @@ export function TimeControlPage() {
                   <span className="font-medium text-slate-800">
                     {format(d, 'EEE, MMM d, yyyy')}: start{' '}
                     <span className="tabular-nums">{row.label}</span>
+                    <span className="text-slate-400"> - </span>
+                    end <span className="tabular-nums">{row.endLabel}</span>
                     <span className="ml-2 text-xs font-normal text-slate-500">
                       (late from {format(lateAt, 'HH:mm')}, absent after {format(absentAt, 'HH:mm')})
                     </span>
