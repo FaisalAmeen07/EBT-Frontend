@@ -92,6 +92,7 @@ export function ManualTimesheetLog() {
       currentUser: s.currentUser,
     }))
   );
+  const departments = useStore((s) => s.departments);
 
   const scopedRequests = useMemo(
     () => filterManualTimeRequestsForViewer(manualTimeRequests, users, currentUser),
@@ -100,7 +101,10 @@ export function ManualTimesheetLog() {
 
   const allGroups = useMemo(() => buildManualGroups(scopedRequests, users), [scopedRequests, users]);
 
-  const sites = useMemo(() => [...COMPANY_SITE_OPTIONS], []);
+  const sites = useMemo(() => {
+    const list = departments.length ? departments : [...COMPANY_SITE_OPTIONS];
+    return ['All departments', ...list.filter((d) => d !== 'All departments')];
+  }, [departments]);
   const providers = useMemo(() => {
     if (currentUser?.role === 'HR') return [...HR_PROVIDER_FILTER_OPTIONS];
     return [...PROVIDER_ROLE_OPTIONS];
@@ -108,7 +112,7 @@ export function ManualTimesheetLog() {
 
   const isTeamLeaderViewer = currentUser?.role === 'Team Leader';
 
-  const [siteFilter, setSiteFilter] = useState('All sites');
+  const [siteFilter, setSiteFilter] = useState('All departments');
   const [providerFilter, setProviderFilter] = useState('All providers');
   const [idQuery, setIdQuery] = useState('');
   const [rangeStart, setRangeStart] = useState('');
@@ -124,7 +128,7 @@ export function ManualTimesheetLog() {
   const filtered = useMemo(() => {
     return allGroups.filter((g) => {
       const bucket = siteBucketForUser(g.user);
-      if (siteFilter !== 'All sites' && bucket !== siteFilter) return false;
+      if (siteFilter !== 'All departments' && bucket !== siteFilter) return false;
 
       if (providerFilter !== 'All providers') {
         const pl = g.user ? providerLabelForRole(g.user.role) : 'Other';
@@ -156,7 +160,7 @@ export function ManualTimesheetLog() {
   const handleExportExcel = useCallback(() => {
     const rows = exportTargetGroups();
     if (rows.length === 0) return;
-    const header = ['Employee', 'Site', 'Provider', 'Period start', 'Period end', 'Hours', 'ID'];
+    const header = ['Employee', 'Department', 'Provider', 'Period start', 'Period end', 'Hours', 'ID'];
     const data = rows.map((g) => {
       const site = siteBucketForUser(g.user);
       const prov = g.user ? providerLabelForRole(g.user.role) : '—';
@@ -179,7 +183,7 @@ export function ManualTimesheetLog() {
     const body = `
       <table>
         <thead><tr>
-          <th>Employee</th><th>Site</th><th>Provider</th><th>Period</th><th>Hours</th><th>ID</th>
+          <th>Employee</th><th>Department</th><th>Provider</th><th>Period</th><th>Hours</th><th>ID</th>
         </tr></thead>
         <tbody>
           ${rows
@@ -281,7 +285,7 @@ export function ManualTimesheetLog() {
                 </th>
                 <th className="px-3 py-3 font-semibold">Sr#</th>
                 <th className="px-3 py-3 font-semibold">Name / role</th>
-                <th className="px-3 py-3 font-semibold">Site</th>
+                <th className="px-3 py-3 font-semibold">Department</th>
                 <th className="px-3 py-3 font-semibold">Period</th>
                 <th className="px-3 py-3 font-semibold">Hours</th>
                 <th className="px-3 py-3 font-semibold">ID</th>
@@ -430,7 +434,7 @@ function ManualDetailPanel({
       )
       .join('');
     const body = `
-      <p><strong>Employee:</strong> ${escapeAttr(group.user?.name ?? 'Unknown')} &nbsp;|&nbsp; <strong>Site:</strong> ${escapeAttr(site)} &nbsp;|&nbsp; <strong>Provider:</strong> ${escapeAttr(prov)}</p>
+      <p><strong>Employee:</strong> ${escapeAttr(group.user?.name ?? 'Unknown')} &nbsp;|&nbsp; <strong>Department:</strong> ${escapeAttr(site)} &nbsp;|&nbsp; <strong>Provider:</strong> ${escapeAttr(prov)}</p>
       <p><strong>Period:</strong> ${escapeAttr(periodLabel)} &nbsp;|&nbsp; <strong>Total:</strong> ${escapeAttr(formatHoursMinutes(group.totalHours))}</p>
       <table>
         <thead><tr><th>Sr#</th><th>Date</th><th>In / Out</th><th>Hours</th><th>ID</th></tr></thead>
@@ -471,7 +475,7 @@ function ManualDetailPanel({
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 shrink-0 text-slate-500" />
             <span>
-              <span className="text-slate-500">Site: </span>
+              <span className="text-slate-500">Department: </span>
               {site}
             </span>
           </div>

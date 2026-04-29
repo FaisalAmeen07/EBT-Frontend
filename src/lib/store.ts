@@ -108,8 +108,9 @@ export { useShallow } from 'zustand/react/shallow';
 
 export type Role = 'Admin' | 'HR' | 'Team Leader' | 'Employee' | 'Pending User';
 
-/** Department options for registration (client-side demo). */
-export type Department = 'Web Design' | 'MERN Stack' | 'Web Development' | 'SEO';
+export const DEFAULT_DEPARTMENTS = ['Web Design', 'MERN Stack', 'Web Development', 'SEO'] as const;
+/** Department labels are admin-configurable, so keep this as free-form string. */
+export type Department = string;
 
 export interface User {
   id: string;
@@ -442,6 +443,10 @@ interface AppState {
   teams: string[];
   addTeam: (name: string) => void;
   removeTeam: (name: string) => void;
+  departments: Department[];
+  setDepartments: (departments: string[]) => void;
+  addDepartment: (name: string) => void;
+  removeDepartment: (name: string) => void;
   /** Known site / office names for assignments. */
   sites: string[];
   addSite: (name: string) => void;
@@ -559,6 +564,7 @@ export const useStore = create<AppState>()(
       geoFencingOfficeLat: null as number | null,
       geoFencingOfficeLng: null as number | null,
       teams: [],
+      departments: [...DEFAULT_DEPARTMENTS],
       sites: [],
       tasks: [],
       Leave: [],
@@ -1458,6 +1464,33 @@ export const useStore = create<AppState>()(
       removeTeam: (name) => set((state) => ({
         teams: state.teams.filter(t => t !== name)
       })),
+
+      setDepartments: (departments) =>
+        set((state) => {
+          const normalized = (Array.isArray(departments) ? departments : [])
+            .map((d) => String(d || "").trim())
+            .filter((d): d is string => !!d);
+          return {
+            departments: normalized.length > 0 ? [...new Set(normalized)] : state.departments,
+          };
+        }),
+
+      addDepartment: (name) =>
+        set((state) => {
+          if (state.currentUser?.role !== 'Admin') return state;
+          const trimmed = name.trim();
+          if (!trimmed) return state;
+          const exists = state.departments.some((d) => d.toLowerCase() === trimmed.toLowerCase());
+          if (exists) return state;
+          return { departments: [...state.departments, trimmed] };
+        }),
+
+      removeDepartment: (name) =>
+        set((state) => {
+          if (state.currentUser?.role !== 'Admin') return state;
+          if (state.departments.length <= 1) return state;
+          return { departments: state.departments.filter((d) => d !== name) };
+        }),
 
       addSite: (name) =>
         set((state) => {
@@ -2432,6 +2465,15 @@ export const useStore = create<AppState>()(
             }
             return raw;
           })(),
+          departments: (() => {
+            const raw = Array.isArray(persistedState.departments)
+              ? (persistedState.departments as unknown[])
+              : [];
+            const normalized = raw
+              .map((d) => (typeof d === 'string' ? d.trim() : ''))
+              .filter((d): d is string => !!d);
+            return normalized.length > 0 ? [...new Set(normalized)] : [...DEFAULT_DEPARTMENTS];
+          })(),
           manualTimeRequests: Array.isArray(persistedState.manualTimeRequests) ? persistedState.manualTimeRequests : [],
           passwordResetTokens: Array.isArray(persistedState.passwordResetTokens)
             ? (persistedState.passwordResetTokens as PasswordResetToken[]).map((t) => {
@@ -2489,6 +2531,14 @@ export const useStore = create<AppState>()(
         }
         if (Array.isArray(merged.users)) {
           merged.teams = deriveTeamsRegistryFromUsers(merged.users);
+        }
+        if (!Array.isArray(merged.departments) || merged.departments.length === 0) {
+          merged.departments = [...DEFAULT_DEPARTMENTS];
+        } else {
+          const normalized = merged.departments
+            .map((d) => (typeof d === 'string' ? d.trim() : ''))
+            .filter((d): d is string => !!d);
+          merged.departments = normalized.length > 0 ? [...new Set(normalized)] : [...DEFAULT_DEPARTMENTS];
         }
         return merged;
       },

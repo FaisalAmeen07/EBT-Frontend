@@ -9,8 +9,6 @@ import { PROFILE_IMAGE_MAX_BYTES, PROFILE_IMAGE_MAX_MB } from '@/lib/file-upload
 import { toast } from '@/lib/toast';
 import { isAxiosError } from 'axios';
 
-const DEPARTMENTS: Department[] = ['Web Design', 'MERN Stack', 'Web Development', 'SEO'];
-
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
 
@@ -32,6 +30,7 @@ export default function ProfilePage() {
   const currentUser = useStore((s) => s.currentUser);
   const setCurrentUser = useStore((s) => s.setCurrentUser);
   const upsertUser = useStore((s) => s.upsertUser);
+  const departments = useStore((s) => s.departments);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingImageRef = useRef<File | null>(null);
 
@@ -154,9 +153,9 @@ export default function ProfilePage() {
   };
 
   const departmentOptions: string[] =
-    department && !DEPARTMENTS.includes(department as Department)
-      ? [department, ...DEPARTMENTS]
-      : [...DEPARTMENTS];
+    department && !departments.includes(department as Department)
+      ? [department, ...departments]
+      : [...departments];
 
   return (
     <div className="mx-auto max-w-4xl pb-12">

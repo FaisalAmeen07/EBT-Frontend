@@ -5,15 +5,8 @@ export function employeeDisplayId(user: User | undefined, fallbackUserId?: strin
   return user?.employeeCode ?? user?.id ?? fallbackUserId ?? '—';
 }
 
-/** Fixed "Site" categories shown on Company Time Records (maps from user profile). */
-export const COMPANY_SITE_OPTIONS = [
-  'All sites',
-  'Web Development',
-  'MERN Stack',
-  'Full Stack',
-  'Frontend Developer',
-  'Backend Developer',
-] as const;
+/** Fallback first option; actual department list should come from store/api. */
+export const COMPANY_SITE_OPTIONS = ['All departments'] as const;
 
 export const PROVIDER_ROLE_OPTIONS = ['All providers', 'Employees', 'HR', 'Team Leader'] as const;
 
@@ -35,19 +28,10 @@ export function userMatchesAttendanceSearch(user: User | undefined, fallbackUser
   );
 }
 
-/** Map a user to one site bucket for filtering. */
+/** Map a user to one department label for filtering. */
 export function siteBucketForUser(u: User | undefined): string {
-  if (!u) return 'Web Development';
-  const dept = u.department;
-  const team = u.team ?? '';
-  if (dept === 'Web Design') return 'Frontend Developer';
-  if (dept === 'SEO') return 'Backend Developer';
-  if (dept === 'MERN Stack') {
-    if (team === 'Development') return 'Full Stack';
-    return 'MERN Stack';
-  }
-  if (dept === 'Web Development') return 'Web Development';
-  return 'Web Development';
+  const d = String(u?.department || '').trim();
+  return d || 'Unassigned';
 }
 
 export function providerLabelForRole(role: string | undefined): 'Employees' | 'HR' | 'Team Leader' | 'Other' {

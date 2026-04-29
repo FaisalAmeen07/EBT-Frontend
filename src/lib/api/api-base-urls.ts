@@ -12,6 +12,7 @@ export const API_PATHS = {
     resetPassword: '/api/auth/reset-password',
     resendOtp: '/api/auth/resend-otp',
     logout: '/api/auth/logout',
+    departments: '/api/auth/departments',
     deleteUser: (hashId: string) => `/api/auth/delete-user/${encodeURIComponent(hashId)}`,
   },
   profile: {
@@ -24,6 +25,8 @@ export const API_PATHS = {
     rejectUser: '/api/admin/reject-user',
     allUsers: '/api/admin/Allusers',
     updateRole: (id: string | number) => `/api/admin/update-role/${id}`,
+    departments: '/api/admin/departments',
+    deleteDepartment: (name: string) => `/api/admin/departments/${encodeURIComponent(name)}`,
   },
   teams: {
     create: '/api/teams/createTeam',

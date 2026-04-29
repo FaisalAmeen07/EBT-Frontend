@@ -1,5 +1,3 @@
-import { DEPARTMENTS } from '@/views/auth/authConstants';
-
 export type ValidationResult = { ok: true } | { ok: false; error: string };
 
 const emailRegex =
@@ -82,10 +80,13 @@ export function validatePasswordStrong(password: string): ValidationResult {
   };
 }
 
-export function validateDepartment(department: string): ValidationResult {
+export function validateDepartment(department: string, allowedDepartments: string[]): ValidationResult {
   const d = String(department || '').trim();
   if (!d) return { ok: false, error: 'Department is required.' };
-  if (!DEPARTMENTS.includes(d as any)) return { ok: false, error: 'Invalid department.' };
+  if (!Array.isArray(allowedDepartments) || allowedDepartments.length === 0) {
+    return { ok: false, error: 'No department is configured. Contact admin.' };
+  }
+  if (!allowedDepartments.includes(d)) return { ok: false, error: 'Invalid department.' };
   return { ok: true };
 }
 

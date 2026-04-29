@@ -1,19 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2, Lock, Mail, Phone, User, Building2 } from 'lucide-react';
-import type { Department } from '@/lib/store';
+import { useStore, type Department } from '@/lib/store';
 import AuthShell from '@/views/auth/AuthShell';
 import { AuthAlerts } from '@/views/auth/AuthAlerts';
 import {
   AUTH_INPUT_COMPACT_CLASS,
   AUTH_PRIMARY_BUTTON_CLASS,
   AUTH_SECONDARY_BUTTON_CLASS,
-  DEPARTMENTS,
 } from '@/views/auth/authConstants';
-import { registerWithApi } from '@/services/auth.service';
+import { fetchPublicDepartmentsApi, registerWithApi } from '@/services/auth.service';
 import {
   validateDepartment,
   validateEmail,
@@ -24,6 +23,8 @@ import {
 
 export default function RegisterView() {
   const router = useRouter();
+  const departments = useStore((s) => s.departments);
+  const setDepartments = useStore((s) => s.setDepartments);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
@@ -31,8 +32,26 @@ export default function RegisterView() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [department, setDepartment] = useState<Department>('Web Development');
+  const [department, setDepartment] = useState<Department>(departments[0] || 'Web Development');
   const [fieldError, setFieldError] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!departments.length) return;
+    if (!departments.includes(department)) setDepartment(departments[0]);
+  }, [departments, department]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const fromApi = await fetchPublicDepartmentsApi();
+      if (cancelled || !fromApi.length) return;
+      setDepartments(fromApi);
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [setDepartments]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +65,7 @@ export default function RegisterView() {
     if (!em.ok) errs.email = em.error;
     const ph = validatePhone(phone);
     if (!ph.ok) errs.phone = ph.error;
-    const dep = validateDepartment(department);
+    const dep = validateDepartment(department, departments);
     if (!dep.ok) errs.department = dep.error;
     const pw = validatePasswordStrong(password);
     if (!pw.ok) errs.password = pw.error;
@@ -172,15 +191,21 @@ export default function RegisterView() {
                 value={department}
                 onChange={(e) => setDepartment(e.target.value as Department)}
                 className={`${AUTH_INPUT_COMPACT_CLASS} cursor-pointer appearance-none`}
+                disabled={departments.length === 0}
                 aria-invalid={fieldError.department ? 'true' : 'false'}
               >
-                {DEPARTMENTS.map((d) => (
+                {departments.map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>
                 ))}
               </select>
             </div>
+            {departments.length === 0 ? (
+              <p className="mt-1 text-xs font-semibold text-rose-600">
+                No department configured. Ask admin to add one in Admin Control.
+              </p>
+            ) : null}
             {fieldError.department ? (
               <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.department}</p>
             ) : null}

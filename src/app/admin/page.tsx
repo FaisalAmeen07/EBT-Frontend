@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ShieldCheck, UsersRound, Timer, ArrowRight, ClipboardList } from 'lucide-react';
+import { ShieldCheck, UsersRound, Timer, ArrowRight, Building2 } from 'lucide-react';
 
 const cards = [
   {
@@ -20,10 +20,10 @@ const cards = [
     accent: 'from-amber-500 to-orange-600 shadow-amber-200/50',
   },
   {
-    href: '/request-management',
-    title: 'Request management',
-    description: 'Review pending leave requests and manual time corrections from staff.',
-    icon: ClipboardList,
+    href: '/admin/departments-control',
+    title: 'Departments control',
+    description: 'Add or remove departments used by the register form dropdown.',
+    icon: Building2,
     accent: 'from-emerald-600 to-teal-600 shadow-emerald-200/50',
   },
 ];
@@ -40,7 +40,7 @@ export default function AdminHomePage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Administration</p>
             <h1 className="mt-1 text-3xl font-light tracking-tight text-slate-900">Admin Control</h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
-              Manage users, time and attendance policies, and staff requests from one place.
+              Manage users, time and attendance policies, and registration departments from one place.
             </p>
           </div>
         </div>

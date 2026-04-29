@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 import { API_PATHS } from '@/lib/api/api-base-urls';
-import { apiPost } from '@/lib/api/axios-request-handler';
+import { apiClient } from '@/lib/api/axios.config';
+import { apiGet, apiPost } from '@/lib/api/axios-request-handler';
 import type { AuthLoginResponse } from '@/lib/auth/auth.types';
 import { mapLoginUserToStore } from '@/lib/auth/map-api-user';
 import type { User } from '@/lib/store';
@@ -77,6 +78,18 @@ export async function logoutFromApi(): Promise<void> {
     await apiPost(API_PATHS.auth.logout, {});
   } catch {
     /* session may already be invalid */
+  }
+}
+
+export async function fetchPublicDepartmentsApi(): Promise<string[]> {
+  try {
+    // Silent fetch: register form can safely fall back to defaults when backend is unavailable.
+    const res = await apiClient.get<{ success: boolean; count: number; data: string[] }>(
+      API_PATHS.auth.departments
+    );
+    return Array.isArray(res.data?.data) ? res.data.data : [];
+  } catch {
+    return [];
   }
 }
 

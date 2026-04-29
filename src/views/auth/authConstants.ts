@@ -1,5 +1,3 @@
-import type { Department } from '@/lib/store';
-
 const AUTH_INPUT_BASE =
   'w-full border-0 border-b-2 border-sky-200 bg-transparent text-slate-800 placeholder:text-slate-300 outline-none focus:border-sky-500 transition-colors';
 
@@ -20,10 +18,3 @@ export const AUTH_PRIMARY_BUTTON_CLASS =
 
 export const AUTH_SECONDARY_BUTTON_CLASS =
   'inline-flex items-center justify-center w-full gap-2 rounded-full border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed';
-
-export const DEPARTMENTS: Department[] = [
-  'Web Design',
-  'MERN Stack',
-  'Web Development',
-  'SEO',
-];

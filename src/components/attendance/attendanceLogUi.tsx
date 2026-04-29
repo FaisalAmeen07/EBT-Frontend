@@ -197,7 +197,7 @@ export function StandardFilterBar({
   rangeEnd: string;
   setRangeEnd: (v: string) => void;
   onFilterChange: () => void;
-  /** Admin / HR: site bucket. Hidden for team leads (team scope is fixed). */
+  /** Admin / HR: department bucket. Hidden for team leads (team scope is fixed). */
   showSiteFilter?: boolean;
   /** Admin / HR: Employee vs HR vs TL. Hidden for team leads. */
   showProviderFilter?: boolean;
@@ -207,7 +207,7 @@ export function StandardFilterBar({
     <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       {showSiteFilter ? (
         <label className="flex min-w-[140px] flex-1 flex-col gap-1 text-xs font-semibold text-slate-500">
-          Site
+          Department
           <select
             value={siteFilter}
             onChange={(e) => {

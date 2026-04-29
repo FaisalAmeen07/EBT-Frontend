@@ -1,5 +1,5 @@
 import { API_PATHS } from '@/lib/api/api-base-urls';
-import { apiGet, apiPost, apiPut } from '@/lib/api/axios-request-handler';
+import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api/axios-request-handler';
 import type { Department, Role, User } from '@/lib/store';
 
 export type AdminUserRow = {
@@ -85,4 +85,16 @@ export function updateUserRoleApi(
 
 export function rejectUserApi(userId: number): Promise<{ message: string }> {
   return apiPost(API_PATHS.admin.rejectUser, { userId });
+}
+
+export function fetchAdminDepartmentsApi(): Promise<{ success: boolean; count: number; data: string[] }> {
+  return apiGet(API_PATHS.admin.departments);
+}
+
+export function addDepartmentApi(name: string): Promise<{ message: string; department: string; data: string[] }> {
+  return apiPost(API_PATHS.admin.departments, { name: name.trim() });
+}
+
+export function removeDepartmentApi(name: string): Promise<{ message: string; department: string; data: string[] }> {
+  return apiDelete(API_PATHS.admin.deleteDepartment(name));
 }
