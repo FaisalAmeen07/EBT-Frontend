@@ -82,7 +82,7 @@ export default function RegisterView() {
   };
 
   return (
-    <AuthShell title="Create account" wide compact>
+    <AuthShell title="Create account" wide compact formTransition="right">
       <AuthAlerts
         error={error}
         success={null}
@@ -213,16 +213,16 @@ export default function RegisterView() {
           </div>
           {fieldError.password ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.password}</p> : null}
         </div>
-        <div className="flex flex-col items-center justify-center gap-2 pt-1 sm:flex-row">
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             type="submit"
             disabled={loading}
-            className={`${AUTH_PRIMARY_BUTTON_CLASS} min-w-[9rem]`}
+            className={`${AUTH_PRIMARY_BUTTON_CLASS} w-full`}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {loading ? 'Signing up...' : 'Sign up'}
           </button>
-          <Link href="/auth/login" className={`${AUTH_SECONDARY_BUTTON_CLASS} min-w-[9rem]`}>
+          <Link href="/auth/login" className={`${AUTH_SECONDARY_BUTTON_CLASS} w-full`}>
             Sign in
           </Link>
         </div>

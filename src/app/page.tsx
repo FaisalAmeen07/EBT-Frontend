@@ -73,13 +73,17 @@ function StatCard({
 }) {
   return (
     <div
-      className={`group min-h-[8.5rem] rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm transition-all hover:border-slate-200/80 hover:shadow-md ${className}`}
+      className={`group relative overflow-hidden min-h-[8rem] rounded-xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] ${className}`}
     >
-      <div className={`${bg} ${color} w-10 h-10 rounded-xl flex items-center justify-center mb-4`}>
-        <Icon className="w-5 h-5" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-slate-200/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="mb-3 flex items-center justify-between">
+        <div className={`${bg} ${color} flex h-10 w-10 items-center justify-center rounded-lg`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-slate-200" />
       </div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <p className="text-2xl font-black text-slate-900 tracking-tight">{value}</p>
+      <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <p className="text-[1.65rem] leading-none font-black tracking-tight text-slate-900 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -531,11 +535,15 @@ function AdminDashboard() {
 
   const activeEmployees = timesheets.filter(t => !t.clockOut).length;
   const pendingLeave = Leave.filter(l => l.status === 'Pending').length;
+  const pendingTasksCount = tasks.filter(
+    t => !isTeamLeaderCreatedTask(t, users) && t.status === 'Pending'
+  ).length;
   const overdueTasksCount = tasks.filter(
     t =>
       !isTeamLeaderCreatedTask(t, users) && t.status !== 'Approved' && new Date(t.deadline) < now
   ).length;
   const pendingUsers = users.filter(u => u.role === 'Pending User').length;
+  const pendingOperationsCount = pendingLeave + pendingTasksCount + pendingUsers;
 
   const workforceUsers = useMemo(
     () => users.filter(u => u.role !== 'Pending User'),
@@ -547,6 +555,7 @@ function AdminDashboard() {
     () => filterUsersForAttendanceViewer(currentUser, users),
     [currentUser, users]
   );
+  const attendanceScopeCount = Math.max(1, attendanceScopeUsers.length);
 
   const todayStatusCounts = useMemo(() => {
     const counts: Record<DayAttendanceUiStatus, number> = { on_time: 0, late: 0, absent: 0, pending: 0 };
@@ -598,15 +607,15 @@ function AdminDashboard() {
   const hasOverrideToday = !!attendanceDayOverrides[dateKeyLocal(now)];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 pb-12">
-      <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/90 to-indigo-50/30 p-8 shadow-sm sm:rounded-[2.5rem]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mx-auto max-w-7xl space-y-8 pb-12">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:rounded-3xl sm:p-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 ring-4 ring-slate-900/5">
               <LayoutDashboard className="h-7 w-7" strokeWidth={1.75} aria-hidden />
             </span>
             <div className="min-w-0 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Admin</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Admin workspace</p>
               <h1 className="text-3xl font-light tracking-tight text-slate-900">System overview</h1>
               <p className="text-sm text-slate-500">
                 {format(now, 'EEEE, MMMM d, yyyy')}
@@ -615,13 +624,20 @@ function AdminDashboard() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 lg:justify-end">
+          <div className="flex flex-wrap gap-2 xl:justify-end">
             <Link
               href="/timesheet"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/90 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition hover:border-slate-300 hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white"
             >
               <Clock className="h-4 w-4 text-slate-400" aria-hidden />
               Timesheet
+            </Link>
+            <Link
+              href="/request-management"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white"
+            >
+              <Calendar className="h-4 w-4 text-slate-400" aria-hidden />
+              Requests
             </Link>
             <Link
               href="/admin"
@@ -634,22 +650,34 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard
-          icon={Users}
-          label="Workforce"
-          value={workforceCount}
-          color="text-blue-500"
-          bg="bg-blue-50"
-        />
-        <StatCard icon={Activity} label="Active now" value={activeEmployees} color="text-emerald-500" bg="bg-emerald-50" />
-        <StatCard icon={Calendar} label="Pending Leave" value={pendingLeave} color="text-amber-500" bg="bg-amber-50" />
-        <StatCard icon={AlertCircle} label="Overdue tasks" value={overdueTasksCount} color="text-rose-500" bg="bg-rose-50" />
-        <StatCard icon={Shield} label="Pending approval" value={pendingUsers} color="text-purple-500" bg="bg-purple-50" />
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Today at a glance</h2>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+          Total workforce {workforceCount}
+        </span>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-sky-100/80 bg-gradient-to-br from-sky-50/40 via-white to-white p-6 shadow-sm ring-1 ring-sky-100/50">
+      <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 shadow-inner shadow-slate-100/70 sm:p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <StatCard
+            icon={Users}
+            label="Workforce"
+            value={workforceCount}
+            color="text-blue-500"
+            bg="bg-blue-50"
+          />
+          <StatCard icon={Activity} label="Active now" value={activeEmployees} color="text-emerald-500" bg="bg-emerald-50" />
+          <StatCard icon={Calendar} label="Pending Leave" value={pendingLeave} color="text-amber-500" bg="bg-amber-50" />
+          <StatCard icon={Target} label="Pending Tasks" value={pendingTasksCount} color="text-indigo-500" bg="bg-indigo-50" />
+          <StatCard icon={AlertCircle} label="Overdue tasks" value={overdueTasksCount} color="text-rose-500" bg="bg-rose-50" />
+          <StatCard icon={Shield} label="Pending approval" value={pendingUsers} color="text-purple-500" bg="bg-purple-50" />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Operations</h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="overflow-hidden rounded-xl border border-sky-100/80 bg-gradient-to-br from-sky-50/40 via-white to-white p-6 shadow-sm ring-1 ring-sky-100/50">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
@@ -685,14 +713,66 @@ function AdminDashboard() {
               >
                 <p className="text-2xl font-black tabular-nums tracking-tight">{todayStatusCounts[key]}</p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-widest opacity-80">{label}</p>
+                <p className="mt-1 text-[10px] font-semibold tabular-nums opacity-70">
+                  {Math.round((todayStatusCounts[key] / attendanceScopeCount) * 100)}%
+                </p>
               </div>
             ))}
           </div>
         </div>
+        <div className="overflow-hidden rounded-xl border border-violet-100/80 bg-gradient-to-br from-violet-50/40 via-white to-white p-6 shadow-sm ring-1 ring-violet-100/50">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-200/50">
+                  <AlertCircle className="h-4 w-4" aria-hidden />
+                </span>
+                Pending workload
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">Requests and approvals that need admin action.</p>
+            </div>
+            <span className="inline-flex self-start rounded-full bg-violet-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-violet-800">
+              Total {pendingOperationsCount}
+            </span>
+          </div>
+          <div className="mt-5 space-y-2.5">
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/90 px-4 py-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Pending Leave</span>
+              <span className="text-lg font-black tabular-nums text-amber-600">{pendingLeave}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/90 px-4 py-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Pending Tasks</span>
+              <span className="text-lg font-black tabular-nums text-indigo-600">{pendingTasksCount}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/90 px-4 py-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Pending Approval</span>
+              <span className="text-lg font-black tabular-nums text-purple-600">{pendingUsers}</span>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/request-management"
+              className="inline-flex items-center gap-1 rounded-lg bg-violet-600/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-800 transition hover:bg-violet-600/15"
+            >
+              Open requests
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+            <Link
+              href="/admin/employees-management"
+              className="inline-flex items-center gap-1 rounded-lg bg-slate-900/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:bg-slate-900/10"
+            >
+              Open approvals
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </div>
+        </div>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-amber-100/80 bg-gradient-to-br from-amber-50/30 via-white to-white p-6 shadow-sm ring-1 ring-amber-100/40">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <section className="space-y-3">
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Policy configuration</h2>
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/80">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1 space-y-4">
             <div>
               <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
@@ -758,15 +838,16 @@ function AdminDashboard() {
               </div>
             </div>
           </div>
-          <Link
-            href="/admin/time-control"
-            className="inline-flex shrink-0 items-center justify-center gap-2 self-stretch rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-amber-200/40 transition hover:from-amber-600 hover:to-orange-700 lg:self-start"
-          >
-            Time control
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
+            <Link
+              href="/admin/time-control"
+              className="inline-flex shrink-0 items-center justify-center gap-2 self-stretch rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md shadow-slate-900/20 transition hover:bg-slate-800 lg:self-start"
+            >
+              Time control
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
     </div>
   );

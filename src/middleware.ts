@@ -6,7 +6,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Let API and static files pass through
-  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon')) {
+  const isStaticAsset =
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/brand') ||
+    /\.[a-zA-Z0-9]+$/.test(pathname);
+
+  if (isStaticAsset) {
     return NextResponse.next();
   }
 

@@ -19,7 +19,7 @@ export const AUTH_PRIMARY_BUTTON_CLASS =
   'inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-b from-blue-600 to-blue-700 px-6 py-2 text-sm font-semibold text-white shadow-[0_8px_16px_rgba(37,99,235,0.35)] hover:from-blue-700 hover:to-blue-800 disabled:opacity-60 disabled:cursor-not-allowed';
 
 export const AUTH_SECONDARY_BUTTON_CLASS =
-  'inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed';
+  'inline-flex items-center justify-center w-full gap-2 rounded-full border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed';
 
 export const DEPARTMENTS: Department[] = [
   'Web Design',

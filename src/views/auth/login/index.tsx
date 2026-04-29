@@ -69,7 +69,7 @@ export default function SignInView() {
   };
 
   return (
-    <AuthShell title="Sign in">
+    <AuthShell title="Sign in" formTransition="left">
       <AuthAlerts error={error} success={success} onDismiss={() => { setError(null); setSuccess(null); }} />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
