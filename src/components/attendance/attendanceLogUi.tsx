@@ -4,7 +4,6 @@ import { Fragment, type ReactNode } from 'react';
 import {
   Menu,
   Calendar,
-  FileSpreadsheet,
   Clock,
   ChevronLeft,
   ChevronRight,
@@ -138,7 +137,7 @@ export function BulkActionBar({
   onExportPdf,
 }: {
   selectedSize: number;
-  onExportExcel: () => void;
+  onExportExcel?: () => void;
   onExportPdf: () => void;
 }) {
   return (
@@ -146,14 +145,15 @@ export function BulkActionBar({
       <span className="mr-1 text-xs text-slate-500">
         {selectedSize > 0 ? `${selectedSize} selected` : 'All filtered rows'}
       </span>
-      <button
-        type="button"
-        onClick={onExportExcel}
-        className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-100"
-      >
-        <FileSpreadsheet className="h-4 w-4" />
-        Excel
-      </button>
+      {onExportExcel ? (
+        <button
+          type="button"
+          onClick={onExportExcel}
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-100"
+        >
+          Excel
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onExportPdf}

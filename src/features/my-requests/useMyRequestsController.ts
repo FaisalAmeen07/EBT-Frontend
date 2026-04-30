@@ -5,20 +5,29 @@ import { useSearchParams } from 'next/navigation';
 import { useStore, useShallow, type LeaveType } from '@/lib/store';
 import { toast } from '@/lib/toast';
 import type { RequestStatusFilter } from './types';
+import {
+  createLeaveRequestApi,
+  createManualRequestApi,
+  fetchLeaveRequestsApi,
+  fetchManualRequestsApi,
+} from '@/services/attendance-requests.service';
 
 export function useMyRequestsController() {
   const searchParams = useSearchParams();
-  const { currentUser, Leave, applyLeave, manualTimeRequests, applyManualTimeRequest } = useStore(
+  const tabParam = searchParams.get('tab');
+  const { currentUser, Leave, manualTimeRequests, setLeaveRequests, setManualTimeRequests } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
       Leave: s.Leave,
-      applyLeave: s.applyLeave,
       manualTimeRequests: s.manualTimeRequests,
-      applyManualTimeRequest: s.applyManualTimeRequest,
+      setLeaveRequests: s.setLeaveRequests,
+      setManualTimeRequests: s.setManualTimeRequests,
     }))
   );
 
-  const [activeTab, setActiveTab] = useState<'leave' | 'manual'>('leave');
+  const [activeTab, setActiveTab] = useState<'leave' | 'manual'>(() =>
+    tabParam === 'manual' ? 'manual' : 'leave'
+  );
   const [LeavetatusFilter, setLeavetatusFilter] = useState<RequestStatusFilter>('Pending');
   const [manualStatusFilter, setManualStatusFilter] = useState<RequestStatusFilter>('Pending');
   const [leaveFormOpen, setLeaveFormOpen] = useState(false);
@@ -36,14 +45,27 @@ export function useMyRequestsController() {
   const [breakOutTime, setBreakOutTime] = useState('');
   const [manualReason, setManualReason] = useState('');
 
-  const tabParam = searchParams.get('tab');
   useEffect(() => {
-    if (tabParam === 'manual') {
-      setActiveTab('manual');
-    } else if (tabParam === 'leave') {
-      setActiveTab('leave');
-    }
-  }, [tabParam]);
+    if (!currentUser?.id) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [leaveRows, manualRows] = await Promise.all([fetchLeaveRequestsApi(), fetchManualRequestsApi()]);
+        if (cancelled) return;
+        setLeaveRequests(leaveRows);
+        setManualTimeRequests(manualRows);
+      } catch (error) {
+        if (!cancelled) {
+          toast(error instanceof Error ? error.message : 'Unable to load requests.', 'error');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, setLeaveRequests, setManualTimeRequests]);
 
   const handleTabChange = (tab: 'leave' | 'manual') => {
     setActiveTab(tab);
@@ -54,17 +76,15 @@ export function useMyRequestsController() {
   const myLeave = useMemo(
     () =>
       Leave
-        .filter((l) => l.userId === currentUser?.id)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [Leave, currentUser?.id]
+    [Leave]
   );
 
   const myManualTimeRequests = useMemo(
     () =>
       manualTimeRequests
-        .filter((r) => r.userId === currentUser?.id)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [manualTimeRequests, currentUser?.id]
+    [manualTimeRequests]
   );
 
   const filteredLeave = useMemo(
@@ -77,7 +97,7 @@ export function useMyRequestsController() {
     [myManualTimeRequests, manualStatusFilter]
   );
 
-  const submitLeave = (e: React.FormEvent) => {
+  const submitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
     if (!startDate || !endDate) {
@@ -88,15 +108,21 @@ export function useMyRequestsController() {
       toast('End date cannot be before start date.', 'error');
       return;
     }
-    applyLeave({ userId: currentUser.id, type: leaveType, startDate, endDate, reason });
-    toast('Leave request submitted successfully.');
-    setStartDate('');
-    setEndDate('');
-    setReason('');
-    setLeaveFormOpen(false);
+    try {
+      await createLeaveRequestApi({ type: leaveType, startDate, endDate, reason });
+      const leaveRows = await fetchLeaveRequestsApi();
+      setLeaveRequests(leaveRows);
+      toast('Leave request submitted successfully.');
+      setStartDate('');
+      setEndDate('');
+      setReason('');
+      setLeaveFormOpen(false);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Unable to submit leave request.', 'error');
+    }
   };
 
-  const submitManual = (e: React.FormEvent) => {
+  const submitManual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
     if (!manualDate) {
@@ -111,20 +137,26 @@ export function useMyRequestsController() {
       toast('If you add Break Out, you must also add Break In.', 'error');
       return;
     }
-    applyManualTimeRequest({
-      date: manualDate,
-      clockInTime,
-      clockOutTime,
-      breakInTime: breakInTime || undefined,
-      breakOutTime: breakOutTime || undefined,
-      reason: manualReason || undefined,
-    });
-    toast('Manual time request submitted successfully.');
-    setManualDate('');
-    setBreakInTime('');
-    setBreakOutTime('');
-    setManualReason('');
-    setManualFormOpen(false);
+    try {
+      await createManualRequestApi({
+        date: manualDate,
+        clockInTime,
+        clockOutTime,
+        breakInTime: breakInTime || undefined,
+        breakOutTime: breakOutTime || undefined,
+        reason: manualReason || undefined,
+      });
+      const manualRows = await fetchManualRequestsApi();
+      setManualTimeRequests(manualRows);
+      toast('Manual time request submitted successfully.');
+      setManualDate('');
+      setBreakInTime('');
+      setBreakOutTime('');
+      setManualReason('');
+      setManualFormOpen(false);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Unable to submit manual request.', 'error');
+    }
   };
 
   const onStatusFilterChange = (v: string) => {

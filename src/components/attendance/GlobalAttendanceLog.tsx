@@ -1,238 +1,163 @@
 'use client';
 
-import { useMemo, useState, Fragment, useCallback, useEffect } from 'react';
-import { useStore, useShallow } from '@/lib/store';
-import type { TimesheetEntry, User } from '@/lib/store';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AttendanceLogPagination,
   BulkActionBar,
   StandardFilterBar,
   AttendanceLogToolbar,
-  formatHoursMinutes,
 } from '@/components/attendance/attendanceLogUi';
-import { downloadExcelCsv, openAttendancePdfReport } from '@/lib/attendanceExport';
 import {
-  COMPANY_SITE_OPTIONS,
-  PROVIDER_ROLE_OPTIONS,
-  HR_PROVIDER_FILTER_OPTIONS,
-  employeeDisplayId,
-  siteBucketForUser,
-  providerLabelForRole,
-  userMatchesAttendanceSearch,
-} from '@/lib/attendanceSite';
-import { filterTimesheetsForViewer, isClockInLate } from '@/lib/attendanceRules';
-import { Calendar, Building2, User as UserIcon, Shield, FileSpreadsheet, FileDown, X } from 'lucide-react';
+  exportClockRecordsApi,
+  fetchClockRecordsApi,
+  type ClockRecordRow,
+} from '@/services/attendance.service';
+import { useStore } from '@/lib/store';
+import { toast } from '@/lib/toast';
+import { X } from 'lucide-react';
 
-type GroupRow = {
-  id: string;
-  userId: string;
-  weekStart: Date;
-  weekEnd: Date;
-  entries: TimesheetEntry[];
-  totalHours: number;
-  user?: User;
-};
-
-function escapeAttr(s: string) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function todayDateInputValue(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-function buildGroups(timesheets: TimesheetEntry[], users: User[]): GroupRow[] {
-  const map = new Map<string, TimesheetEntry[]>();
+function mapProviderFilter(value: string): string | undefined {
+  if (value === 'Employees') return 'employee';
+  if (value === 'HR') return 'hr';
+  if (value === 'Team Leader') return 'team_leader';
+  return undefined;
+}
 
-  for (const t of timesheets) {
-    const ci = new Date(t.clockIn);
-    const ws = startOfWeek(ci, { weekStartsOn: 1 });
-    const key = `${t.userId}__${format(ws, 'yyyy-MM-dd')}`;
-    const arr = map.get(key) || [];
-    arr.push(t);
-    map.set(key, arr);
+function dateOnly(value?: string | null): string {
+  if (!value) return '—';
+  const asDate = new Date(value);
+  if (!Number.isNaN(asDate.getTime())) return asDate.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
+function timeOnly(value?: string | null): string {
+  if (!value) return '—';
+  const asDate = new Date(value);
+  if (!Number.isNaN(asDate.getTime())) {
+    return asDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
-
-  const groups: GroupRow[] = [];
-  map.forEach((entries, key) => {
-    const [userId] = key.split('__');
-    const ws = startOfWeek(new Date(entries[0].clockIn), { weekStartsOn: 1 });
-    const we = endOfWeek(ws, { weekStartsOn: 1 });
-    let total = 0;
-    for (const e of entries) {
-      if (typeof e.totalHours === 'number') total += e.totalHours;
-      else if (e.clockOut) {
-        const ms = new Date(e.clockOut).getTime() - new Date(e.clockIn).getTime();
-        total += ms / (1000 * 60 * 60);
-      }
-    }
-    const user = users.find((u) => u.id === userId);
-    groups.push({
-      id: key,
-      userId,
-      weekStart: ws,
-      weekEnd: we,
-      entries: entries.sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime()),
-      totalHours: total,
-      user,
-    });
-  });
-
-  return groups.sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime());
+  return String(value).slice(0, 5);
 }
 
 export function GlobalAttendanceLog() {
-  const { timesheets, users, currentUser } = useStore(
-    useShallow((s) => ({ timesheets: s.timesheets, users: s.users, currentUser: s.currentUser }))
-  );
-  const departments = useStore((s) => s.departments);
-
-  const scopedTimesheets = useMemo(
-    () => filterTimesheetsForViewer(timesheets, users, currentUser),
-    [timesheets, users, currentUser]
-  );
-
-  const allGroups = useMemo(() => buildGroups(scopedTimesheets, users), [scopedTimesheets, users]);
-
-  const sites = useMemo(() => {
-    const list = departments.length ? departments : [...COMPANY_SITE_OPTIONS];
-    return ['All departments', ...list.filter((d) => d !== 'All departments')];
-  }, [departments]);
-  const providers = useMemo(() => {
-    if (currentUser?.role === 'HR') return [...HR_PROVIDER_FILTER_OPTIONS];
-    return [...PROVIDER_ROLE_OPTIONS];
-  }, [currentUser?.role]);
-
-  const isTeamLeaderViewer = currentUser?.role === 'Team Leader';
+  const currentUser = useStore((s) => s.currentUser);
+  const users = useStore((s) => s.users);
+  const currentUserId = currentUser?.id;
+  const [rows, setRows] = useState<ClockRecordRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [detailRow, setDetailRow] = useState<ClockRecordRow | null>(null);
+  const [periodLabel, setPeriodLabel] = useState('');
 
   const [siteFilter, setSiteFilter] = useState('All departments');
   const [providerFilter, setProviderFilter] = useState('All providers');
   const [idQuery, setIdQuery] = useState('');
-  const [rangeStart, setRangeStart] = useState('');
-  const [rangeEnd, setRangeEnd] = useState('');
-
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [detailModal, setDetailModal] = useState<GroupRow | null>(null);
+  const [rangeStart, setRangeStart] = useState(() => todayDateInputValue());
+  const [rangeEnd, setRangeEnd] = useState(() => todayDateInputValue());
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const resetPage = () => setPage(1);
+  const isTeamLeaderViewer = currentUser?.role === 'Team Leader';
+  const providers = useMemo(() => {
+    if (currentUser?.role === 'HR') return ['All providers', 'Employees', 'Team Leader'];
+    if (isTeamLeaderViewer) return ['All providers'];
+    return ['All providers', 'Employees', 'HR', 'Team Leader'];
+  }, [currentUser?.role, isTeamLeaderViewer]);
+  const sites = useMemo(() => {
+    const list = [...new Set(rows.map((r) => (r.department || '').trim()).filter(Boolean))];
+    return ['All departments', ...list];
+  }, [rows]);
 
-  const filtered = useMemo(() => {
-    return allGroups.filter((g) => {
-      const bucket = siteBucketForUser(g.user);
-      if (siteFilter !== 'All departments' && bucket !== siteFilter) return false;
+  const effectiveRangeStart = rangeStart || (!rangeEnd ? todayDateInputValue() : '');
+  const effectiveRangeEnd = rangeEnd || (!rangeStart ? todayDateInputValue() : '');
 
-      if (providerFilter !== 'All providers') {
-        const pl = g.user ? providerLabelForRole(g.user.role) : 'Other';
-        if (providerFilter === 'Employees' && pl !== 'Employees') return false;
-        if (providerFilter === 'HR' && pl !== 'HR') return false;
-        if (providerFilter === 'Team Leader' && pl !== 'Team Leader') return false;
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      try {
+        const data = await fetchClockRecordsApi({
+          role: mapProviderFilter(providerFilter),
+          department: siteFilter === 'All departments' ? undefined : siteFilter,
+          gdc_id: idQuery.trim() || undefined,
+          from: effectiveRangeStart || undefined,
+          to: effectiveRangeEnd || undefined,
+        });
+        if (!cancelled) {
+          setRows(data.rows);
+          setPeriodLabel(data.period || '');
+          setSelected(new Set());
+          setPage(1);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast(error instanceof Error ? error.message : 'Unable to load clock records.', 'error');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, providerFilter, siteFilter, idQuery, effectiveRangeStart, effectiveRangeEnd]);
 
-      if (!userMatchesAttendanceSearch(g.user, g.userId, idQuery)) return false;
-
-      if (rangeStart) {
-        const rs = new Date(rangeStart);
-        if (g.weekEnd < rs) return false;
-      }
-      if (rangeEnd) {
-        const re = new Date(rangeEnd);
-        re.setHours(23, 59, 59, 999);
-        if (g.weekStart > re) return false;
-      }
-      return true;
-    });
-  }, [allGroups, siteFilter, providerFilter, idQuery, rangeStart, rangeEnd]);
-
-  const exportTargetGroups = useCallback(() => {
-    if (selected.size === 0) return filtered;
-    return filtered.filter((g) => selected.has(g.id));
-  }, [filtered, selected]);
-
-  const handleExportExcel = useCallback(() => {
-    const rows = exportTargetGroups();
-    if (rows.length === 0) return;
-    const header = ['Employee', 'Department', 'Provider', 'Period start', 'Period end', 'Hours', 'ID'];
-    const data = rows.map((g) => {
-      const site = siteBucketForUser(g.user);
-      const prov = g.user ? providerLabelForRole(g.user.role) : '—';
-      return [
-        g.user?.name ?? 'Unknown',
-        site,
-        prov,
-        format(g.weekStart, 'yyyy-MM-dd'),
-        format(g.weekEnd, 'yyyy-MM-dd'),
-        formatHoursMinutes(g.totalHours),
-        employeeDisplayId(g.user, g.userId),
-      ];
-    });
-    downloadExcelCsv(`company-time-records-${format(new Date(), 'yyyy-MM-dd')}`, header, data);
-  }, [exportTargetGroups]);
-
-  const handleExportPdf = useCallback(() => {
-    const rows = exportTargetGroups();
-    if (rows.length === 0) return;
-    const body = `
-      <table>
-        <thead><tr>
-          <th>Employee</th><th>Department</th><th>Provider</th><th>Period</th><th>Hours</th><th>ID</th>
-        </tr></thead>
-        <tbody>
-          ${rows
-            .map((g) => {
-              const site = siteBucketForUser(g.user);
-              const prov = g.user ? providerLabelForRole(g.user.role) : '—';
-              const period = `${format(g.weekStart, 'MM/dd/yyyy')} – ${format(g.weekEnd, 'MM/dd/yyyy')}`;
-              return `<tr>
-                <td>${escapeAttr(g.user?.name ?? 'Unknown')}</td>
-                <td>${escapeAttr(site)}</td>
-                <td>${escapeAttr(prov)}</td>
-                <td>${escapeAttr(period)}</td>
-                <td>${escapeAttr(formatHoursMinutes(g.totalHours))}</td>
-                <td>${escapeAttr(employeeDisplayId(g.user, g.userId))}</td>
-              </tr>`;
-            })
-            .join('')}
-        </tbody>
-      </table>`;
-    openAttendancePdfReport('Company time records', body);
-  }, [exportTargetGroups]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const pageSafe = Math.min(page, totalPages);
-  const paginated = filtered.slice((pageSafe - 1) * rowsPerPage, pageSafe * rowsPerPage);
+  const paginated = rows.slice((pageSafe - 1) * rowsPerPage, pageSafe * rowsPerPage);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
-
   const toggleSelectAll = () => {
+    if (paginated.length === 0) return;
     if (selected.size === paginated.length) setSelected(new Set());
-    else setSelected(new Set(paginated.map((p) => p.id)));
+    else setSelected(new Set(paginated.map((r) => String(r.id))));
   };
 
-  useEffect(() => {
-    if (!detailModal) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDetailModal(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [detailModal]);
+  const exportParams = {
+    role: mapProviderFilter(providerFilter),
+    department: siteFilter === 'All departments' ? undefined : siteFilter,
+    gdc_id: idQuery.trim() || undefined,
+    from: effectiveRangeStart || undefined,
+    to: effectiveRangeEnd || undefined,
+  };
+  const userNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of users) {
+      const name = String(u?.name || '').trim();
+      if (!name) continue;
+      map.set(String(u.id), name);
+    }
+    return map;
+  }, [users]);
+
+  const resolveRowName = (row: ClockRecordRow): string => {
+    const apiName = String(row.name || row.user_name || '').trim();
+    if (apiName) return apiName;
+    const mappedName = userNameById.get(String(row.user_id));
+    if (mappedName) return mappedName;
+    return '—';
+  };
 
   return (
     <div className="space-y-4">
       <AttendanceLogToolbar
-        title={
-          currentUser?.role === 'Team Leader'
-            ? 'Team attendance log'
-            : currentUser?.role === 'HR'
-              ? 'Company attendance (employees & team leads)'
-              : 'Global attendance log'
-        }
+        title="Global attendance log"
         filters={
           <StandardFilterBar
             sites={sites}
@@ -247,31 +172,31 @@ export function GlobalAttendanceLog() {
             setRangeStart={setRangeStart}
             rangeEnd={rangeEnd}
             setRangeEnd={setRangeEnd}
-            onFilterChange={resetPage}
+            onFilterChange={() => setPage(1)}
             showSiteFilter={!isTeamLeaderViewer}
             showProviderFilter={!isTeamLeaderViewer}
-            idSearchPlaceholder={
-              isTeamLeaderViewer
-                ? 'Team member — ID, code, or name'
-                : 'Unique ID, code, email, or name'
-            }
+            idSearchPlaceholder="GDC-ID search"
           />
         }
         actions={
           <BulkActionBar
             selectedSize={selected.size}
-            onExportExcel={handleExportExcel}
-            onExportPdf={handleExportPdf}
+            onExportPdf={() =>
+              void exportClockRecordsApi({ format: 'pdf', ...exportParams }).catch((error) =>
+                toast(error instanceof Error ? error.message : 'Export failed.', 'error')
+              )
+            }
           />
         }
       />
 
-      {/* Table */}
+      {periodLabel ? <p className="text-xs font-semibold text-slate-500">Period: {periodLabel}</p> : null}
+
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="max-h-[70vh] overflow-auto">
-          <table className="w-full min-w-[800px] border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-blue-600 text-white">
+          <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-blue-600 text-white">
+              <tr>
                 <th className="w-10 px-3 py-3">
                   <input
                     type="checkbox"
@@ -280,279 +205,183 @@ export function GlobalAttendanceLog() {
                     className="h-4 w-4 rounded border-white/30"
                   />
                 </th>
-                <th className="px-3 py-3 font-semibold">Sr#</th>
-                <th className="px-3 py-3 font-semibold">Name / role</th>
-                <th className="px-3 py-3 font-semibold">Department</th>
-                <th className="px-3 py-3 font-semibold">Period</th>
-                <th className="px-3 py-3 font-semibold">Hours</th>
-                <th className="px-3 py-3 font-semibold">ID</th>
+                <th className="px-3 py-3">Sr#</th>
+                <th className="px-3 py-3">Name</th>
+                <th className="px-3 py-3">GDC-ID</th>
+                <th className="px-3 py-3">Role</th>
+                <th className="px-3 py-3">Department</th>
+                <th className="px-3 py-3">Hours</th>
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center text-slate-500">
-                    No attendance periods match your filters.
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                    Loading...
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                    No clock records found.
                   </td>
                 </tr>
               ) : (
-                paginated.map((g, idx) => {
-                  const sr = (pageSafe - 1) * rowsPerPage + idx + 1;
-                  const site = siteBucketForUser(g.user);
-                  const period = `${format(g.weekStart, 'MM/dd/yyyy')} - ${format(g.weekEnd, 'MM/dd/yyyy')}`;
-                  const zebra = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/80';
-
-                  return (
-                    <Fragment key={g.id}>
-                      <tr
-                        className={`${zebra} cursor-pointer border-b border-slate-100 transition-colors hover:bg-blue-50/40`}
-                        onClick={() => setDetailModal(g)}
-                      >
-                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(g.id)}
-                            onChange={() => toggleSelect(g.id)}
-                            className="h-4 w-4 rounded border-slate-300"
-                          />
-                        </td>
-                        <td className="px-3 py-3 font-medium text-slate-700">{sr}</td>
-                        <td className="px-3 py-3">
-                          <div className="font-medium text-slate-900">{g.user?.name ?? 'Unknown'}</div>
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            {g.user?.role ?? '—'}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 text-slate-700">{site}</td>
-                        <td className="px-3 py-3 text-slate-600">{period}</td>
-                        <td className="px-3 py-3 font-semibold tabular-nums text-slate-900">
-                          {formatHoursMinutes(g.totalHours)}
-                        </td>
-                        <td className="px-3 py-3 font-mono text-xs text-slate-700" onClick={(e) => e.stopPropagation()}>
-                          {employeeDisplayId(g.user, g.userId)}
-                        </td>
-                      </tr>
-                    </Fragment>
-                  );
-                })
+                paginated.map((r, idx) => (
+                  <tr
+                    key={r.id}
+                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/80'} cursor-pointer hover:bg-blue-50/60`}
+                    onClick={() => setDetailRow(r)}
+                  >
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(String(r.id))}
+                        onChange={() => toggleSelect(String(r.id))}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                    </td>
+                    <td className="px-3 py-3">{r.sr}</td>
+                    <td className="px-3 py-3 font-semibold text-slate-900">
+                      {resolveRowName(r)}
+                    </td>
+                    <td className="px-3 py-3">{r.gdc_id || '—'}</td>
+                    <td className="px-3 py-3">{r.role || '—'}</td>
+                    <td className="px-3 py-3">{r.department || '—'}</td>
+                    <td className="px-3 py-3">{r.hours || '—'}</td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
-
         <AttendanceLogPagination
           pageSafe={pageSafe}
           totalPages={totalPages}
-          filteredLen={filtered.length}
+          filteredLen={rows.length}
           rowsPerPage={rowsPerPage}
           setRowsPerPage={setRowsPerPage}
           setPage={setPage}
         />
       </div>
 
-      {detailModal && (
+      {detailRow ? (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 sm:p-6"
           role="presentation"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setDetailModal(null);
+            if (e.target === e.currentTarget) setDetailRow(null);
           }}
         >
           <div
-            className="flex max-h-[min(92dvh,720px)] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl"
+            className="relative w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="global-att-detail-title"
+            aria-labelledby="global-clock-detail-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3 sm:px-5">
-              <h3 id="global-att-detail-title" className="text-base font-bold text-slate-900 sm:text-lg">
-                Weekly attendance detail
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <h3 id="global-clock-detail-title" className="text-2xl font-bold text-slate-900">
+                Clock Records
               </h3>
               <button
                 type="button"
-                onClick={() => setDetailModal(null)}
-                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-200/80 hover:text-slate-800"
-                aria-label="Close"
+                onClick={() => setDetailRow(null)}
+                className="rounded-full p-1.5 text-slate-500 hover:bg-slate-200/70"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              <TimesheetApprovalPanel group={detailModal} onClose={() => setDetailModal(null)} embedded />
+            <div className="max-h-[calc(92vh-72px)] space-y-4 overflow-y-auto p-5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-sky-600">{periodLabel || 'Selected period'}</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">{detailRow.department || '—'}</p>
+                    <p className="mt-1 text-slate-700">{resolveRowName(detailRow)}</p>
+                    <p className="text-slate-700">{detailRow.gdc_id || '—'}</p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Status: <span className="font-semibold">{detailRow.status || '—'}</span>
+                    </p>
+                  </div>
+                  <p className="text-2xl font-bold text-sky-600">{detailRow.hours || '—'}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 text-sm text-slate-500">
+                  <span>PDF preview</span>
+                  <span>1 / 1</span>
+                </div>
+                <div className="overflow-x-auto p-4">
+                  <div className="mx-auto aspect-[1.35] min-w-[900px] max-w-4xl rounded border border-slate-300 bg-white p-5 shadow-inner">
+                    <div className="mb-5 flex items-start justify-between">
+                      <div>
+                        <p className="text-3xl font-bold text-sky-600">{resolveRowName(detailRow)}</p>
+                        <p className="text-base text-slate-500">{periodLabel || 'Selected period'}</p>
+                      </div>
+                      <div className="text-right text-xs text-slate-500">
+                        <p className="rounded bg-sky-500 px-3 py-1 font-semibold text-white">Hours {detailRow.hours || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="mb-4 grid grid-cols-4 gap-2 text-xs">
+                      <div className="rounded border border-sky-300 bg-sky-500 p-2 font-semibold text-white">Work Hours<br />{detailRow.hours || '—'}</div>
+                      <div className="rounded border border-sky-300 bg-sky-500 p-2 font-semibold text-white">Total Paid Hours<br />{detailRow.hours || '—'}</div>
+                      <div className="rounded border border-slate-300 bg-slate-100 p-2 font-semibold text-slate-700">Regular<br />{detailRow.hours || '—'}</div>
+                      <div className="rounded border border-slate-300 bg-slate-100 p-2 font-semibold text-slate-700">Overtime<br />0h 0m</div>
+                    </div>
+                    <div className="overflow-hidden rounded border border-slate-300">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-100 text-slate-700">
+                          <tr>
+                            <th className="px-2 py-1 text-left">Date</th>
+                            <th className="px-2 py-1 text-left">Department</th>
+                            <th className="px-2 py-1 text-left">Role</th>
+                            <th className="px-2 py-1 text-left">Clock in</th>
+                            <th className="px-2 py-1 text-left">Clock out</th>
+                            <th className="px-2 py-1 text-left">Total hrs</th>
+                            <th className="px-2 py-1 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-t border-slate-200">
+                            <td className="px-2 py-1">{dateOnly(detailRow.check_in)}</td>
+                            <td className="px-2 py-1">{detailRow.department || '—'}</td>
+                            <td className="px-2 py-1">{detailRow.role || '—'}</td>
+                            <td className="px-2 py-1">{timeOnly(detailRow.check_in)}</td>
+                            <td className="px-2 py-1">{timeOnly(detailRow.check_out)}</td>
+                            <td className="px-2 py-1">{detailRow.hours || '—'}</td>
+                            <td className="px-2 py-1">{detailRow.status || '—'}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    void exportClockRecordsApi({
+                      format: 'pdf',
+                      role: exportParams.role,
+                      department: exportParams.department,
+                      id: String(detailRow.id),
+                    }).catch((error) =>
+                      toast(error instanceof Error ? error.message : 'PDF download failed.', 'error')
+                    )
+                  }
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+                >
+                  Download PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function TimesheetApprovalPanel({
-  group,
-  onClose,
-  embedded,
-}: {
-  group: GroupRow;
-  onClose: () => void;
-  embedded?: boolean;
-}) {
-  const attendanceDayOverrides = useStore((s) => s.attendanceDayOverrides);
-  const site = siteBucketForUser(group.user);
-  const periodLabel = `${format(group.weekStart, 'MMM d')} - ${format(group.weekEnd, 'MMM d, yyyy')}`;
-  const idLine = employeeDisplayId(group.user, group.userId);
-
-  const exportPanelExcel = () => {
-    const header = ['Sr#', 'Date', 'Clock In', 'Clock Out', 'Hours', 'Status', 'ID'];
-    const rowId = idLine;
-    const data = group.entries.map((e, i) => [
-      i + 1,
-      format(new Date(e.clockIn), 'yyyy-MM-dd'),
-      format(new Date(e.clockIn), 'HH:mm'),
-      e.clockOut ? format(new Date(e.clockOut), 'HH:mm') : '—',
-      typeof e.totalHours === 'number' ? e.totalHours.toFixed(2) : '—',
-      isClockInLate(e.clockIn, attendanceDayOverrides) ? 'Late' : 'On time',
-      rowId,
-    ]);
-    const safeName = (group.user?.name ?? 'employee').replace(/[^\w\-]+/g, '_');
-    downloadExcelCsv(`timesheet-${safeName}-${format(group.weekStart, 'yyyy-MM-dd')}`, header, data);
-  };
-
-  const exportPanelPdf = () => {
-    const prov = group.user ? providerLabelForRole(group.user.role) : '—';
-    const rows = group.entries
-      .map(
-        (e, i) =>
-          `<tr>
-            <td>${i + 1}</td>
-            <td>${escapeAttr(format(new Date(e.clockIn), 'MM/dd/yyyy'))}</td>
-            <td>${escapeAttr(format(new Date(e.clockIn), 'HH:mm'))} → ${e.clockOut ? escapeAttr(format(new Date(e.clockOut), 'HH:mm')) : '—'}</td>
-            <td>${typeof e.totalHours === 'number' ? e.totalHours.toFixed(2) : '—'}</td>
-            <td>${isClockInLate(e.clockIn, attendanceDayOverrides) ? 'Late' : 'On time'}</td>
-            <td>${escapeAttr(idLine)}</td>
-          </tr>`
-      )
-      .join('');
-    const body = `
-      <p><strong>Employee:</strong> ${escapeAttr(group.user?.name ?? 'Unknown')} &nbsp;|&nbsp; <strong>Department:</strong> ${escapeAttr(site)} &nbsp;|&nbsp; <strong>Provider:</strong> ${escapeAttr(prov)}</p>
-      <p><strong>Period:</strong> ${escapeAttr(periodLabel)} &nbsp;|&nbsp; <strong>Total:</strong> ${escapeAttr(formatHoursMinutes(group.totalHours))}</p>
-      <table>
-        <thead><tr><th>Sr#</th><th>Date</th><th>In / Out</th><th>Hours</th><th>Status</th><th>ID</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-    openAttendancePdfReport(`Timesheet — ${group.user?.name ?? 'Employee'}`, body);
-  };
-
-  return (
-    <div className={embedded ? 'bg-white p-4 sm:p-6' : 'bg-slate-50/90 p-4 sm:p-6'}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900">Weekly timesheet detail</h3>
-          <p className="text-xs text-slate-500">
-            {embedded ? 'Clock in/out rows for this week.' : 'Daily rows for this period — click the row again to collapse'}
-          </p>
-        </div>
-        {!embedded && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-          >
-            Close
-          </button>
-        )}
-      </div>
-
-      <div className="mb-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-50 p-4 shadow-inner">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200/80 pb-3">
-          <div className="flex items-center gap-2 text-slate-800">
-            <Calendar className="h-5 w-5 text-blue-600" />
-            <span className="font-semibold">{periodLabel}</span>
-          </div>
-          <span className="text-lg font-bold text-blue-600">{formatHoursMinutes(group.totalHours)}</span>
-        </div>
-        <div className="mt-3 space-y-2 text-sm text-slate-700">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 shrink-0 text-slate-500" />
-            <span>
-              <span className="text-slate-500">Department: </span>
-              {site}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <UserIcon className="h-4 w-4 shrink-0 text-slate-500" />
-            <span>{group.user?.name ?? 'Unknown'}</span>
-            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-              {group.user?.role ?? '—'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 shrink-0 text-slate-500" />
-            <span className="font-mono text-xs">ID: {idLine}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
-          <span className="text-xs font-semibold text-slate-600">Daily entries</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-xs">
-            <thead>
-              <tr className="bg-blue-600 text-white">
-                <th className="px-3 py-2">Sr#</th>
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">In / Out</th>
-                <th className="px-3 py-2">Hours</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {group.entries.map((e, i) => (
-                <tr key={e.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/80'}>
-                  <td className="border-b border-slate-100 px-3 py-2">{i + 1}</td>
-                  <td className="border-b border-slate-100 px-3 py-2">{format(new Date(e.clockIn), 'MM/dd/yyyy')}</td>
-                  <td className="border-b border-slate-100 px-3 py-2">
-                    {format(new Date(e.clockIn), 'HH:mm')} → {e.clockOut ? format(new Date(e.clockOut), 'HH:mm') : '—'}
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-2 font-medium tabular-nums">
-                    {typeof e.totalHours === 'number' ? e.totalHours.toFixed(2) : '—'}
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-2">
-                    {isClockInLate(e.clockIn, attendanceDayOverrides) ? (
-                      <span className="font-semibold text-rose-700">Late</span>
-                    ) : (
-                      <span className="text-emerald-700">On time</span>
-                    )}
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-2 font-mono text-[10px] text-slate-700">{idLine}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={exportPanelExcel}
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100"
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          Excel
-        </button>
-        <button
-          type="button"
-          onClick={exportPanelPdf}
-          className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-900 hover:bg-rose-100"
-        >
-          <FileDown className="h-4 w-4" />
-          PDF
-        </button>
-      </div>
+      ) : null}
     </div>
   );
 }

@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { format } from 'date-fns';
+import { useEffect, useState } from 'react';
 import { useStore, useShallow } from '@/lib/store';
-import { ABSENT_AFTER_MINUTES, LATE_AFTER_MINUTES, getOfficeEndForDay } from '@/lib/attendanceRules';
 import { cn } from '@/lib/utils';
 import { Timer, CalendarClock, MapPin } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import {
+  getCurrentShiftApi,
+  getShiftStatusApi,
+  setShiftStatusApi,
+  setShiftTimingApi,
+} from '@/services/attendance.service';
 
 function todayDateInput(): string {
   const d = new Date();
@@ -52,10 +56,6 @@ function PolicyToggle({
 export function TimeControlPage() {
   const {
     sites,
-    attendanceDayOverrides,
-    setAttendanceDayOverride,
-    clearAttendanceDayOverride,
-    adhocShiftsEnabled,
     geoFencingEnabled,
     geoFencingUseGlobalRadius,
     geoFencingGlobalRadiusMiles,
@@ -66,10 +66,6 @@ export function TimeControlPage() {
   } = useStore(
     useShallow((s) => ({
       sites: s.sites,
-      attendanceDayOverrides: s.attendanceDayOverrides,
-      setAttendanceDayOverride: s.setAttendanceDayOverride,
-      clearAttendanceDayOverride: s.clearAttendanceDayOverride,
-      adhocShiftsEnabled: s.adhocShiftsEnabled,
       geoFencingEnabled: s.geoFencingEnabled,
       geoFencingUseGlobalRadius: s.geoFencingUseGlobalRadius,
       geoFencingGlobalRadiusMiles: s.geoFencingGlobalRadiusMiles,
@@ -83,40 +79,62 @@ export function TimeControlPage() {
   const [companyDay, setCompanyDay] = useState(todayDateInput());
   const [companyStartTime, setCompanyStartTime] = useState('09:00');
   const [companyEndTime, setCompanyEndTime] = useState('18:00');
+  const [shiftEnabled, setShiftEnabled] = useState(false);
+  const [shiftId, setShiftId] = useState<number | null>(null);
+  const [loadingShift, setLoadingShift] = useState(false);
 
-  const overrideList = useMemo(() => {
-    return Object.entries(attendanceDayOverrides)
-      .map(([date, row]) => {
-        const dayRef = new Date(date + 'T12:00:00');
-        const { hour, minute } = row;
-        const end = getOfficeEndForDay(dayRef, attendanceDayOverrides);
-        return {
-          date,
-          hour,
-          minute,
-          endHour: end.hour,
-          endMinute: end.minute,
-          label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-          endLabel: `${String(end.hour).padStart(2, '0')}:${String(end.minute).padStart(2, '0')}`,
-        };
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [attendanceDayOverrides]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setLoadingShift(true);
+      try {
+        const [status, current] = await Promise.all([getShiftStatusApi(), getCurrentShiftApi()]);
+        if (cancelled) return;
+        setShiftEnabled(Boolean(status.is_enabled));
+        setShiftId(status.shift_id ?? null);
+        if (current.shift_start) setCompanyStartTime(String(current.shift_start).slice(0, 5));
+      } catch (error) {
+        if (!cancelled) toast(error instanceof Error ? error.message : 'Unable to load shift config.', 'error');
+      } finally {
+        if (!cancelled) setLoadingShift(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const saveCompanyStart = () => {
+  const saveShiftTiming = async () => {
     const [h, m] = companyStartTime.split(':').map((x) => parseInt(x, 10));
     const [eh, em] = companyEndTime.split(':').map((x) => parseInt(x, 10));
     if (Number.isNaN(h) || Number.isNaN(m) || Number.isNaN(eh) || Number.isNaN(em)) {
       toast('Enter valid office start/end times.', 'error');
       return;
     }
-    const startMinutes = h * 60 + m;
-    const endMinutes = eh * 60 + em;
-    if (endMinutes <= startMinutes) {
+    if (eh * 60 + em <= h * 60 + m) {
       toast('Office end must be after office start.', 'error');
       return;
     }
-    setAttendanceDayOverride(companyDay, h, m, eh, em);
+    try {
+      await setShiftTimingApi({
+        shift_start: `${companyStartTime}:00`,
+        shift_end: `${companyEndTime}:00`,
+        effective_date: companyDay,
+      });
+      toast('Shift timing updated.');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Unable to set shift timing.', 'error');
+    }
+  };
+
+  const toggleShiftStatus = async (next: boolean) => {
+    try {
+      await setShiftStatusApi({ shift_id: shiftId ?? 1, is_enabled: next });
+      setShiftEnabled(next);
+      toast(next ? 'Shift enabled.' : 'Shift disabled.');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Unable to update shift status.', 'error');
+    }
   };
 
   return (
@@ -174,62 +192,27 @@ export function TimeControlPage() {
           </div>
           <button
             type="button"
-            onClick={saveCompanyStart}
+            onClick={() => void saveShiftTiming()}
             className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
           >
-            Apply for this day
+            Save shift timing
           </button>
         </div>
-        {overrideList.length > 0 && (
-          <ul className="mt-5 space-y-2 border-t border-indigo-100 pt-4 text-sm">
-            {overrideList.map((row) => {
-              const d = new Date(row.date + 'T12:00:00');
-              const dayStart = new Date(row.date + 'T00:00:00');
-              const officeStart = new Date(dayStart);
-              officeStart.setHours(row.hour, row.minute, 0, 0);
-              const lateAt = new Date(officeStart.getTime() + LATE_AFTER_MINUTES * 60 * 1000);
-              const absentAt = new Date(officeStart.getTime() + ABSENT_AFTER_MINUTES * 60 * 1000);
-              return (
-                <li
-                  key={row.date}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-white/80 px-3 py-2"
-                >
-                  <span className="font-medium text-slate-800">
-                    {format(d, 'EEE, MMM d, yyyy')}: start{' '}
-                    <span className="tabular-nums">{row.label}</span>
-                    <span className="text-slate-400"> - </span>
-                    end <span className="tabular-nums">{row.endLabel}</span>
-                    <span className="ml-2 text-xs font-normal text-slate-500">
-                      (late from {format(lateAt, 'HH:mm')}, absent after {format(absentAt, 'HH:mm')})
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => clearAttendanceDayOverride(row.date)}
-                    className="text-xs font-semibold text-rose-600 hover:text-rose-800"
-                  >
-                    Remove
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </div>
 
-      {/* Enable Ad-Hoc Shifts — when off, dashboard Clock In is disabled for all non-Admin roles */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="min-w-0 max-w-xl">
-          <h2 className="text-base font-semibold text-slate-900">Enable Shifts</h2>
+          <h2 className="text-base font-semibold text-slate-900">Shift status</h2>
           <p className="mt-1 text-sm text-slate-600">
-            When turned off, employees (and HR / Team Leader) cannot use the live Clock In button on the dashboard.
+            Uses backend `/api/shift-status` and controls whether clock-in is enabled.
           </p>
         </div>
         <PolicyToggle
-          checked={adhocShiftsEnabled}
-          onCheckedChange={(next) => patchAttendanceControlSettings({ adhocShiftsEnabled: next })}
-          aria-label="Enable ad-hoc shifts"
+          checked={shiftEnabled}
+          onCheckedChange={(next) => void toggleShiftStatus(next)}
+          aria-label="Enable shifts"
         />
+        {loadingShift ? <span className="text-xs text-slate-500">Loading...</span> : null}
       </div>
 
       {/* Geo-Fencing */}

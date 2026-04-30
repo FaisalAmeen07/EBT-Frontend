@@ -1,18 +1,21 @@
 import { taskApiDelete, taskApiGet, taskApiPost, taskApiPut } from '@/lib/api/task-request-handler';
+import { API_PATHS } from '@/lib/api/api-base-urls';
 import type { Task, TaskComment, TaskHistoryEntry, TaskWorkflowStatus } from '@/lib/store';
 
 export const TASK_API_PATHS = {
-  list: '/api/getTasks',
-  create: '/api/createTask',
-  update: (id: string | number) => `/api/updateTask/${id}`,
-  delete: (id: string | number) => `/api/deleteTasks/${id}`,
-  assignable: '/api/assignable-users',
-  startWork: (id: string | number) => `/api/tasks/${id}/start-work`,
-  submit: (id: string | number) => `/api/tasks/${id}/submit`,
-  sendReview: (id: string | number) => `/api/tasks/${id}/send-review`,
-  approve: (id: string | number) => `/api/tasks/${id}/approve`,
-  forwardTl: (id: string | number) => `/api/tasks/${id}/forward-to-tl`,
-  comment: (id: string | number) => `/api/tasks/${id}/comments`,
+  list: API_PATHS.task.tasks.list,
+  create: API_PATHS.task.tasks.create,
+  update: API_PATHS.task.tasks.update,
+  delete: API_PATHS.task.tasks.delete,
+  assignable: API_PATHS.task.tasks.assignable,
+  startWork: API_PATHS.task.tasks.startWork,
+  submit: API_PATHS.task.tasks.submit,
+  sendReview: API_PATHS.task.tasks.sendReview,
+  approve: API_PATHS.task.tasks.approve,
+  forwardTl: API_PATHS.task.tasks.forwardTl,
+  comment: API_PATHS.task.tasks.comment,
+  pendingTasksCount: API_PATHS.task.tasks.pendingTasksCount,
+  overdueTasksCount: API_PATHS.task.tasks.overdueTasksCount,
 } as const;
 
 type ApiTaskRow = {
@@ -34,6 +37,8 @@ type ApiTaskRow = {
 type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
 type ListResponse = { success: boolean; data: ApiTaskRow[]; pagination?: Pagination };
 type OneResponse = { success: boolean; data: ApiTaskRow };
+type PendingTasksCountResponse = { pendingTasks?: number };
+type OverdueTasksCountResponse = { overdueTasks?: number };
 
 function statusFromApi(s: string): TaskWorkflowStatus {
   const x = String(s || '')
@@ -186,4 +191,14 @@ export async function forwardTaskToTeamLeaderApi(taskId: string, teamLeaderId: s
 export async function addTaskCommentApi(taskId: string, comment: string): Promise<Task> {
   const res = await taskApiPost<OneResponse>(TASK_API_PATHS.comment(taskId), { comment: comment.trim() });
   return mapApiTaskToStore(res.data);
+}
+
+export async function fetchPendingTasksCountApi(): Promise<number> {
+  const res = await taskApiGet<PendingTasksCountResponse>(TASK_API_PATHS.pendingTasksCount);
+  return Number(res?.pendingTasks ?? 0);
+}
+
+export async function fetchOverdueTasksCountApi(): Promise<number> {
+  const res = await taskApiGet<OverdueTasksCountResponse>(TASK_API_PATHS.overdueTasksCount);
+  return Number(res?.overdueTasks ?? 0);
 }

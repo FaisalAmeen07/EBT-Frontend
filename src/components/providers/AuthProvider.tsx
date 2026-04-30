@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(user);
           upsertUser(user);
           void useStore.getState().refreshTasksFromApi();
+          void useStore.getState().refreshAttendanceFromApi();
           return;
         } catch {
           /* fall through to local roster */
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u && u.role === role) {
         setCurrentUser(u);
         void useStore.getState().refreshTasksFromApi();
+        void useStore.getState().refreshAttendanceFromApi();
         return;
       }
 
@@ -80,7 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!mounted || !currentUser) return;
-    const t = setInterval(() => void useStore.getState().refreshTasksFromApi(), 30_000);
+    void useStore.getState().refreshAttendanceFromApi();
+    const t = setInterval(() => {
+      void useStore.getState().refreshTasksFromApi();
+      void useStore.getState().refreshAttendanceFromApi();
+    }, 30_000);
     return () => clearInterval(t);
   }, [mounted, currentUser?.id]);
 

@@ -90,12 +90,24 @@ export function RequestManagementView() {
                   getUsername={c.getUsername}
                   canReview={c.canReviewLeave}
                   onApprove={(id) => {
-                    c.updateLeavetatus(id, 'Approved');
-                    toast('Leave approved!');
+                    void (async () => {
+                      try {
+                        await c.approveLeave(id);
+                        toast('Leave approved!');
+                      } catch (error) {
+                        toast(error instanceof Error ? error.message : 'Unable to approve leave.', 'error');
+                      }
+                    })();
                   }}
                   onReject={(id) => {
-                    c.updateLeavetatus(id, 'Rejected');
-                    toast('Leave rejected!');
+                    void (async () => {
+                      try {
+                        await c.rejectLeave(id, 'Rejected by reviewer');
+                        toast('Leave rejected!');
+                      } catch (error) {
+                        toast(error instanceof Error ? error.message : 'Unable to reject leave.', 'error');
+                      }
+                    })();
                   }}
                 />
               ) : (
@@ -108,8 +120,14 @@ export function RequestManagementView() {
                   setRejectFeedback={c.setRejectFeedback}
                   setActiveRejectId={c.setActiveRejectId}
                   onApprove={(id) => {
-                    c.approveManualTimeRequest(id);
-                    toast('Manual time approved!');
+                    void (async () => {
+                      try {
+                        await c.approveManual(id);
+                        toast('Manual time approved!');
+                      } catch (error) {
+                        toast(error instanceof Error ? error.message : 'Unable to approve manual time.', 'error');
+                      }
+                    })();
                   }}
                   onRejectConfirm={(id) => {
                     const trimmed = c.rejectFeedback.trim();
@@ -117,10 +135,16 @@ export function RequestManagementView() {
                       toast('Feedback is required.', 'error');
                       return;
                     }
-                    c.rejectManualTimeRequest(id, trimmed);
-                    toast('Manual time rejected!');
-                    c.setActiveRejectId(null);
-                    c.setRejectFeedback('');
+                    void (async () => {
+                      try {
+                        await c.rejectManual(id, trimmed);
+                        toast('Manual time rejected!');
+                        c.setActiveRejectId(null);
+                        c.setRejectFeedback('');
+                      } catch (error) {
+                        toast(error instanceof Error ? error.message : 'Unable to reject manual time.', 'error');
+                      }
+                    })();
                   }}
                 />
               )}

@@ -32,6 +32,7 @@ import {
   submitTaskApi,
   updatePendingTaskMultipart,
 } from '@/services/tasks.service';
+import { checkInApi, checkOutApi, endBreakApi, fetchAttendanceRecordsApi } from '@/services/attendance.service';
 
 async function taskAttachmentToFile(att: TaskAttachment): Promise<File> {
   const res = await fetch(att.dataUrl);
@@ -155,6 +156,8 @@ export interface TimesheetEntry {
   clockIn: string;
   clockOut?: string;
   breaks: BreakEntry[];
+  /** Backend tracked completed break minutes for current shift. */
+  breakDurationMinutes?: number;
   totalHours?: number;
   lateMark?: boolean;
   overtime?: number;
@@ -228,6 +231,7 @@ export type Leavetatus = 'Pending' | 'Approved' | 'Rejected';
 export interface LeaveRequest {
   id: string;
   userId: string;
+  requesterName?: string;
   type: LeaveType;
   startDate: string;
   endDate: string;
@@ -241,6 +245,7 @@ export type ManualTimeStatus = 'Pending' | 'Approved' | 'Rejected';
 export interface ManualTimeRequest {
   id: string;
   userId: string;
+  requesterName?: string;
   date: string; // YYYY-MM-DD
   clockInTime: string; // HH:mm
   clockOutTime: string; // HH:mm
@@ -338,10 +343,11 @@ interface AppState {
   upsertTeamLeaderDailySummary: (input: { date: string; body: string }) => { ok: true } | { ok: false; error: string };
   upsertHRDailySummary: (input: { date: string; body: string }) => { ok: true } | { ok: false; error: string };
   setCurrentUser: (user: User | null) => void;
-  clockIn: () => void;
-  clockOut: () => void;
-  startBreak: () => void;
-  endBreak: () => void;
+  clockIn: () => Promise<void>;
+  clockOut: () => Promise<void>;
+  startBreak: () => Promise<void>;
+  endBreak: () => Promise<void>;
+  refreshAttendanceFromApi: () => Promise<void>;
   // Admin / HR: manual attendance record (finalized entry; recalculates hours / late / OT).
   addManualTimesheetEntry: (input: {
     userId: string;
@@ -423,6 +429,7 @@ interface AppState {
   // Leave
   applyLeave: (leave: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>) => void;
   updateLeavetatus: (leaveId: string, status: Leavetatus) => void;
+  setLeaveRequests: (rows: LeaveRequest[]) => void;
 
   // Manual Time Requests
   applyManualTimeRequest: (input: Omit<
@@ -431,6 +438,7 @@ interface AppState {
   >) => void;
   approveManualTimeRequest: (requestId: string) => void;
   rejectManualTimeRequest: (requestId: string, feedback: string) => void;
+  setManualTimeRequests: (rows: ManualTimeRequest[]) => void;
   // Availability
   availability: UserAvailability[];
   updateAvailability: (userId: string, activeDays: DayAvailability[]) => void;
@@ -583,102 +591,53 @@ export const useStore = create<AppState>()(
             : [...s.users, user],
         })),
 
-      clockIn: () => {
-        const { currentUser, timesheets, adhocShiftsEnabled, attendanceDayOverrides } = get();
+      refreshAttendanceFromApi: async () => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+        const timesheets = await fetchAttendanceRecordsApi();
+        set({ timesheets });
+      },
+
+      clockIn: async () => {
+        const { currentUser, adhocShiftsEnabled, attendanceDayOverrides } = get();
         if (!currentUser) return;
         if (!adhocShiftsEnabled && currentUser.role !== 'Admin') return;
         if (currentUser.role !== 'Admin') {
           if (clockInBlockedBeforeOfficeStart(new Date(), attendanceDayOverrides)) return;
         }
 
-        const now = new Date();
-        const clockInTime = now.toISOString();
-
-        const newEntry: TimesheetEntry = {
-          id: Math.random().toString(36).substring(7),
-          userId: currentUser.id,
-          clockIn: clockInTime,
-          breaks: [],
-          lateMark: isClockInLate(clockInTime, attendanceDayOverrides),
-        };
-
+        await checkInApi();
+        const timesheets = await fetchAttendanceRecordsApi();
         // UX: Clock-in implies "Present" (stored as Available in this app's status enum).
         set((s) => ({
-          timesheets: [...s.timesheets, newEntry],
+          timesheets,
           currentUser: s.currentUser ? { ...s.currentUser, status: 'Available' } : s.currentUser,
           users: s.users.map((u) => (u.id === currentUser.id ? { ...u, status: 'Available' } : u)),
         }));
       },
-      
-      clockOut: () => {
-        const { currentUser, timesheets } = get();
-        if (!currentUser) return;
-        
-        const updatedTimesheets = timesheets.map(t => {
-          if (t.userId === currentUser.id && !t.clockOut) {
-            const clockOutTime = new Date();
-            const clockInTime = new Date(t.clockIn);
-            let totalHours = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
-            
-            // Deduct breaks
-            t.breaks.forEach(b => {
-              if (b.endTime) {
-                totalHours -= (new Date(b.endTime).getTime() - new Date(b.startTime).getTime()) / (1000 * 60 * 60);
-              }
-            });
 
-            // Overtime rule: if totalHours > 8, calculate overtime
-            let overtime = 0;
-            if (totalHours > 8) {
-              overtime = totalHours - 8;
-            }
+      clockOut: async () => {
+        const { currentUser } = get();
+        if (!currentUser) return;
 
-            return { ...t, clockOut: clockOutTime.toISOString(), totalHours, overtime };
-          }
-          return t;
-        });
-        
-        set({ timesheets: updatedTimesheets });
+        await checkOutApi();
+        const timesheets = await fetchAttendanceRecordsApi();
+        set({ timesheets });
       },
-      
-      startBreak: () => {
-        const { currentUser, timesheets } = get();
+
+      // Break start is handled by backend auto-break scheduler; no manual start endpoint.
+      startBreak: async () => {
+        const { currentUser } = get();
         if (!currentUser) return;
-        
-        const updatedTimesheets = timesheets.map(t => {
-          if (t.userId === currentUser.id && !t.clockOut) {
-            const newBreak: BreakEntry = {
-              id: Math.random().toString(36).substring(7),
-              startTime: new Date().toISOString()
-            };
-            return { ...t, breaks: [...t.breaks, newBreak] };
-          }
-          return t;
-        });
-        
-        set({ timesheets: updatedTimesheets });
       },
-      
-      endBreak: () => {
-        const { currentUser, timesheets } = get();
+
+      endBreak: async () => {
+        const { currentUser } = get();
         if (!currentUser) return;
-        
-        const updatedTimesheets = timesheets.map(t => {
-          if (t.userId === currentUser.id && !t.clockOut && t.breaks.length > 0) {
-            const activeBreak = t.breaks[t.breaks.length - 1];
-            if (!activeBreak.endTime) {
-              const updatedBreaks = [...t.breaks];
-              updatedBreaks[updatedBreaks.length - 1] = {
-                ...activeBreak,
-                endTime: new Date().toISOString()
-              };
-              return { ...t, breaks: updatedBreaks };
-            }
-          }
-          return t;
-        });
-        
-        set({ timesheets: updatedTimesheets });
+
+        await endBreakApi();
+        const timesheets = await fetchAttendanceRecordsApi();
+        set({ timesheets });
       },
 
       setAttendanceDayOverride: (date, hour, minute, endHour, endMinute) => {
@@ -1031,6 +990,10 @@ export const useStore = create<AppState>()(
           ),
         });
       },
+      setManualTimeRequests: (rows) =>
+        set(() => ({
+          manualTimeRequests: Array.isArray(rows) ? rows : [],
+        })),
 
       addUser: (user) => set((state) => ({ users: [...state.users, user] })),
 
@@ -1282,6 +1245,10 @@ export const useStore = create<AppState>()(
           Leave: state.Leave.map(l => (l.id === leaveId ? { ...l, status } : l)),
         }));
       },
+      setLeaveRequests: (rows) =>
+        set(() => ({
+          Leave: Array.isArray(rows) ? rows : [],
+        })),
 
       updateAvailability: (userId, days) => set((state) => {
         const existing = state.availability.find(a => a.userId === userId);

@@ -1,9 +1,18 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useStore, useShallow } from '@/lib/store';
 import type { ReviewStatusFilter } from './constants';
+import { toast } from '@/lib/toast';
+import {
+  approveLeaveRequestApi,
+  approveManualRequestApi,
+  fetchLeaveRequestsApi,
+  fetchManualRequestsApi,
+  rejectLeaveRequestApi,
+  rejectManualRequestApi,
+} from '@/services/attendance-requests.service';
 
 export function useRequestManagementController() {
   const router = useRouter();
@@ -13,19 +22,17 @@ export function useRequestManagementController() {
     currentUser,
     Leave,
     users,
-    updateLeavetatus,
     manualTimeRequests,
-    approveManualTimeRequest,
-    rejectManualTimeRequest,
+    setLeaveRequests,
+    setManualTimeRequests,
   } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
       Leave: s.Leave,
       users: s.users,
-      updateLeavetatus: s.updateLeavetatus,
       manualTimeRequests: s.manualTimeRequests,
-      approveManualTimeRequest: s.approveManualTimeRequest,
-      rejectManualTimeRequest: s.rejectManualTimeRequest,
+      setLeaveRequests: s.setLeaveRequests,
+      setManualTimeRequests: s.setManualTimeRequests,
     }))
   );
 
@@ -39,27 +46,53 @@ export function useRequestManagementController() {
   const [activeRejectId, setActiveRejectId] = useState<string | null>(null);
   const [rejectFeedback, setRejectFeedback] = useState('');
 
-  const getUsername = (userId: string) => users.find((u) => u.id === userId)?.name || 'Unknown User';
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [leaveRows, manualRows] = await Promise.all([fetchLeaveRequestsApi(), fetchManualRequestsApi()]);
+        if (cancelled) return;
+        setLeaveRequests(leaveRows);
+        setManualTimeRequests(manualRows);
+      } catch (error) {
+        if (!cancelled) {
+          toast(error instanceof Error ? error.message : 'Unable to load requests.', 'error');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, setLeaveRequests, setManualTimeRequests]);
+
+  const getUsername = (userId: string) =>
+    users.find((u) => u.id === userId)?.name ||
+    Leave.find((l) => l.userId === userId)?.requesterName ||
+    manualTimeRequests.find((m) => m.userId === userId)?.requesterName ||
+    `User ${String(userId).slice(0, 8)}`;
 
   const filteredLeave = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return Leave.filter((leave) => {
-      const userName = (users.find((u) => u.id === leave.userId)?.name || 'Unknown User').toLowerCase();
+      const userName = getUsername(leave.userId).toLowerCase();
       const matchesSearch = userName.includes(q);
       const matchesStatus = statusFilter === 'All' || leave.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [Leave, searchTerm, statusFilter, users]);
+  }, [Leave, searchTerm, statusFilter, users, manualTimeRequests]);
 
   const filteredManual = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return manualTimeRequests.filter((req) => {
-      const userName = (users.find((u) => u.id === req.userId)?.name || 'Unknown User').toLowerCase();
+      const userName = getUsername(req.userId).toLowerCase();
       const matchesSearch = userName.includes(q);
       const matchesStatus = statusFilter === 'All' || req.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [manualTimeRequests, searchTerm, statusFilter, users]);
+  }, [manualTimeRequests, searchTerm, statusFilter, users, Leave]);
 
   const sortedLeave = useMemo(
     () =>
@@ -94,6 +127,32 @@ export function useRequestManagementController() {
     setRejectFeedback('');
   };
 
+  const refreshRequests = async () => {
+    const [leaveRows, manualRows] = await Promise.all([fetchLeaveRequestsApi(), fetchManualRequestsApi()]);
+    setLeaveRequests(leaveRows);
+    setManualTimeRequests(manualRows);
+  };
+
+  const approveLeave = async (id: string) => {
+    await approveLeaveRequestApi(id);
+    await refreshRequests();
+  };
+
+  const rejectLeave = async (id: string, reason: string) => {
+    await rejectLeaveRequestApi(id, reason);
+    await refreshRequests();
+  };
+
+  const approveManual = async (id: string) => {
+    await approveManualRequestApi(id);
+    await refreshRequests();
+  };
+
+  const rejectManual = async (id: string, reason: string) => {
+    await rejectManualRequestApi(id, reason);
+    await refreshRequests();
+  };
+
   return {
     activeTab,
     onTabChange,
@@ -106,9 +165,10 @@ export function useRequestManagementController() {
     getUsername,
     canReviewLeave,
     canReviewManual,
-    updateLeavetatus,
-    approveManualTimeRequest,
-    rejectManualTimeRequest,
+    approveLeave,
+    rejectLeave,
+    approveManual,
+    rejectManual,
     activeRejectId,
     setActiveRejectId,
     rejectFeedback,

@@ -33,16 +33,38 @@ import {
   getOfficeEndForDay,
   getOfficeStartForDay,
   isClockInLate,
- type DayAttendanceUiStatus,
 } from '@/lib/attendanceRules';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subDays, isWithinInterval } from 'date-fns';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { fetchPendingUsersCountApi, fetchWorkforceCountApi } from '@/services/admin.service';
+import { fetchAttendanceSummaryApi } from '@/services/attendance.service';
+import { fetchLeaveRequestsApi } from '@/services/attendance-requests.service';
+import { fetchOverdueTasksCountApi, fetchPendingTasksCountApi } from '@/services/tasks.service';
 
 function availabilityStatusLabel(status: string | undefined): string {
   if (status === 'Available') return 'Present';
   if (status === 'Unavailable') return 'Absent';
   return status || 'N/A';
+}
+
+function isApprovedLeaveOnDate(
+  date: Date,
+  userId: string,
+  leaves: { userId: string; status: string; startDate: string; endDate: string }[]
+): boolean {
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return leaves.some((l) => {
+    if (String(l.userId) !== userId) return false;
+    const status = String(l.status || '').trim().toUpperCase();
+    if (status !== 'APPROVED') return false;
+    const start = new Date(String(l.startDate || '').slice(0, 10));
+    const end = new Date(String(l.endDate || '').slice(0, 10));
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return false;
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+    return day >= startDay && day <= endDay;
+  });
 }
 
 // ─── ROUTER ────────────────────────────────────────────────────────
@@ -93,7 +115,6 @@ function TimerWidget() {
     currentUser,
     timesheets,
     clockOut,
-    startBreak,
     endBreak,
     adhocShiftsEnabled,
     attendanceDayOverrides,
@@ -108,7 +129,6 @@ function TimerWidget() {
       currentUser: s.currentUser,
       timesheets: s.timesheets,
       clockOut: s.clockOut,
-      startBreak: s.startBreak,
       endBreak: s.endBreak,
       adhocShiftsEnabled: s.adhocShiftsEnabled,
       attendanceDayOverrides: s.attendanceDayOverrides,
@@ -166,8 +186,9 @@ function TimerWidget() {
         if (!b.startTime || !b.endTime) return acc;
         return acc + (new Date(b.endTime).getTime() - new Date(b.startTime).getTime());
       }, 0);
+    const completedBreakMsFromApi = Math.max(0, Number(activeTimesheet.breakDurationMinutes || 0)) * 60 * 1000;
 
-    const diffMs = Math.max(0, effectiveNowMs - clockInMs - completedBreakMs);
+    const diffMs = Math.max(0, effectiveNowMs - clockInMs - Math.max(completedBreakMs, completedBreakMsFromApi));
     const hours = Math.floor(diffMs / 3600000);
     const minutes = Math.floor((diffMs % 3600000) / 60000);
     const seconds = Math.floor((diffMs % 60000) / 1000);
@@ -288,7 +309,17 @@ function TimerWidget() {
               <div className="flex flex-row gap-4">
                 {activeBreak ? (
                   <button
-                    onClick={endBreak}
+                    onClick={async () => {
+                      setClockBusy(true);
+                      try {
+                        await endBreak();
+                      } catch (error) {
+                        toast(error instanceof Error ? error.message : 'Unable to end break.', 'error');
+                      } finally {
+                        setClockBusy(false);
+                      }
+                    }}
+                    disabled={clockBusy}
                     className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-100 transition-all hover:bg-rose-500 active:scale-95 focus:outline-none ring-8 ring-rose-500/10"
                     title="Break out"
                   >
@@ -299,31 +330,29 @@ function TimerWidget() {
                     </div>
                   </button>
                 ) : (
-                  <>
-                    <button
-                      onClick={startBreak}
-                      className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg shadow-amber-100 transition-all hover:bg-amber-400 active:scale-95 focus:outline-none ring-8 ring-amber-500/10"
-                      title="Break in"
-                    >
-                      <div className="absolute inset-0 rounded-full bg-amber-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40" />
-                      <div className="relative z-10 flex flex-col items-center">
-                        <Coffee className="h-7 w-7 drop-shadow" fill="currentColor" />
-                        <span className="mt-1 text-[10px] font-black uppercase tracking-widest">Break In</span>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={clockOut}
-                      className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-100 transition-all hover:bg-blue-500 active:scale-95 focus:outline-none ring-8 ring-blue-600/10"
-                      title="Clock out"
-                    >
-                      <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40" />
-                      <div className="relative z-10 flex flex-col items-center">
-                        <Square className="h-7 w-7 drop-shadow" fill="currentColor" />
-                        <span className="mt-1 text-[10px] font-black uppercase tracking-widest">Clock Out</span>
-                      </div>
-                    </button>
-                  </>
+                  <button
+                    onClick={async () => {
+                      setClockBusy(true);
+                      try {
+                        await clockOut();
+                      } catch (error) {
+                        toast(error instanceof Error ? error.message : 'Unable to clock out.', 'error');
+                      } finally {
+                        setClockBusy(false);
+                      }
+                    }}
+                    disabled={clockBusy}
+                    className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-100 transition-all hover:bg-blue-500 active:scale-95 focus:outline-none ring-8 ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none disabled:hover:bg-slate-400"
+                    title="Clock out"
+                  >
+                    <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40" />
+                    <div className="relative z-10 flex flex-col items-center">
+                      <Square className="h-7 w-7 drop-shadow" fill="currentColor" />
+                      <span className="mt-1 text-[10px] font-black uppercase tracking-widest">
+                        {clockBusy ? '…' : 'Clock Out'}
+                      </span>
+                    </div>
+                  </button>
                 )}
               </div>
             )}
@@ -528,28 +557,99 @@ function AdminDashboard() {
   );
 
   const [now, setNow] = useState(() => new Date());
+  const [apiWorkforceCount, setApiWorkforceCount] = useState<number | null>(null);
+  const [apiPendingUsersCount, setApiPendingUsersCount] = useState<number | null>(null);
+  const [apiActiveEmployees, setApiActiveEmployees] = useState<number | null>(null);
+  const [apiPendingLeaveCount, setApiPendingLeaveCount] = useState<number | null>(null);
+  const [apiPendingTasksCount, setApiPendingTasksCount] = useState<number | null>(null);
+  const [apiOverdueTasksCount, setApiOverdueTasksCount] = useState<number | null>(null);
+
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  const activeEmployees = timesheets.filter(t => !t.clockOut).length;
-  const pendingLeave = Leave.filter(l => l.status === 'Pending').length;
-  const pendingTasksCount = tasks.filter(
+  const localActiveEmployees = timesheets.filter(t => !t.clockOut).length;
+  const localPendingLeave = Leave.filter(l => l.status === 'Pending').length;
+  const localPendingTasksCount = tasks.filter(
     t => !isTeamLeaderCreatedTask(t, users) && t.status === 'Pending'
   ).length;
-  const overdueTasksCount = tasks.filter(
+  const localOverdueTasksCount = tasks.filter(
     t =>
       !isTeamLeaderCreatedTask(t, users) && t.status !== 'Approved' && new Date(t.deadline) < now
   ).length;
-  const pendingUsers = users.filter(u => u.role === 'Pending User').length;
-  const pendingOperationsCount = pendingLeave + pendingTasksCount + pendingUsers;
+  const localPendingUsers = users.filter(u => u.role === 'Pending User').length;
 
   const workforceUsers = useMemo(
     () => users.filter(u => u.role !== 'Pending User'),
     [users]
   );
-  const workforceCount = workforceUsers.length;
+  const localWorkforceCount = workforceUsers.length;
+  const activeEmployees = apiActiveEmployees ?? localActiveEmployees;
+  const pendingLeave = apiPendingLeaveCount ?? localPendingLeave;
+  const pendingTasksCount = apiPendingTasksCount ?? localPendingTasksCount;
+  const overdueTasksCount = apiOverdueTasksCount ?? localOverdueTasksCount;
+  const workforceCount = apiWorkforceCount ?? localWorkforceCount;
+  const pendingUsers = apiPendingUsersCount ?? localPendingUsers;
+  const pendingOperationsCount = pendingLeave + pendingTasksCount + pendingUsers;
+
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.role !== 'Admin') return;
+    let cancelled = false;
+    const loadCounts = async () => {
+      const results = await Promise.allSettled([
+        fetchWorkforceCountApi(),
+        fetchPendingUsersCountApi(),
+        fetchAttendanceSummaryApi(),
+        fetchLeaveRequestsApi(),
+        fetchPendingTasksCountApi(),
+        fetchOverdueTasksCountApi(),
+      ]);
+      if (cancelled) return;
+
+      const workforceRes = results[0];
+      if (workforceRes.status === 'fulfilled') {
+        setApiWorkforceCount(Number(workforceRes.value?.workforce ?? 0));
+      }
+
+      const pendingUsersRes = results[1];
+      if (pendingUsersRes.status === 'fulfilled') {
+        setApiPendingUsersCount(Number(pendingUsersRes.value?.pendingUsers ?? 0));
+      }
+
+      const attendanceSummaryRes = results[2];
+      if (attendanceSummaryRes.status === 'fulfilled') {
+        const activeCount =
+          Number(attendanceSummaryRes.value?.working ?? 0) +
+          Number(attendanceSummaryRes.value?.break ?? 0);
+        setApiActiveEmployees(activeCount);
+      }
+
+      const pendingLeaveRes = results[3];
+      if (pendingLeaveRes.status === 'fulfilled') {
+        const count = pendingLeaveRes.value.filter((l) => l.status === 'Pending').length;
+        setApiPendingLeaveCount(count);
+      }
+
+      const pendingTasksRes = results[4];
+      if (pendingTasksRes.status === 'fulfilled') {
+        setApiPendingTasksCount(Number(pendingTasksRes.value ?? 0));
+      }
+
+      const overdueTasksRes = results[5];
+      if (overdueTasksRes.status === 'fulfilled') {
+        setApiOverdueTasksCount(Number(overdueTasksRes.value ?? 0));
+      }
+    };
+    void loadCounts();
+    const timerId = window.setInterval(() => {
+      void loadCounts();
+    }, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timerId);
+    };
+  }, [currentUser?.id, currentUser?.role]);
 
   const attendanceScopeUsers = useMemo(
     () => filterUsersForAttendanceViewer(currentUser, users),
@@ -558,13 +658,18 @@ function AdminDashboard() {
   const attendanceScopeCount = Math.max(1, attendanceScopeUsers.length);
 
   const todayStatusCounts = useMemo(() => {
-    const counts: Record<DayAttendanceUiStatus, number> = { on_time: 0, late: 0, absent: 0, pending: 0 };
+    const counts = { on_time: 0, late: 0, absent: 0, leave: 0 };
     for (const u of attendanceScopeUsers) {
+      if (isApprovedLeaveOnDate(now, String(u.id), Leave)) {
+        counts.leave += 1;
+        continue;
+      }
       const s = dayAttendanceStatus(u.id, now, timesheets, now, attendanceDayOverrides);
-      counts[s] += 1;
+      if (s === 'on_time' || s === 'late' || s === 'absent') counts[s] += 1;
+      else counts.absent += 1;
     }
     return counts;
-  }, [attendanceScopeUsers, now, timesheets, attendanceDayOverrides]);
+  }, [attendanceScopeUsers, now, timesheets, attendanceDayOverrides, Leave]);
 
   const effectiveGeoRadiusMiles = useMemo(() => {
     if (!geoFencingEnabled) return 0;
@@ -698,13 +803,13 @@ function AdminDashboard() {
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {(
               [
-                { key: 'on_time' as const, label: 'On time', className: 'border-emerald-100 bg-emerald-50/60 text-emerald-900' },
+                { key: 'on_time' as const, label: 'Present', className: 'border-emerald-100 bg-emerald-50/60 text-emerald-900' },
                 { key: 'late' as const, label: 'Late', className: 'border-amber-100 bg-amber-50/60 text-amber-900' },
                 { key: 'absent' as const, label: 'Absent', className: 'border-rose-100 bg-rose-50/60 text-rose-900' },
-                { key: 'pending' as const, label: 'Pending', className: 'border-slate-200 bg-slate-50/80 text-slate-800' },
+                { key: 'leave' as const, label: 'Leave', className: 'border-indigo-100 bg-indigo-50/80 text-indigo-900' },
               ] as const
             ).map(({ key, label, className }) => (
               <div

@@ -1,4 +1,3 @@
-import { clockInBlockedBeforeOfficeStart } from '@/lib/attendanceRules';
 import { useStore } from '@/lib/store';
 import { getCurrentLatLng, haversineMiles } from '@/lib/geoDistance';
 
@@ -13,22 +12,31 @@ function radiusMilesForUser(): number {
   return Math.max(0, s.geoFencingGlobalRadiusMiles);
 }
 
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 /**
  * Clock in with admin policies: ad-hoc master switch, optional geo-fence.
  * Call from the dashboard Clock In button (async).
  */
 export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok: false; error: string }> {
   const state = useStore.getState();
-  const { currentUser } = state;
+  const { currentUser, timesheets } = state;
   if (!currentUser) return { ok: false, error: 'You must be signed in to clock in.' };
 
-  if (!state.adhocShiftsEnabled && currentUser.role !== 'Admin') {
-    return { ok: false, error: 'Clock-in is turned off by your administrator.' };
-  }
-
-  if (currentUser.role !== 'Admin') {
-    const beforeStart = clockInBlockedBeforeOfficeStart(new Date(), state.attendanceDayOverrides);
-    if (beforeStart) return { ok: false, error: beforeStart };
+  const today = new Date();
+  const alreadyCompletedShiftToday = timesheets.some((t) => {
+    if (t.userId !== currentUser.id || !t.clockOut) return false;
+    const clockInDate = new Date(t.clockIn);
+    return isSameLocalDay(clockInDate, today);
+  });
+  if (alreadyCompletedShiftToday) {
+    return { ok: false, error: 'You have already complete shift.' };
   }
 
   const radius = radiusMilesForUser();
@@ -58,6 +66,6 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
     }
   }
 
-  state.clockIn();
+  await state.clockIn();
   return { ok: true };
 }

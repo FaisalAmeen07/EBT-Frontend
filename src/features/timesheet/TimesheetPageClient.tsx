@@ -23,6 +23,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { fetchPublicDepartmentsApi } from '@/services/auth.service';
 
 // ─── PERSONAL ATTENDANCE (Employee + TL “My attendance” tab) ───
 function EmployeeTimesheetView() {
@@ -388,9 +389,23 @@ function EmployeeTimesheetView() {
 
 export function TimesheetPageClient() {
   const currentUser = useStore((s) => s.currentUser);
+  const setDepartments = useStore((s) => s.setDepartments);
   const { tabs, activeTab } = useTimesheetTab(currentUser?.role);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadDepartments = async () => {
+      const departments = await fetchPublicDepartmentsApi();
+      if (cancelled || departments.length === 0) return;
+      setDepartments(departments);
+    };
+    void loadDepartments();
+    return () => {
+      cancelled = true;
+    };
+  }, [setDepartments]);
 
   if (!currentUser || currentUser.role === 'Pending User') {
     return (

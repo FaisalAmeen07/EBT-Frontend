@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, AlertCircle, UserCheck, Clock, Activity, Filter, Calendar } from 'lucide-react';
+import { CalendarClock, AlertCircle, UserCheck, Clock, Activity, Filter } from 'lucide-react';
 import { useStore, useShallow } from '@/lib/store';
 import type { Role } from '@/lib/store';
+import { fetchAttendanceSummaryApi, type AttendanceSummaryUser } from '@/services/attendance.service';
 
 export default function AvailabilityPage() {
   const currentUser = useStore((s) => s.currentUser);
@@ -18,11 +19,13 @@ export default function AvailabilityPage() {
 const BOARD_ROLES: Role[] = ['Employee', 'HR', 'Team Leader'];
 type BoardRoleFilter = 'all' | Role;
 type BoardStatusFilter = 'all' | 'Available' | 'Unavailable' | 'Leave';
+type AttendanceLogPreset = 'today' | '7d' | '30d' | 'custom';
 
 function displayStatusLabel(status?: string): string {
   if (!status) return 'Not Set';
   if (status === 'Available') return 'Present';
   if (status === 'Unavailable') return 'Absent';
+  if (status === 'Not Set') return 'N/A';
   return status;
 }
 
@@ -47,15 +50,42 @@ function dayStartMs(d: Date): number {
 function isApprovedLeaveLeaveDay(
   date: Date,
   userId: string,
-  Leave: { userId: string; type: string; status: string; startDate: string; endDate: string }[]
+  leaves: { userId: string; type: string; status: string; startDate: string; endDate: string }[]
 ): boolean {
   const dayMs = dayStartMs(date);
-  return Leave.some((l) => {
-    if (l.userId !== userId || l.type !== 'Leave' || l.status !== 'Approved') return false;
-    const startMs = dayStartMs(fromDateInputValue(l.startDate.slice(0, 10)));
-    const endMs = dayStartMs(fromDateInputValue(l.endDate.slice(0, 10)));
+  return leaves.some((l) => {
+    const normalizedStatus = String(l.status || '').trim().toUpperCase();
+    if (l.userId !== userId || l.type !== 'Leave' || normalizedStatus !== 'APPROVED') return false;
+    const startMs = dayStartMs(fromDateInputValue(String(l.startDate || '').slice(0, 10)));
+    const endMs = dayStartMs(fromDateInputValue(String(l.endDate || '').slice(0, 10)));
     return dayMs >= startMs && dayMs <= endMs;
   });
+}
+
+function normalizeApiRole(role?: string): Role | null {
+  const r = String(role || '').trim().toLowerCase().replace(/[_-]/g, ' ');
+  if (r === 'employee') return 'Employee';
+  if (r === 'hr') return 'HR';
+  if (r === 'team leader' || r === 'teamlead') return 'Team Leader';
+  if (r === 'admin') return 'Admin';
+  return null;
+}
+
+function isHiddenBoardRole(role?: string): boolean {
+  const normalized = String(role || '').trim().toLowerCase().replace(/[_-]/g, ' ');
+  return normalized.includes('admin') || normalized.includes('pending');
+}
+
+function toBoardStatus(
+  attendanceStatus?: string,
+  checkIn?: string | null
+): 'Available' | 'Unavailable' | 'Leave' | 'Not Set' {
+  const s = String(attendanceStatus || '').trim().toUpperCase();
+  if (s === 'PRESENT') return 'Available';
+  if (s === 'ABSENT' && !checkIn) return 'Not Set';
+  if (s === 'ABSENT') return 'Unavailable';
+  if (s === 'LEAVE') return 'Leave';
+  return 'Not Set';
 }
 
 /** First and last calendar day of the previous month (local), as `YYYY-MM-DD` for date inputs. */
@@ -69,24 +99,95 @@ function getLastMonthDateRange(): { start: string; end: string } {
   };
 }
 
+function getRollingDateRange(days: number): { start: string; end: string } {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - Math.max(0, days - 1));
+  return {
+    start: toDateInputValue(start),
+    end: toDateInputValue(end),
+  };
+}
+
 function AdminAvailabilityBoard() {
-  const { users, timesheets } = useStore(
-    useShallow((s) => ({ users: s.users, timesheets: s.timesheets }))
+  const { currentUser, users } = useStore(
+    useShallow((s) => ({
+      currentUser: s.currentUser,
+      users: s.users,
+    }))
   );
   const [roleFilter, setRoleFilter] = useState<BoardRoleFilter>('all');
   const [statusFilter, setStatusFilter] = useState<BoardStatusFilter>('all');
+  const [summaryUsers, setSummaryUsers] = useState<AttendanceSummaryUser[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      if (u.role === 'Pending User') return false;
-      if (roleFilter !== 'all' && u.role !== roleFilter) return false;
-      const st = u.status || 'Not Set';
-      if (statusFilter !== 'all') {
-        if (st !== statusFilter) return false;
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let cancelled = false;
+    const roleParam =
+      roleFilter === 'all'
+        ? 'ALL'
+        : roleFilter === 'Employee'
+          ? 'employee'
+          : roleFilter === 'Team Leader'
+            ? 'team_leader'
+            : 'HR';
+    const attendanceParam =
+      statusFilter === 'all'
+        ? 'ALL'
+        : statusFilter === 'Available'
+          ? 'PRESENT'
+          : statusFilter === 'Unavailable'
+            ? 'ABSENT'
+            : 'LEAVE';
+
+    const loadLeaves = async () => {
+      setLoading(true);
+      try {
+        const summary = await fetchAttendanceSummaryApi({
+          role: roleParam as 'ALL' | 'employee' | 'HR' | 'team_leader',
+          attendance: attendanceParam as 'ALL' | 'PRESENT' | 'ABSENT' | 'LEAVE',
+        });
+        if (!cancelled) setSummaryUsers(summary.users);
+      } catch {
+        if (!cancelled) setSummaryUsers([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      return true;
+    };
+    void loadLeaves();
+    const id = window.setInterval(() => {
+      void loadLeaves();
+    }, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [currentUser?.id, roleFilter, statusFilter]);
+
+  const boardRows = useMemo(() => {
+    return summaryUsers
+      .filter((u) => !isHiddenBoardRole(u.role))
+      .map((u) => {
+      const role = normalizeApiRole(u.role) || 'Employee';
+      const boardStatus = toBoardStatus(u.attendance_status, u.check_in);
+      const enriched =
+        users.find((x) => String(x.id) === String(u.id)) ||
+        users.find((x) => String(x.employeeCode || '').trim() === String(u.gdc_id || '').trim()) ||
+        users.find((x) => x.name?.trim().toLowerCase() === String(u.name || '').trim().toLowerCase()) ||
+        null;
+      return {
+        id: String(u.id),
+        name: u.name || enriched?.name || '—',
+        role,
+        team: enriched?.team || '—',
+        gdcId: u.gdc_id || enriched?.employeeCode || '—',
+        status: boardStatus,
+        liveStatus: String(u.live_status || ''),
+      };
     });
-  }, [users, roleFilter, statusFilter]);
+  }, [summaryUsers, users]);
 
   const getStatusAccent = (status?: string) => {
     switch (status) {
@@ -230,14 +331,17 @@ function AdminAvailabilityBoard() {
         </div>
       </div>
 
-      {filteredUsers.length === 0 ? (
+      {loading ? (
+        <p className="text-center text-slate-500 py-12 text-sm">Loading team status…</p>
+      ) : boardRows.length === 0 ? (
         <p className="text-center text-slate-500 py-12 text-sm">No people match these filters.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredUsers.map((user) => {
-            const isClockedIn = timesheets.some((t) => t.userId === user.id && !t.clockOut);
-            const Icon = getStatusIcon(user.status);
-            const accent = getStatusAccent(user.status);
+          {boardRows.map((user) => {
+            const isClockedIn = ['WORKING', 'BREAK'].includes(user.liveStatus.toUpperCase());
+            const effectiveStatus = user.status;
+            const Icon = getStatusIcon(effectiveStatus);
+            const accent = getStatusAccent(effectiveStatus);
 
             return (
               <div
@@ -273,7 +377,7 @@ function AdminAvailabilityBoard() {
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">Status</span>
                     </div>
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shrink-0 ${accent.badge}`}>
-                      {displayStatusLabel(user.status)}
+                      {displayStatusLabel(effectiveStatus)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 backdrop-blur-sm px-3.5 py-3 border border-slate-100/80">
@@ -312,8 +416,9 @@ function EmployeeAvailabilityView() {
   );
   const [status, setStatus] = useState(currentUser?.status || 'Available');
   const [now, setNow] = useState(new Date());
-  const [logRangeStart, setLogRangeStart] = useState(() => getLastMonthDateRange().start);
-  const [logRangeEnd, setLogRangeEnd] = useState(() => getLastMonthDateRange().end);
+  const [logPreset, setLogPreset] = useState<AttendanceLogPreset>('30d');
+  const [logRangeStart, setLogRangeStart] = useState(() => getRollingDateRange(30).start);
+  const [logRangeEnd, setLogRangeEnd] = useState(() => getRollingDateRange(30).end);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -336,10 +441,18 @@ function EmployeeAvailabilityView() {
     return last && !last.endTime ? last : null;
   }, [activeEntry]);
 
-  const { rangeStartDate, rangeEndDate, attendanceDays } = useMemo(() => {
+  const attendanceDays = useMemo(() => {
     if (!currentUser) {
-      return { rangeStartDate: new Date(), rangeEndDate: new Date(), attendanceDays: [] as { date: Date; entry?: any }[] };
+      return [] as { date: Date; entry?: any }[];
     }
+    const userTimesheets = timesheets
+      .filter((t) => t.userId === currentUser.id)
+      .sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
+    if (userTimesheets.length === 0) {
+      // Do not render historical absent rows before the user's first actual check-in.
+      return [] as { date: Date; entry?: any }[];
+    }
+
     let start = fromDateInputValue(logRangeStart);
     let end = fromDateInputValue(logRangeEnd);
     start.setHours(0, 0, 0, 0);
@@ -354,6 +467,19 @@ function EmployeeAvailabilityView() {
       start = new Date(end.getTime() - maxSpan);
     }
 
+    const firstCheckInDate = new Date(userTimesheets[0].clockIn);
+    const firstCheckInDayStart = new Date(
+      firstCheckInDate.getFullYear(),
+      firstCheckInDate.getMonth(),
+      firstCheckInDate.getDate()
+    );
+    if (firstCheckInDayStart > end) {
+      return [] as { date: Date; entry?: any }[];
+    }
+    if (firstCheckInDayStart > start) {
+      start = firstCheckInDayStart;
+    }
+
     const sameYMD = (a: Date, b: Date) =>
       a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
@@ -361,13 +487,11 @@ function EmployeeAvailabilityView() {
     const cursor = new Date(end);
     while (cursor >= start) {
       const d = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
-      const entry = timesheets
-        .filter((t) => t.userId === currentUser.id)
-        .find((t) => sameYMD(new Date(t.clockIn), d));
+      const entry = userTimesheets.find((t) => sameYMD(new Date(t.clockIn), d));
       days.push({ date: d, entry });
       cursor.setDate(cursor.getDate() - 1);
     }
-    return { rangeStartDate: start, rangeEndDate: end, attendanceDays: days };
+    return days;
   }, [currentUser, timesheets, logRangeStart, logRangeEnd]);
 
   const fmtTime = (iso?: string) => {
@@ -452,8 +576,16 @@ function EmployeeAvailabilityView() {
     };
   }, [attendanceDays, now, activeEntry, activeBreak, Leave, currentUser]);
 
-  const applyLastMonth = () => {
-    const { start, end } = getLastMonthDateRange();
+  const applyPresetRange = (preset: AttendanceLogPreset) => {
+    setLogPreset(preset);
+    const { start, end } =
+      preset === 'today'
+        ? getRollingDateRange(1)
+        : preset === '7d'
+          ? getRollingDateRange(7)
+          : preset === '30d'
+            ? getRollingDateRange(30)
+            : getLastMonthDateRange();
     setLogRangeStart(start);
     setLogRangeEnd(end);
   };
@@ -484,23 +616,6 @@ function EmployeeAvailabilityView() {
           <Activity className="w-5 h-5 text-emerald-500 shrink-0" />
           Current status
         </h2>
-        {activeEntry && (
-          <div className="mb-6 rounded-2xl border border-slate-100 bg-gradient-to-r from-slate-50 to-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-900">Shift in progress</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {activeBreak ? 'On break (timer paused)' : 'Working'} · Check-in {fmtTime(activeEntry.clockIn)}
-              </p>
-            </div>
-            <div
-              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border self-start sm:self-auto ${
-                activeBreak ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              }`}
-            >
-              {activeBreak ? 'On break' : 'Active'}
-            </div>
-          </div>
-        )}
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {(
@@ -553,48 +668,38 @@ function EmployeeAvailabilityView() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={applyLastMonth}
-                className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-indigo-50 border border-indigo-100 text-indigo-700 hover:bg-indigo-100/80"
+                onClick={() => applyPresetRange('today')}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-colors ${
+                  logPreset === 'today'
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80'
+                }`}
               >
-                Last month
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetRange('7d')}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-colors ${
+                  logPreset === '7d'
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80'
+                }`}
+              >
+                7 days
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetRange('30d')}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-colors ${
+                  logPreset === '30d'
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80'
+                }`}
+              >
+                1 month
               </button>
             </div>
-          </div>
-
-          <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-4">
-            <label className="flex flex-col gap-1.5 min-w-[160px]">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" aria-hidden />
-                From
-              </span>
-              <input
-                type="date"
-                value={logRangeStart}
-                max={logRangeEnd}
-                onChange={(e) => setLogRangeStart(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 min-w-[160px]">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" aria-hidden />
-                To
-              </span>
-              <input
-                type="date"
-                value={logRangeEnd}
-                min={logRangeStart}
-                onChange={(e) => setLogRangeEnd(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-              />
-            </label>
-            <p className="text-xs text-slate-400 sm:pb-2">
-              {rangeStartDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} —{' '}
-              {rangeEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-              <span className="block sm:inline sm:before:content-['·'] sm:before:mx-2">
-                Max 90 days per view
-              </span>
-            </p>
           </div>
 
           <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">

@@ -87,6 +87,14 @@ export function rejectUserApi(userId: number): Promise<{ message: string }> {
   return apiPost(API_PATHS.admin.rejectUser, { userId });
 }
 
+export function fetchWorkforceCountApi(): Promise<{ workforce: number }> {
+  return apiGet<{ workforce: number }>(API_PATHS.admin.workforceCount);
+}
+
+export function fetchPendingUsersCountApi(): Promise<{ pendingUsers: number }> {
+  return apiGet<{ pendingUsers: number }>(API_PATHS.admin.pendingUsersCount);
+}
+
 export function fetchAdminDepartmentsApi(): Promise<{ success: boolean; count: number; data: string[] }> {
   return apiGet(API_PATHS.admin.departments);
 }
