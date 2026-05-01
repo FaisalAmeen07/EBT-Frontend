@@ -1,5 +1,6 @@
 import { useStore } from '@/lib/store';
 import { getCurrentLatLng, haversineMiles } from '@/lib/geoDistance';
+import { getShiftStatusApi } from '@/services/attendance.service';
 
 function radiusMilesForUser(): number {
   const s = useStore.getState();
@@ -28,6 +29,20 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
   const state = useStore.getState();
   const { currentUser, timesheets } = state;
   if (!currentUser) return { ok: false, error: 'You must be signed in to clock in.' };
+
+  // Backend is source of truth for shift enable/disable.
+  if (currentUser.role !== 'Admin') {
+    try {
+      const shift = await getShiftStatusApi();
+      if (!shift.is_enabled) {
+        return { ok: false, error: 'Clock-in is disabled by admin.' };
+      }
+    } catch {
+      if (!state.adhocShiftsEnabled) {
+        return { ok: false, error: 'Clock-in is disabled by admin.' };
+      }
+    }
+  }
 
   const today = new Date();
   const alreadyCompletedShiftToday = timesheets.some((t) => {

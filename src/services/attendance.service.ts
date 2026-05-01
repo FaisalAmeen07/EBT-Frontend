@@ -292,11 +292,19 @@ export async function fetchAttendance30DaysApi(params?: {
   return data?.data ?? { period_start: '', period_end: '', users: [] };
 }
 
-export async function getCurrentShiftApi(): Promise<{ shift_start: string | null; effective_date: string | null }> {
-  const { data } = await attendanceApiClient.get<{ shift_start: string | null; effective_date: string | null }>(
+export async function getCurrentShiftApi(): Promise<{
+  shift_start: string | null;
+  shift_end: string | null;
+  effective_date: string | null;
+}> {
+  const { data } = await attendanceApiClient.get<{
+    shift_start: string | null;
+    shift_end: string | null;
+    effective_date: string | null;
+  }>(
     API_PATHS.attendance.currentShift
   );
-  return data ?? { shift_start: null, effective_date: null };
+  return data ?? { shift_start: null, shift_end: null, effective_date: null };
 }
 
 export async function getShiftStatusApi(): Promise<{ shift_id: number | null; is_enabled: boolean }> {

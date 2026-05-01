@@ -32,7 +32,7 @@ import {
   submitTaskApi,
   updatePendingTaskMultipart,
 } from '@/services/tasks.service';
-import { checkInApi, checkOutApi, endBreakApi, fetchAttendanceRecordsApi } from '@/services/attendance.service';
+import { checkInApi, checkOutApi, endBreakApi, fetchAttendanceRecordsApi, getShiftStatusApi } from '@/services/attendance.service';
 
 async function taskAttachmentToFile(att: TaskAttachment): Promise<File> {
   const res = await fetch(att.dataUrl);
@@ -601,7 +601,17 @@ export const useStore = create<AppState>()(
       clockIn: async () => {
         const { currentUser, adhocShiftsEnabled, attendanceDayOverrides } = get();
         if (!currentUser) return;
-        if (!adhocShiftsEnabled && currentUser.role !== 'Admin') return;
+        if (currentUser.role !== 'Admin') {
+          try {
+            const shift = await getShiftStatusApi();
+            if (!shift.is_enabled) return;
+          } catch {
+            // Fallback to local cached toggle if shift API is temporarily unavailable.
+            if (!adhocShiftsEnabled) return;
+          }
+        } else if (!adhocShiftsEnabled) {
+          return;
+        }
         if (currentUser.role !== 'Admin') {
           if (clockInBlockedBeforeOfficeStart(new Date(), attendanceDayOverrides)) return;
         }

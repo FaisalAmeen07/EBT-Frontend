@@ -4,15 +4,24 @@ import { ACCESS_TOKEN_COOKIE } from '@/lib/api/axios.config';
 
 const DEFAULT_ATTENDANCE_DEV = 'http://localhost:5003';
 const DEFAULT_ATTENDANCE_PROD = 'https://attendence-service-rdvv.onrender.com';
+const LOCALHOST_RE = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 function resolveAttendanceBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_ATTENDANCE_API_URL?.trim() ?? '';
   const normalized = raw.replace(/\/$/, '');
+  const forceRemoteInDev = process.env.NEXT_PUBLIC_ATTENDANCE_API_FORCE_REMOTE === '1';
+
+  if (process.env.NODE_ENV === 'development' && !forceRemoteInDev) {
+    if (normalized && !LOCALHOST_RE.test(normalized)) {
+      console.warn(
+        `[attendance-api] Development mode: ignoring remote NEXT_PUBLIC_ATTENDANCE_API_URL (${normalized}) and using ${DEFAULT_ATTENDANCE_DEV}. Set NEXT_PUBLIC_ATTENDANCE_API_FORCE_REMOTE=1 to force remote in dev.`
+      );
+    }
+    return DEFAULT_ATTENDANCE_DEV;
+  }
+
   if (normalized) {
-    if (
-      process.env.NODE_ENV === 'production' &&
-      /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalized)
-    ) {
+    if (process.env.NODE_ENV === 'production' && LOCALHOST_RE.test(normalized)) {
       console.error(
         `[attendance-api] NEXT_PUBLIC_ATTENDANCE_API_URL is set to a localhost URL (${normalized}) in production — falling back to ${DEFAULT_ATTENDANCE_PROD}.`
       );
@@ -29,7 +38,7 @@ function resolveAttendanceBaseURL(): string {
   }
 
   console.warn(
-    `[attendance-api] NEXT_PUBLIC_ATTENDANCE_API_URL is unset — using ${DEFAULT_ATTENDANCE_DEV}. For deployed attendance API set .env.local, e.g. ${DEFAULT_ATTENDANCE_PROD}`
+    `[attendance-api] NEXT_PUBLIC_ATTENDANCE_API_URL is unset — using ${DEFAULT_ATTENDANCE_DEV}. For deployed attendance API set env to ${DEFAULT_ATTENDANCE_PROD}`
   );
   return DEFAULT_ATTENDANCE_DEV;
 }

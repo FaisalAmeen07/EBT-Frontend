@@ -93,6 +93,7 @@ export function TimeControlPage() {
         setShiftEnabled(Boolean(status.is_enabled));
         setShiftId(status.shift_id ?? null);
         if (current.shift_start) setCompanyStartTime(String(current.shift_start).slice(0, 5));
+        if (current.shift_end) setCompanyEndTime(String(current.shift_end).slice(0, 5));
       } catch (error) {
         if (!cancelled) toast(error instanceof Error ? error.message : 'Unable to load shift config.', 'error');
       } finally {

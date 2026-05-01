@@ -38,7 +38,7 @@ import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subDays, 
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { fetchPendingUsersCountApi, fetchWorkforceCountApi } from '@/services/admin.service';
-import { fetchAttendanceSummaryApi } from '@/services/attendance.service';
+import { fetchAttendanceSummaryApi, getCurrentShiftApi, getShiftStatusApi } from '@/services/attendance.service';
 import { fetchLeaveRequestsApi } from '@/services/attendance-requests.service';
 import { fetchOverdueTasksCountApi, fetchPendingTasksCountApi } from '@/services/tasks.service';
 
@@ -46,6 +46,17 @@ function availabilityStatusLabel(status: string | undefined): string {
   if (status === 'Available') return 'Present';
   if (status === 'Unavailable') return 'Absent';
   return status || 'N/A';
+}
+
+function formatShiftTime(value?: string | null): string {
+  if (!value) return '—';
+  const [rawHour = '0', rawMinute = '0'] = String(value).split(':');
+  const hour24 = Number(rawHour);
+  const minute = Number(rawMinute);
+  if (!Number.isFinite(hour24) || !Number.isFinite(minute)) return '—';
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  return `${hour12}:${String(minute).padStart(2, '0')} ${ampm}`;
 }
 
 function isApprovedLeaveOnDate(
@@ -144,8 +155,35 @@ function TimerWidget() {
   const isClockedIn = !!activeTimesheet;
   const [now, setNow] = useState(new Date());
   const [clockBusy, setClockBusy] = useState(false);
+  const [shiftEnabledApi, setShiftEnabledApi] = useState<boolean | null>(null);
+  const [shiftStartApi, setShiftStartApi] = useState<string | null>(null);
+  const [shiftEndApi, setShiftEndApi] = useState<string | null>(null);
 
-  const clockInBlocked = !adhocShiftsEnabled && currentUser?.role !== 'Admin';
+  useEffect(() => {
+    let cancelled = false;
+    const loadShift = async () => {
+      try {
+        const [status, current] = await Promise.all([getShiftStatusApi(), getCurrentShiftApi()]);
+        if (cancelled) return;
+        setShiftEnabledApi(Boolean(status.is_enabled));
+        setShiftStartApi(current.shift_start ?? null);
+        setShiftEndApi(current.shift_end ?? null);
+      } catch {
+        // Keep timer usable with local fallback values.
+      }
+    };
+    void loadShift();
+    const id = window.setInterval(() => {
+      void loadShift();
+    }, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const shiftEnabled = shiftEnabledApi ?? adhocShiftsEnabled;
+  const clockInBlocked = !shiftEnabled && currentUser?.role !== 'Admin';
   const beforeOfficeStartMsg =
     currentUser?.role !== 'Admin'
       ? clockInBlockedBeforeOfficeStart(now, attendanceDayOverrides)
@@ -205,8 +243,9 @@ function TimerWidget() {
         ? 'bg-blue-600'
         : 'bg-amber-500';
 
-  const siteLabel = currentUser?.workSite ?? currentUser?.team ?? '—';
   const roleLabel = currentUser?.department ?? currentUser?.role ?? '—';
+  const shiftStartLabel = formatShiftTime(shiftStartApi);
+  const shiftEndLabel = formatShiftTime(shiftEndApi);
 
   return (
     <div className="space-y-5">
@@ -228,16 +267,17 @@ function TimerWidget() {
 
               <div className="mt-4 grid gap-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <span className="inline-flex h-6  w-6 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-500">
-                    <Target className="h-4 w-4" />
-                  </span>
-                  {siteLabel}
-                </div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-500">
                     <UserCheck className="h-4 w-4" />
                   </span>
                   {roleLabel}
+                </div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-500">
+                    <Timer className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="text-sm font-bold tabular-nums text-slate-900">{shiftStartLabel}</p>
+                  <p className="text-sm font-bold tabular-nums text-slate-900">{shiftEndLabel}</p>
                 </div>
               </div>
 
@@ -563,6 +603,9 @@ function AdminDashboard() {
   const [apiPendingLeaveCount, setApiPendingLeaveCount] = useState<number | null>(null);
   const [apiPendingTasksCount, setApiPendingTasksCount] = useState<number | null>(null);
   const [apiOverdueTasksCount, setApiOverdueTasksCount] = useState<number | null>(null);
+  const [apiShiftEnabled, setApiShiftEnabled] = useState<boolean | null>(null);
+  const [apiShiftStart, setApiShiftStart] = useState<string | null>(null);
+  const [apiShiftEnd, setApiShiftEnd] = useState<string | null>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000);
@@ -604,6 +647,8 @@ function AdminDashboard() {
         fetchLeaveRequestsApi(),
         fetchPendingTasksCountApi(),
         fetchOverdueTasksCountApi(),
+        getCurrentShiftApi(),
+        getShiftStatusApi(),
       ]);
       if (cancelled) return;
 
@@ -639,6 +684,17 @@ function AdminDashboard() {
       const overdueTasksRes = results[5];
       if (overdueTasksRes.status === 'fulfilled') {
         setApiOverdueTasksCount(Number(overdueTasksRes.value ?? 0));
+      }
+
+      const currentShiftRes = results[6];
+      if (currentShiftRes.status === 'fulfilled') {
+        setApiShiftStart(currentShiftRes.value.shift_start ?? null);
+        setApiShiftEnd(currentShiftRes.value.shift_end ?? null);
+      }
+
+      const shiftStatusRes = results[7];
+      if (shiftStatusRes.status === 'fulfilled') {
+        setApiShiftEnabled(Boolean(shiftStatusRes.value.is_enabled));
       }
     };
     void loadCounts();
@@ -710,6 +766,9 @@ function AdminDashboard() {
     0
   );
   const hasOverrideToday = !!attendanceDayOverrides[dateKeyLocal(now)];
+  const shiftEnabledDisplay = apiShiftEnabled ?? adhocShiftsEnabled;
+  const shiftStartDisplay = apiShiftStart ? formatShiftTime(apiShiftStart) : format(officeStartToday, 'h:mm a');
+  const shiftEndDisplay = apiShiftEnd ? formatShiftTime(apiShiftEnd) : format(officeEndToday, 'h:mm a');
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 pb-12">
@@ -894,12 +953,12 @@ function AdminDashboard() {
                 <span
                   className={cn(
                     'rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
-                    adhocShiftsEnabled
+                    shiftEnabledDisplay
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-rose-100 text-rose-800'
                   )}
                 >
-                  {adhocShiftsEnabled ? 'Enabled' : 'Disabled'}
+                  {shiftEnabledDisplay ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
               <div className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-white/80 px-4 py-3 shadow-sm sm:col-span-1 md:col-span-1">
@@ -928,14 +987,16 @@ function AdminDashboard() {
                 <div className="mt-1 grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Start</p>
-                    <p className="text-lg font-bold tabular-nums text-slate-900">{format(officeStartToday, 'h:mm a')}</p>
+                    <p className="text-lg font-bold tabular-nums text-slate-900">{shiftStartDisplay}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">End</p>
-                    <p className="text-lg font-bold tabular-nums text-slate-900">{format(officeEndToday, 'h:mm a')}</p>
+                    <p className="text-lg font-bold tabular-nums text-slate-900">{shiftEndDisplay}</p>
                   </div>
                 </div>
-                {hasOverrideToday ? (
+                {apiShiftStart || apiShiftEnd ? (
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-indigo-700">Live from shift API</p>
+                ) : hasOverrideToday ? (
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-indigo-700">Company override today</p>
                 ) : (
                   <p className="mt-1 text-[10px] text-slate-400">Default or scheduled</p>
