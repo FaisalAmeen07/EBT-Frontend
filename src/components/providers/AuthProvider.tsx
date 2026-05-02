@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           upsertUser(user);
           void useStore.getState().refreshTasksFromApi();
           void useStore.getState().refreshAttendanceFromApi();
+          void useStore.getState().refreshNotificationsFromApi();
           return;
         } catch {
           /* fall through to local roster */
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser(u);
         void useStore.getState().refreshTasksFromApi();
         void useStore.getState().refreshAttendanceFromApi();
+        void useStore.getState().refreshNotificationsFromApi();
         return;
       }
 

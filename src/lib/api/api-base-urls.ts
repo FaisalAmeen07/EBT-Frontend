@@ -13,6 +13,10 @@ export const API_PATHS = {
     resendOtp: '/api/auth/resend-otp',
     logout: '/api/auth/logout',
     departments: '/api/auth/departments',
+    notifications: '/api/auth/notifications',
+    markAllNotificationsRead: '/api/auth/notifications/read-all',
+    markNotificationRead: (id: string | number) => `/api/auth/notifications/${encodeURIComponent(String(id))}/read`,
+    deleteNotification: (id: string | number) => `/api/auth/notifications/${encodeURIComponent(String(id))}`,
     deleteUser: (hashId: string) => `/api/auth/delete-user/${encodeURIComponent(hashId)}`,
   },
   profile: {

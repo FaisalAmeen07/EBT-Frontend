@@ -38,6 +38,7 @@ import {
 } from '@/lib/messaging';
 import { format, isSameDay } from 'date-fns';
 import { MAX_UPLOAD_FILE_BYTES, MAX_UPLOAD_FILE_MB } from '@/lib/file-upload-limits';
+import { useSearchParams } from 'next/navigation';
 
 function lastActivityMs(thread: ChatThread): number {
   const last = thread.messages[thread.messages.length - 1];
@@ -164,6 +165,7 @@ function ThreadListAvatar({
 }
 
 export default function MessagesPage() {
+  const searchParams = useSearchParams();
   const {
     currentUser,
     users,
@@ -234,6 +236,8 @@ export default function MessagesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupAvatarInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const targetChatId = searchParams.get('chatId');
+  const targetMessageId = searchParams.get('messageId');
 
   const userName = (id: string) => users.find((u) => u.id === id)?.name ?? 'Unknown';
 
@@ -265,6 +269,13 @@ export default function MessagesPage() {
   }, [visibleThreads, selectedId]);
 
   useEffect(() => {
+    if (!targetChatId) return;
+    const exists = visibleThreads.some((t) => t.id === targetChatId);
+    if (!exists) return;
+    setSelectedId((prev) => (prev === targetChatId ? prev : targetChatId));
+  }, [targetChatId, visibleThreads]);
+
+  useEffect(() => {
     if (!selectedId || !currentUser) return;
     void markChatRead(selectedId);
   }, [selectedId, selected?.messages.length, currentUser, markChatRead]);
@@ -294,6 +305,14 @@ export default function MessagesPage() {
     }, 2500);
     return () => window.clearInterval(id);
   }, [selectedId, currentUser?.id, syncChatMessages]);
+
+  useEffect(() => {
+    if (!targetChatId || !targetMessageId) return;
+    if (selected?.id !== targetChatId) return;
+    const node = messageRefs.current[targetMessageId];
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [targetChatId, targetMessageId, selected?.id, selected?.messages.length]);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' });

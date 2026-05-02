@@ -139,6 +139,9 @@ const toTimesheet = (row: AttendanceRow): TimesheetEntry => {
       : 0;
   const backendBreakMinutes =
     typeof row.break_duration === 'number' && Number.isFinite(row.break_duration) ? row.break_duration : 0;
+  // Single source: DB counter is canonical; timestamps only if legacy row has no break_duration yet.
+  const breakDurationMinutes =
+    backendBreakMinutes > 0 ? backendBreakMinutes : breakMinutesFromTimestamps;
   return {
     id: String(row.id),
     userId: String(row.user_id),
@@ -152,7 +155,7 @@ const toTimesheet = (row: AttendanceRow): TimesheetEntry => {
           },
         ]
       : [],
-    breakDurationMinutes: Math.max(backendBreakMinutes, breakMinutesFromTimestamps),
+    breakDurationMinutes,
     totalHours,
     overtime: typeof totalHours === 'number' ? Math.max(0, totalHours - 8) : undefined,
     lateMark: Boolean(row.is_late),

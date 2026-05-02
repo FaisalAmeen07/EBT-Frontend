@@ -1,10 +1,12 @@
 'use client';
 
-import { Bell, Menu, User as UserIcon } from 'lucide-react';
+import { Bell, CheckCheck, Menu, Trash2, User as UserIcon, X } from 'lucide-react';
 import { useStore, type User } from '@/lib/store';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { MobileSidebarDrawer } from '@/components/layout/MobileSidebarDrawer';
+import { fetchMyNotificationsApi } from '@/services/notification.service';
 
 function getInitials(text: string): string {
   const parts = text.trim().split(/\s+/).filter(Boolean);
@@ -31,11 +33,33 @@ function headerPillLabel(user: User): string {
   }
 }
 
+function relativeTimeLabel(iso: string): string {
+  const ts = new Date(iso).getTime();
+  if (!Number.isFinite(ts)) return '';
+  const diff = Math.max(0, Date.now() - ts);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
 export function Topbar() {
+  const router = useRouter();
   const currentUser = useStore((s) => s.currentUser);
+  const notifications = useStore((s) => s.notifications);
+  const setNotifications = useStore((s) => s.setNotifications);
+  const markNotificationRead = useStore((s) => s.markNotificationRead);
+  const markAllNotificationsRead = useStore((s) => s.markAllNotificationsRead);
+  const clearNotifications = useStore((s) => s.clearNotifications);
+  const removeNotification = useStore((s) => s.removeNotification);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const menuWrapRef = useRef<HTMLDivElement>(null);
+  const notifWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -48,13 +72,65 @@ export function Topbar() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!notifOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (notifWrapRef.current && !notifWrapRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [notifOpen]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+    const run = async () => {
+        try {
+          const rows = await fetchMyNotificationsApi(100);
+          if (cancelled) return;
+          setNotifications(
+            rows.map((r) => ({
+              id: r.id,
+              title: r.title,
+              description: r.description,
+              category: r.category,
+              read: r.read,
+              createdAt: r.createdAt,
+              ...(r.eventKey ? { eventKey: r.eventKey } : {}),
+              ...(r.targetPath ? { targetPath: r.targetPath } : {}),
+            }))
+          );
+        } catch (e) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[notifications] fetch failed', e);
+        }
+      }
+    };
+    void run();
+    const id = window.setInterval(() => {
+      void run();
+    }, 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [currentUser?.id, setNotifications]);
+
   const pillLabel = currentUser ? headerPillLabel(currentUser) : 'User';
   const avatarSrc = currentUser?.avatar;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const openNotification = (id: string, targetPath?: string) => {
+    markNotificationRead(id);
+    setNotifOpen(false);
+    if (targetPath) router.push(targetPath);
+  };
 
   return (
     <>
       <MobileSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <header className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm sm:px-8">
+      <header className="relative z-50 flex h-20 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm sm:px-8">
         <div className="flex max-w-xl flex-1 items-center gap-3">
           <button
             onClick={() => setMobileOpen(true)}
@@ -66,14 +142,83 @@ export function Topbar() {
         </div>
 
         <div className="ml-4 flex shrink-0 items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50"
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5 text-slate-700" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border border-white bg-red-500" />
-          </button>
+          <div className="relative" ref={notifWrapRef}>
+            <button
+              type="button"
+              onClick={() => setNotifOpen((o) => !o)}
+              className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5 text-slate-700" />
+              {unreadCount > 0 ? (
+                <span className="absolute right-1.5 top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              ) : null}
+            </button>
+            {notifOpen ? (
+              <div className="absolute right-0 top-full z-50 mt-2 w-[min(92vw,24rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+                  <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => markAllNotificationsRead()}
+                      disabled={notifications.length === 0}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      Mark all read
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearNotifications()}
+                      disabled={notifications.length === 0}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Clear all notifications"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-[22rem] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-sm text-slate-500">No notifications yet.</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 ${
+                          n.read ? 'bg-white' : 'bg-sky-50/40'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openNotification(n.id, n.targetPath)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <p className="truncate text-sm font-semibold text-slate-900">{n.title}</p>
+                          <p className="mt-0.5 text-xs text-slate-600">{n.description}</p>
+                          <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            {relativeTimeLabel(n.createdAt)}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeNotification(n.id)}
+                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                          aria-label="Remove notification"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
 
           {/* w-fit + shrink-0: menu width matches pill; dropdown stays under pill (not under bell). */}
           <div className="relative w-fit shrink-0" ref={menuWrapRef}>

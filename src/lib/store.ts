@@ -33,6 +33,14 @@ import {
   updatePendingTaskMultipart,
 } from '@/services/tasks.service';
 import { checkInApi, checkOutApi, endBreakApi, fetchAttendanceRecordsApi, getShiftStatusApi } from '@/services/attendance.service';
+import {
+  createMyNotificationApi,
+  fetchMyNotificationsApi,
+  markMyNotificationReadApi,
+  markAllMyNotificationsReadApi,
+  deleteMyNotificationApi,
+  clearMyNotificationsApi,
+} from '@/services/notification.service';
 
 async function taskAttachmentToFile(att: TaskAttachment): Promise<File> {
   const res = await fetch(att.dataUrl);
@@ -259,6 +267,19 @@ export interface ManualTimeRequest {
   feedback?: string;
 }
 
+export type AppNotificationCategory = 'attendance' | 'task' | 'request' | 'system';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  read: boolean;
+  category: AppNotificationCategory;
+  eventKey?: string;
+  targetPath?: string;
+}
+
 /** Personal daily note (Employee); one row per user per calendar day. */
 export interface EmployeeDailyUpdate {
   id: string;
@@ -336,6 +357,19 @@ interface AppState {
   tasks: Task[];
   Leave: LeaveRequest[];
   manualTimeRequests: ManualTimeRequest[];
+  notifications: AppNotification[];
+  addNotification: (input: {
+    title: string;
+    description: string;
+    category?: AppNotificationCategory;
+    eventKey?: string;
+    targetPath?: string;
+  }) => Promise<void>;
+  setNotifications: (rows: AppNotification[]) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  removeNotification: (id: string) => void;
+  clearNotifications: () => void;
   employeeDailyUpdates: EmployeeDailyUpdate[];
   teamLeaderDailySummaries: TeamLeaderDailySummary[];
   hrDailySummaries: HRDailySummary[];
@@ -348,7 +382,8 @@ interface AppState {
   startBreak: () => Promise<void>;
   endBreak: () => Promise<void>;
   refreshAttendanceFromApi: () => Promise<void>;
-  // Admin / HR: manual attendance record (finalized entry; recalculates hours / late / OT).
+  /** Load bell notifications from gdc-backend (not persisted — always fresh). */
+  refreshNotificationsFromApi: () => Promise<void>;
   addManualTimesheetEntry: (input: {
     userId: string;
     date: string; // YYYY-MM-DD
@@ -577,6 +612,85 @@ export const useStore = create<AppState>()(
       tasks: [],
       Leave: [],
       manualTimeRequests: [],
+      notifications: [],
+      addNotification: async ({ title, description, category = 'system', eventKey, targetPath }) => {
+        const { currentUser, notifications: current } = get();
+        if (!currentUser) return;
+        const key = String(eventKey || '').trim();
+        if (key && current.some((n) => n.eventKey === key)) return;
+        try {
+          const created = await createMyNotificationApi({
+            title: String(title || '').trim() || 'Activity',
+            description: String(description || '').trim(),
+            category,
+            eventKey: key || undefined,
+            targetPath,
+          });
+          if (!created) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[notifications] Server did not return a row; check auth and notifications table');
+            }
+            return;
+          }
+          const rows = await fetchMyNotificationsApi(100);
+          set({
+            notifications: rows.map((r) => ({
+              id: r.id,
+              title: r.title,
+              description: r.description,
+              category: r.category,
+              read: r.read,
+              createdAt: r.createdAt,
+              ...(r.eventKey ? { eventKey: r.eventKey } : {}),
+              ...(r.targetPath ? { targetPath: r.targetPath } : {}),
+            })),
+          });
+        } catch (e) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[notifications] addNotification failed', e);
+          }
+        }
+      },
+      setNotifications: (rows) =>
+        set(() => ({
+          notifications: Array.isArray(rows) ? rows : [],
+        })),
+      markNotificationRead: (id) =>
+        set((s) => ({
+          notifications: (() => {
+            void markMyNotificationReadApi(id).catch(() => {
+              /* backend sync is best-effort */
+            });
+            return s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+          })(),
+        })),
+      markAllNotificationsRead: () =>
+        set((s) => ({
+          notifications: (() => {
+            void markAllMyNotificationsReadApi().catch(() => {
+              /* backend sync is best-effort */
+            });
+            return s.notifications.map((n) => ({ ...n, read: true }));
+          })(),
+        })),
+      removeNotification: (id) =>
+        set((s) => ({
+          notifications: (() => {
+            void deleteMyNotificationApi(id).catch(() => {
+              /* backend sync is best-effort */
+            });
+            return s.notifications.filter((n) => n.id !== id);
+          })(),
+        })),
+      clearNotifications: () =>
+        set((s) => ({
+          notifications: (() => {
+            void clearMyNotificationsApi().catch(() => {
+              /* backend sync is best-effort */
+            });
+            return [];
+          })(),
+        })),
       employeeDailyUpdates: [] as EmployeeDailyUpdate[],
       teamLeaderDailySummaries: [] as TeamLeaderDailySummary[],
       hrDailySummaries: [] as HRDailySummary[],
@@ -596,6 +710,28 @@ export const useStore = create<AppState>()(
         if (!currentUser) return;
         const timesheets = await fetchAttendanceRecordsApi();
         set({ timesheets });
+      },
+
+      refreshNotificationsFromApi: async () => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+        try {
+          const rows = await fetchMyNotificationsApi(100);
+          set({
+            notifications: rows.map((r) => ({
+              id: r.id,
+              title: r.title,
+              description: r.description,
+              category: r.category,
+              read: r.read,
+              createdAt: r.createdAt,
+              ...(r.eventKey ? { eventKey: r.eventKey } : {}),
+              ...(r.targetPath ? { targetPath: r.targetPath } : {}),
+            })),
+          });
+        } catch {
+          /* keep existing list */
+        }
       },
 
       clockIn: async () => {
@@ -624,6 +760,12 @@ export const useStore = create<AppState>()(
           currentUser: s.currentUser ? { ...s.currentUser, status: 'Available' } : s.currentUser,
           users: s.users.map((u) => (u.id === currentUser.id ? { ...u, status: 'Available' } : u)),
         }));
+        get().addNotification({
+          title: 'Clock In',
+          description: 'You clocked in successfully.',
+          category: 'attendance',
+          targetPath: '/timesheet',
+        });
       },
 
       clockOut: async () => {
@@ -633,6 +775,12 @@ export const useStore = create<AppState>()(
         await checkOutApi();
         const timesheets = await fetchAttendanceRecordsApi();
         set({ timesheets });
+        get().addNotification({
+          title: 'Clock Out',
+          description: 'Your shift has been clocked out.',
+          category: 'attendance',
+          targetPath: '/timesheet',
+        });
       },
 
       // Break start is handled by backend auto-break scheduler; no manual start endpoint.
@@ -648,6 +796,12 @@ export const useStore = create<AppState>()(
         await endBreakApi();
         const timesheets = await fetchAttendanceRecordsApi();
         set({ timesheets });
+        get().addNotification({
+          title: 'Break Ended',
+          description: 'You are back to active work.',
+          category: 'attendance',
+          targetPath: '/timesheet',
+        });
       },
 
       setAttendanceDayOverride: (date, hour, minute, endHour, endMinute) => {
@@ -1049,6 +1203,7 @@ export const useStore = create<AppState>()(
           file,
         });
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       forwardTaskToTeamLeader: async (taskId, teamLeaderId) => {
@@ -1067,6 +1222,7 @@ export const useStore = create<AppState>()(
 
         await forwardTaskToTeamLeaderApi(taskId, teamLeaderId);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       deletePendingTask: async (taskId) => {
@@ -1092,6 +1248,7 @@ export const useStore = create<AppState>()(
 
         await deleteTaskApi(taskId);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       updatePendingTask: async (taskId, input) => {
@@ -1132,6 +1289,7 @@ export const useStore = create<AppState>()(
           file: file ?? null,
         });
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       startTaskWork: async (taskId) => {
@@ -1146,6 +1304,7 @@ export const useStore = create<AppState>()(
 
         await startTaskWorkApi(taskId);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       submitTask: async (taskId, submissionNote) => {
@@ -1163,6 +1322,7 @@ export const useStore = create<AppState>()(
 
         await submitTaskApi(taskId, note);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       moveTaskToReview: async (taskId) => {
@@ -1189,6 +1349,7 @@ export const useStore = create<AppState>()(
 
         await moveTaskToReviewApi(taskId);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       approveTask: async (taskId) => {
@@ -1216,6 +1377,7 @@ export const useStore = create<AppState>()(
 
         await approveTaskApi(taskId);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
 
       addTaskComment: async (taskId, commentText) => {
@@ -1225,6 +1387,7 @@ export const useStore = create<AppState>()(
         if (!text) return;
         await addTaskCommentApi(taskId, text);
         await get().refreshTasksFromApi();
+        void get().refreshNotificationsFromApi();
       },
       
       applyLeave: (leaveData) => {
@@ -1256,9 +1419,68 @@ export const useStore = create<AppState>()(
         }));
       },
       setLeaveRequests: (rows) =>
-        set(() => ({
-          Leave: Array.isArray(rows) ? rows : [],
-        })),
+        set((state) => {
+          const nextRows = Array.isArray(rows) ? rows : [];
+          const hasPreviousSnapshot = state.Leave.length > 0;
+          const prevById = new Map(state.Leave.map((l) => [l.id, l]));
+          const me = state.currentUser;
+          let nextNotifications = state.notifications;
+          const pushNotification = (input: {
+            title: string;
+            description: string;
+            category: AppNotificationCategory;
+            eventKey: string;
+            targetPath: string;
+          }) => {
+            if (nextNotifications.some((n) => n.eventKey === input.eventKey)) return;
+            void createMyNotificationApi({
+              title: input.title,
+              description: input.description,
+              category: input.category,
+              eventKey: input.eventKey,
+              targetPath: input.targetPath,
+            }).catch(() => {
+              /* backend sync is best-effort */
+            });
+            nextNotifications = [
+              {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                title: input.title,
+                description: input.description,
+                createdAt: new Date().toISOString(),
+                read: false,
+                category: input.category,
+                eventKey: input.eventKey,
+                targetPath: input.targetPath,
+              },
+              ...nextNotifications,
+            ].slice(0, 100);
+          };
+          for (const row of nextRows) {
+            const prev = prevById.get(row.id);
+            if (!me) continue;
+            const isForReviewer = (me.role === 'Admin' || me.role === 'HR') && row.userId !== me.id;
+            if (hasPreviousSnapshot && !prev && isForReviewer && row.status === 'Pending') {
+              pushNotification({
+                title: 'New Leave Request',
+                description: `${row.requesterName || 'A user'} submitted a leave request.`,
+                category: 'request',
+                eventKey: `leave-new-${row.id}`,
+                targetPath: `/request-management?requestId=${encodeURIComponent(row.id)}`,
+              });
+            }
+            if (prev && prev.status !== row.status && row.userId === me.id) {
+              pushNotification({
+                title: 'Leave Status Updated',
+                description: `Your leave request is now ${row.status}.`,
+                category: 'request',
+                eventKey: `leave-status-${row.id}-${row.status}`,
+                targetPath: `/my-requests?requestId=${encodeURIComponent(row.id)}`,
+              });
+            }
+          }
+          return { Leave: nextRows, notifications: nextNotifications };
+        }),
 
       updateAvailability: (userId, days) => set((state) => {
         const existing = state.availability.find(a => a.userId === userId);
@@ -1720,7 +1942,7 @@ export const useStore = create<AppState>()(
       },
 
       syncChatMessages: async (chatId) => {
-        const { currentUser, chatThreads } = get();
+        const { currentUser, chatThreads, users } = get();
         if (!currentUser) return { ok: false, error: 'Not signed in' };
         const thread = chatThreads.find((t) => t.id === chatId);
         if (!thread) return { ok: false, error: 'Chat not found' };
@@ -1751,6 +1973,21 @@ export const useStore = create<AppState>()(
           set({
             chatThreads: chatThreads.map((t) => (t.id === chatId ? { ...t, messages: msgs } : t)),
           });
+          const hasPreviousSnapshot = thread.messages.length > 0;
+          if (!hasPreviousSnapshot) return { ok: true };
+          const prevIds = new Set(thread.messages.map((m) => m.id));
+          const senderName = (id: string) => users.find((u) => u.id === id)?.name || 'Someone';
+          for (const m of msgs) {
+            if (prevIds.has(m.id)) continue;
+            if (m.authorId === currentUser.id) continue;
+            get().addNotification({
+              title: 'New Message',
+              description: `${senderName(m.authorId)} sent you a message.`,
+              category: 'system',
+              eventKey: `chat-msg-${m.id}`,
+              targetPath: `/messages?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(m.id)}`,
+            });
+          }
           return { ok: true };
         } catch (e: any) {
           return { ok: false, error: e?.message || 'Network error' };
@@ -2369,6 +2606,14 @@ export const useStore = create<AppState>()(
             t.id === chatId ? { ...t, messages: [...t.messages, msg] } : t
           ),
         });
+        const senderName = users.find((u) => u.id === fromUserId)?.name || 'Someone';
+        get().addNotification({
+          title: 'New Message',
+          description: `${senderName} sent you a message.`,
+          category: 'system',
+          eventKey: `chat-msg-${msg.id}`,
+          targetPath: `/messages?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(msg.id)}`,
+        });
         emitChatSocketEvent({ type: 'message:new', chatId, message: msg, source: 'incoming' });
         return { ok: true };
       },
@@ -2376,12 +2621,12 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'gdc-storage',
-      version: 19,
+      version: 20,
       partialize: (state) => {
-        const { tasks: _tasks, ...rest } = state;
+        const { tasks: _tasks, notifications: _notifications, ...rest } = state;
         return rest as typeof state;
       },
-      migrate: (persistedState: any) => {
+      migrate: (persistedState: any, _version: number) => {
         if (!persistedState) return persistedState;
 
         const LEGACY_DEMO_SITES = ['Karachi HQ', 'Lahore Office', 'Islamabad', 'Remote'] as const;
@@ -2452,6 +2697,7 @@ export const useStore = create<AppState>()(
             return normalized.length > 0 ? [...new Set(normalized)] : [...DEFAULT_DEPARTMENTS];
           })(),
           manualTimeRequests: Array.isArray(persistedState.manualTimeRequests) ? persistedState.manualTimeRequests : [],
+          notifications: [],
           passwordResetTokens: Array.isArray(persistedState.passwordResetTokens)
             ? (persistedState.passwordResetTokens as PasswordResetToken[]).map((t) => {
                 const raw = t as PasswordResetToken & { otp?: string; otpVerified?: boolean };
@@ -2488,8 +2734,10 @@ export const useStore = create<AppState>()(
           persistedState && typeof persistedState === 'object'
             ? (persistedState as Partial<AppState>)
             : {};
-        const merged = { ...currentState, ...partial };
+        const { notifications: _persistedNotifications, ...restPersisted } = partial;
+        const merged = { ...currentState, ...restPersisted };
         merged.tasks = [];
+        merged.notifications = Array.isArray(currentState.notifications) ? currentState.notifications : [];
         if (merged.attendanceDayOverrides == null || typeof merged.attendanceDayOverrides !== 'object') {
           merged.attendanceDayOverrides = {};
         }

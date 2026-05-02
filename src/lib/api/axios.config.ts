@@ -11,10 +11,12 @@ function resolveBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim() ?? '';
   const normalized = raw.replace(/\/$/, '');
   if (normalized) return normalized;
+
   if (process.env.NODE_ENV === 'development') {
-    console.warn(
-      `[api] NEXT_PUBLIC_API_URL is unset — using ${DEFAULT_DEV_ORIGIN}. Add it to .env.local (see .env.example).`
-    );
+    if (typeof window !== 'undefined') {
+      // Same origin → Next.js rewrites forward to gdc-backend (avoids CORS / CORP / port mixups).
+      return '';
+    }
     return DEFAULT_DEV_ORIGIN;
   }
   console.warn(

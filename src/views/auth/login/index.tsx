@@ -61,6 +61,7 @@ export default function SignInView() {
       setCurrentUser(res.user);
       upsertUser(res.user);
       commitSession(res.user, res.token);
+      void useStore.getState().refreshNotificationsFromApi();
       router.push(res.user.role === 'Pending User' ? '/pending' : '/');
       router.refresh();
     } finally {

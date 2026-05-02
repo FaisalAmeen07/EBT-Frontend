@@ -123,6 +123,7 @@ export function TimeControlPage() {
         effective_date: companyDay,
       });
       toast('Shift timing updated.');
+      void useStore.getState().refreshNotificationsFromApi();
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Unable to set shift timing.', 'error');
     }
