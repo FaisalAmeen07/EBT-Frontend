@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { ChatAttachment, ChatMessage, ChatThread } from '@/lib/messaging';
 import {
   chatThreadTitle,
@@ -11,7 +10,6 @@ import {
   canAddToTlGroup,
   canAddToGroup,
   resolveMessageRecipients,
-  migrateChatThreadsForReadReceipts,
   teamGroupChatId,
   canDmPair,
 } from '@/lib/messaging';
@@ -592,9 +590,7 @@ export function deriveTeamsRegistryFromUsers(users: User[]): string[] {
   return [...s].sort((a, b) => a.localeCompare(b));
 }
 
-export const useStore = create<AppState>()(
-  persist(
-    (set, get) => ({
+export const useStore = create<AppState>()((set, get) => ({
       currentUser: null,
       users: [],
       timesheets: [],
@@ -2617,156 +2613,4 @@ export const useStore = create<AppState>()(
         emitChatSocketEvent({ type: 'message:new', chatId, message: msg, source: 'incoming' });
         return { ok: true };
       },
-
-    }),
-    {
-      name: 'gdc-storage',
-      version: 20,
-      partialize: (state) => {
-        const { tasks: _tasks, notifications: _notifications, ...rest } = state;
-        return rest as typeof state;
-      },
-      migrate: (persistedState: any, _version: number) => {
-        if (!persistedState) return persistedState;
-
-        const LEGACY_DEMO_SITES = ['Karachi HQ', 'Lahore Office', 'Islamabad', 'Remote'] as const;
-        const migratedThreads = Array.isArray(persistedState.chatThreads) ? persistedState.chatThreads : [];
-        const legacyRead =
-          persistedState.chatLastReadAt && typeof persistedState.chatLastReadAt === 'object'
-            ? (persistedState.chatLastReadAt as Record<string, string>)
-            : undefined;
-        const threadsWithReceipts = migrateChatThreadsForReadReceipts(migratedThreads, legacyRead);
-
-        const { chatLastReadAt: _discardLegacyRead, ...persistWithoutRead } = persistedState;
-
-        const normalizedUsers: User[] = Array.isArray(persistedState.users)
-          ? (persistedState.users as any[]).map((u) => {
-              const fixedStatus = u?.status === 'Holiday' ? { ...u, status: 'Unavailable' as const } : u;
-              return fixedStatus;
-            }) as User[]
-          : [];
-
-        const mergedUsers = mergeUsersWithSeed(normalizedUsers);
-        const nextState = {
-          ...persistWithoutRead,
-          attendanceDayOverrides:
-            persistedState.attendanceDayOverrides &&
-            typeof persistedState.attendanceDayOverrides === 'object' &&
-            !Array.isArray(persistedState.attendanceDayOverrides)
-              ? persistedState.attendanceDayOverrides
-              : {},
-          adhocShiftsEnabled:
-            typeof persistedState.adhocShiftsEnabled === 'boolean' ? persistedState.adhocShiftsEnabled : true,
-          geoFencingEnabled:
-            typeof persistedState.geoFencingEnabled === 'boolean' ? persistedState.geoFencingEnabled : false,
-          geoFencingUseGlobalRadius:
-            typeof persistedState.geoFencingUseGlobalRadius === 'boolean'
-              ? persistedState.geoFencingUseGlobalRadius
-              : true,
-          geoFencingGlobalRadiusMiles:
-            typeof persistedState.geoFencingGlobalRadiusMiles === 'number'
-              ? Math.max(0, persistedState.geoFencingGlobalRadiusMiles)
-              : 0,
-          geoFencingSiteRadiusMiles:
-            persistedState.geoFencingSiteRadiusMiles &&
-            typeof persistedState.geoFencingSiteRadiusMiles === 'object' &&
-            !Array.isArray(persistedState.geoFencingSiteRadiusMiles)
-              ? persistedState.geoFencingSiteRadiusMiles
-              : {},
-          geoFencingOfficeLat:
-            typeof persistedState.geoFencingOfficeLat === 'number' ? persistedState.geoFencingOfficeLat : null,
-          geoFencingOfficeLng:
-            typeof persistedState.geoFencingOfficeLng === 'number' ? persistedState.geoFencingOfficeLng : null,
-          sites: (() => {
-            const raw = Array.isArray(persistedState.sites) ? [...persistedState.sites] : [];
-            if (
-              raw.length === LEGACY_DEMO_SITES.length &&
-              LEGACY_DEMO_SITES.every((s) => raw.includes(s))
-            ) {
-              return [];
-            }
-            return raw;
-          })(),
-          departments: (() => {
-            const raw = Array.isArray(persistedState.departments)
-              ? (persistedState.departments as unknown[])
-              : [];
-            const normalized = raw
-              .map((d) => (typeof d === 'string' ? d.trim() : ''))
-              .filter((d): d is string => !!d);
-            return normalized.length > 0 ? [...new Set(normalized)] : [...DEFAULT_DEPARTMENTS];
-          })(),
-          manualTimeRequests: Array.isArray(persistedState.manualTimeRequests) ? persistedState.manualTimeRequests : [],
-          notifications: [],
-          passwordResetTokens: Array.isArray(persistedState.passwordResetTokens)
-            ? (persistedState.passwordResetTokens as PasswordResetToken[]).map((t) => {
-                const raw = t as PasswordResetToken & { otp?: string; otpVerified?: boolean };
-                const hasOtp = typeof raw.otp === 'string' && raw.otp.length > 0;
-                return {
-                  ...t,
-                  otp: hasOtp ? raw.otp : '',
-                  otpVerified:
-                    typeof raw.otpVerified === 'boolean' ? raw.otpVerified : !hasOtp,
-                };
-              })
-            : [],
-          employeeDailyUpdates: Array.isArray(persistedState.employeeDailyUpdates)
-            ? persistedState.employeeDailyUpdates
-            : [],
-          teamLeaderDailySummaries: Array.isArray(persistedState.teamLeaderDailySummaries)
-            ? persistedState.teamLeaderDailySummaries
-            : [],
-          hrDailySummaries: Array.isArray(persistedState.hrDailySummaries) ? persistedState.hrDailySummaries : [],
-          chatThreads: threadsWithReceipts,
-          users: mergedUsers,
-          teams: deriveTeamsRegistryFromUsers(mergedUsers),
-        };
-
-        // Tasks are loaded from Task microservice only (not persisted).
-        return {
-          ...nextState,
-          tasks: [],
-          teams: deriveTeamsRegistryFromUsers(nextState.users || []),
-        };
-      },
-      merge: (persistedState: unknown, currentState: AppState) => {
-        const partial =
-          persistedState && typeof persistedState === 'object'
-            ? (persistedState as Partial<AppState>)
-            : {};
-        const { notifications: _persistedNotifications, ...restPersisted } = partial;
-        const merged = { ...currentState, ...restPersisted };
-        merged.tasks = [];
-        merged.notifications = Array.isArray(currentState.notifications) ? currentState.notifications : [];
-        if (merged.attendanceDayOverrides == null || typeof merged.attendanceDayOverrides !== 'object') {
-          merged.attendanceDayOverrides = {};
-        }
-        if (typeof merged.adhocShiftsEnabled !== 'boolean') merged.adhocShiftsEnabled = true;
-        if (typeof merged.geoFencingEnabled !== 'boolean') merged.geoFencingEnabled = false;
-        if (typeof merged.geoFencingUseGlobalRadius !== 'boolean') merged.geoFencingUseGlobalRadius = true;
-        if (typeof merged.geoFencingGlobalRadiusMiles !== 'number') merged.geoFencingGlobalRadiusMiles = 0;
-        if (merged.geoFencingSiteRadiusMiles == null || typeof merged.geoFencingSiteRadiusMiles !== 'object') {
-          merged.geoFencingSiteRadiusMiles = {};
-        }
-        if (merged.geoFencingOfficeLat !== null && typeof merged.geoFencingOfficeLat !== 'number') {
-          merged.geoFencingOfficeLat = null;
-        }
-        if (merged.geoFencingOfficeLng !== null && typeof merged.geoFencingOfficeLng !== 'number') {
-          merged.geoFencingOfficeLng = null;
-        }
-        if (Array.isArray(merged.users)) {
-          merged.teams = deriveTeamsRegistryFromUsers(merged.users);
-        }
-        if (!Array.isArray(merged.departments) || merged.departments.length === 0) {
-          merged.departments = [...DEFAULT_DEPARTMENTS];
-        } else {
-          const normalized = merged.departments
-            .map((d) => (typeof d === 'string' ? d.trim() : ''))
-            .filter((d): d is string => !!d);
-          merged.departments = normalized.length > 0 ? [...new Set(normalized)] : [...DEFAULT_DEPARTMENTS];
-        }
-        return merged;
-      },
-    }
-  )
-);
+}));

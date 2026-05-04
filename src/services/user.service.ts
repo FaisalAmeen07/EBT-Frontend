@@ -22,8 +22,8 @@ export type UpdateProfileResponse = {
 };
 
 /**
- * Fetches the authenticated user's profile.
- * Requires a JWT in the `accessToken` cookie (Bearer) unless you extend the axios interceptor.
+ * Fetches the authenticated user (same intent as a typical GET /api/me).
+ * Backend: GET /api/profile/getProfile — JWT via `Authorization: Bearer …` and/or `accessToken` cookie (see `authMiddleware`).
  */
 export function getCurrentUserProfile(): Promise<UserProfileDto> {
   return apiGet<UserProfileDto>(API_PATHS.profile.get);

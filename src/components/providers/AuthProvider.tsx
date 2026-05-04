@@ -1,15 +1,23 @@
 'use client';
 
 import { ToastViewport } from '@/components/ToastViewport';
-import { ACCESS_TOKEN_COOKIE } from '@/lib/api/axios.config';
+import { clearLegacyDashboardLocalStorage } from '@/lib/clear-legacy-dashboard-storage';
 import { mapProfileToStoreUser } from '@/lib/auth/map-api-user';
 import { useStore, type Role } from '@/lib/store';
+import { fetchAllUsersForAdmin, mapAdminUserRowToStoreUser } from '@/services/admin.service';
 import { fetchMyTeamRoster, mapRosterMemberToStoreUser } from '@/services/team.service';
 import { getCurrentUserProfile } from '@/services/user.service';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import Cookies from 'js-cookie';
 import { clearSessionCookies } from '@/views/auth/authSession';
+
+const noopSubscribe = () => () => {};
+
+/** Client-only gate without `setState` inside an effect (satisfies `react-hooks/set-state-in-effect`). */
+function useClientMounted(): boolean {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentUser = useStore((s) => s.currentUser);
@@ -17,18 +25,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const upsertUser = useStore((s) => s.upsertUser);
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientMounted();
 
   useEffect(() => {
-    setMounted(true);
+    clearLegacyDashboardLocalStorage();
   }, []);
 
-  // Rehydrate session: cookie present but zustand user empty (e.g. cleared storage)
+  // Rehydrate session: auth cookies present but in-memory user empty (e.g. new tab / no PII in storage).
+  /** Profile GET (`/api/profile/getProfile`) — same JWT source as a typical `/api/me` (Bearer or `accessToken` cookie per backend). */
   useEffect(() => {
     if (!mounted) return;
     const roleCookie = Cookies.get('auth-role');
     const idCookie = Cookies.get('auth-user-id');
-    const tokenCookie = Cookies.get(ACCESS_TOKEN_COOKIE);
     if (!roleCookie || !idCookie || currentUser) return;
 
     let cancelled = false;
@@ -36,33 +44,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function hydrate() {
       const id = idCookie as string;
       const role = roleCookie as Role;
-      if (tokenCookie) {
-        try {
-          const profile = await getCurrentUserProfile();
-          if (cancelled) return;
-          const user = mapProfileToStoreUser(profile, id, role);
-          setCurrentUser(user);
-          upsertUser(user);
-          void useStore.getState().refreshTasksFromApi();
-          void useStore.getState().refreshAttendanceFromApi();
-          void useStore.getState().refreshNotificationsFromApi();
-          return;
-        } catch {
-          /* fall through to local roster */
-        }
-      }
+      try {
+        const profile = await getCurrentUserProfile();
+        if (cancelled) return;
+        const user = mapProfileToStoreUser(profile, id, role);
 
-      const u = useStore.getState().users.find((x) => x.id === id);
-      if (u && u.role === role) {
-        setCurrentUser(u);
+        const { replaceDirectoryUsers, users } = useStore.getState();
+        if ((role === 'Admin' || role === 'HR') && users.length === 0) {
+          try {
+            const res = await fetchAllUsersForAdmin();
+            if (cancelled) return;
+            if (res.success && Array.isArray(res.data)) {
+              replaceDirectoryUsers(res.data.map(mapAdminUserRowToStoreUser));
+            }
+          } catch {
+            /* directory loads on dedicated views if this fails */
+          }
+        }
+
+        setCurrentUser(user);
+        upsertUser(user);
         void useStore.getState().refreshTasksFromApi();
         void useStore.getState().refreshAttendanceFromApi();
         void useStore.getState().refreshNotificationsFromApi();
-        return;
+      } catch {
+        clearSessionCookies();
+        router.push('/auth/login');
       }
-
-      clearSessionCookies();
-      router.push('/auth/login');
     }
 
     void hydrate();
