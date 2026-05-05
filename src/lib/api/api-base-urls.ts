@@ -39,6 +39,7 @@ export const API_PATHS = {
     create: '/api/teams/createTeam',
     list: '/api/teams/getTeams',
     myTeamRoster: '/api/teams/my-team-roster',
+    visibleDirectory: '/api/teams/visible-directory',
     delete: (id: string | number) => `/api/teams/deleteTeam/${id}`,
     detachMember: '/api/teams/detach-member',
     addEmployees: '/api/teams/add-employees',

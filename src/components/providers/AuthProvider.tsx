@@ -5,7 +5,7 @@ import { clearLegacyDashboardLocalStorage } from '@/lib/clear-legacy-dashboard-s
 import { mapProfileToStoreUser } from '@/lib/auth/map-api-user';
 import { useStore, type Role } from '@/lib/store';
 import { fetchAllUsersForAdmin, mapAdminUserRowToStoreUser } from '@/services/admin.service';
-import { fetchMyTeamRoster, mapRosterMemberToStoreUser } from '@/services/team.service';
+import { fetchVisibleDirectory, visibleDirectoryMembersToUsers } from '@/services/team.service';
 import { getCurrentUserProfile } from '@/services/user.service';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useSyncExternalStore } from 'react';
@@ -107,12 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetchMyTeamRoster();
+        const res = await fetchVisibleDirectory();
         if (cancelled) return;
-        const { upsertUser, setCurrentUser } = useStore.getState();
-        for (const row of res.members) {
-          upsertUser(mapRosterMemberToStoreUser(row, res.team_name, res.work_site));
-        }
+        const { replaceDirectoryUsers, setCurrentUser } = useStore.getState();
+        replaceDirectoryUsers(visibleDirectoryMembersToUsers(res));
         const latest = useStore.getState().currentUser;
         if (latest && res.team_name) {
           const ws = res.work_site?.trim();

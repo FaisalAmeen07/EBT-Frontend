@@ -41,6 +41,7 @@ import {
 } from '@/services/notification.service';
 import { fetchChatParticipantSnapshotsApi, type ChatParticipantSnapshot } from '@/services/user.service';
 import { dbRoleToFrontendRole } from '@/services/admin.service';
+import { filterUsersForViewer, isUserVisibleToViewer } from '@/lib/userVisibility';
 
 function mapChatSnapshotToUser(row: ChatParticipantSnapshot): User {
   const tn = row.team_name?.trim();
@@ -759,11 +760,19 @@ export const useStore = create<AppState>()((set, get) => ({
       availability: [],
       setCurrentUser: (user) => set({ currentUser: user }),
       upsertUser: (user) =>
-        set((s) => ({
-          users: s.users.some((u) => u.id === user.id)
-            ? s.users.map((u) => (u.id === user.id ? { ...u, ...user } : u))
-            : [...s.users, user],
-        })),
+        set((s) => {
+          const viewer = s.currentUser;
+          const existing = s.users.find((u) => u.id === user.id);
+          const mergedUser = existing ? { ...existing, ...user } : user;
+          if (viewer && !isUserVisibleToViewer(viewer, mergedUser)) {
+            return s;
+          }
+          return {
+            users: s.users.some((u) => u.id === user.id)
+              ? s.users.map((u) => (u.id === user.id ? mergedUser : u))
+              : [...s.users, mergedUser],
+          };
+        }),
 
       refreshAttendanceFromApi: async () => {
         const { currentUser } = get();
@@ -1655,14 +1664,24 @@ export const useStore = create<AppState>()((set, get) => ({
 
       replaceDirectoryUsers: (users) =>
         set((state) => {
+          const merged = mergeUsersWithSeed(users);
+          const viewer = state.currentUser;
+          let next: User[] = viewer ? (filterUsersForViewer(viewer, merged) as User[]) : merged;
+
           let currentUser = state.currentUser;
           if (currentUser) {
-            const refreshed = users.find((x) => x.id === currentUser!.id);
+            let refreshed = next.find((x) => x.id === currentUser!.id);
+            if (!refreshed) {
+              next = mergeUsersWithSeed([...next, currentUser]);
+              next = viewer ? (filterUsersForViewer(viewer, next) as User[]) : next;
+              refreshed = next.find((x) => x.id === currentUser!.id);
+            }
             if (refreshed) currentUser = refreshed;
           }
+
           return {
-            users,
-            teams: deriveTeamsRegistryFromUsers(users),
+            users: next,
+            teams: deriveTeamsRegistryFromUsers(next),
             currentUser,
           };
         }),
@@ -2015,7 +2034,9 @@ export const useStore = create<AppState>()((set, get) => ({
           const res = await fetchChatParticipantSnapshotsApi(need);
           if (!res.success || !Array.isArray(res.data)) return { ok: false, error: 'Could not load participant profiles' };
           for (const row of res.data) {
-            get().upsertUser(mapChatSnapshotToUser(row));
+            const u = mapChatSnapshotToUser(row);
+            if (!isUserVisibleToViewer(currentUser, u)) continue;
+            get().upsertUser(u);
           }
           return { ok: true };
         } catch (e: any) {

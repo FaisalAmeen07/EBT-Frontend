@@ -246,6 +246,12 @@ function TimerWidget() {
   const roleLabel = currentUser?.department ?? currentUser?.role ?? '—';
   const shiftStartLabel = formatShiftTime(shiftStartApi);
   const shiftEndLabel = formatShiftTime(shiftEndApi);
+  /** TL / Employee: show assigned team where the card used to say only “Regular”. */
+  const teamHeadline =
+    (currentUser?.role === 'Team Leader' || currentUser?.role === 'Employee') &&
+    currentUser?.team?.trim()
+      ? currentUser.team.trim()
+      : null;
 
   return (
     <div className="space-y-5">
@@ -263,7 +269,17 @@ function TimerWidget() {
           <div className="flex items-start gap-4">
             <div className={`w-1.5 self-stretch rounded-full ${lineColorClass}`} />
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-widest text-blue-600">Regular</p>
+              {teamHeadline ? (
+                <>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Your team</p>
+                  <p className="mt-1 text-base font-bold leading-snug text-blue-600">{teamHeadline}</p>
+                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Regular shift
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs font-black uppercase tracking-widest text-blue-600">Regular</p>
+              )}
 
               <div className="mt-4 grid gap-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">

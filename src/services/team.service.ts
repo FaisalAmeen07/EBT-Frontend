@@ -103,6 +103,9 @@ export type TeamRosterMemberRow = {
   department?: string | null;
   gdc_id?: string | null;
   profile_image?: string | null;
+  /** Backend may attach per-member team label (e.g. Admin rows vs roster team name). */
+  member_team_name?: string | null;
+  member_work_site?: string | null;
 };
 
 export type MyTeamRosterResponse = {
@@ -135,6 +138,23 @@ export function mapRosterMemberToStoreUser(
 
 export async function fetchMyTeamRoster(): Promise<MyTeamRosterResponse> {
   return apiGet<MyTeamRosterResponse>(API_PATHS.teams.myTeamRoster);
+}
+
+/** Team Leader / Employee: full allowed directory slice from API (never the admin “All users” list). */
+export async function fetchVisibleDirectory(): Promise<MyTeamRosterResponse> {
+  return apiGet<MyTeamRosterResponse>(API_PATHS.teams.visibleDirectory);
+}
+
+export function visibleDirectoryMembersToUsers(res: MyTeamRosterResponse): User[] {
+  const fallbackTeam = res.team_name?.trim() ?? null;
+  const fallbackSite = res.work_site?.trim() ?? null;
+  return (res.members ?? []).map((row) =>
+    mapRosterMemberToStoreUser(
+      row,
+      row.member_team_name?.trim() || fallbackTeam,
+      row.member_work_site?.trim() || fallbackSite,
+    ),
+  );
 }
 
 export async function buildUsersWithResolvedTeams(): Promise<User[]> {
