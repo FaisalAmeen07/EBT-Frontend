@@ -23,6 +23,7 @@ export function isUserVisibleToViewer(viewer: UserVisibilityShape, candidate: Us
       return true;
     case 'Team Leader':
       if (candidate.role === 'Admin' || candidate.role === 'HR') return true;
+      if (candidate.role === 'Team Leader') return true;
       if (candidate.role === 'Employee') return sameTeamName(viewer.team, candidate.team);
       return false;
     case 'Employee':

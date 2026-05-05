@@ -134,8 +134,10 @@ export function teamGroupChatId(teamName: string): string {
 export function canDm(from: Role, to: Role): boolean {
   if (from === 'Pending User' || to === 'Pending User') return false;
   if (from === 'Admin') return to === 'HR' || to === 'Team Leader' || to === 'Employee';
-  if (from === 'HR') return to === 'Admin' || to === 'Team Leader' || to === 'Employee';
-  if (from === 'Team Leader') return to === 'Admin' || to === 'HR' || to === 'Employee';
+  if (from === 'HR')
+    return to === 'Admin' || to === 'HR' || to === 'Team Leader' || to === 'Employee';
+  if (from === 'Team Leader')
+    return to === 'Admin' || to === 'HR' || to === 'Team Leader' || to === 'Employee';
   if (from === 'Employee') return to === 'Admin' || to === 'HR' || to === 'Team Leader';
   return false;
 }
