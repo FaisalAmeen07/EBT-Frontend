@@ -50,8 +50,13 @@ type TlBundleResponse = {
 
 type LeadershipResponse = {
   success: boolean;
-  team_leader_summaries: TeamLeaderSummaryRow[];
-  hr_summary: HrSummaryRow | null;
+  team_leader_summaries?: TeamLeaderSummaryRow[] | unknown;
+  hr_summary?: HrSummaryRow | unknown | null;
+  /** Some gateways / older payloads wrap under `data`. */
+  data?: {
+    team_leader_summaries?: unknown[];
+    hr_summary?: unknown | null;
+  };
 };
 
 function toYmd(val: unknown): string {
@@ -84,6 +89,68 @@ function mapTlRow(r: TeamLeaderSummaryRow): TeamLeaderDailySummary {
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   };
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Normalize TL summary rows whether the API sent camelCase (model mapper) or raw snake_case.
+ */
+export function normalizeTeamLeaderSummaryPayload(row: unknown): TeamLeaderDailySummary | null {
+  if (!isPlainObject(row)) return null;
+  const id =
+    row.id != null ? String(row.id) : '';
+  const team = String(row.team ?? row.team_name ?? '').trim();
+  const authorRaw = row.authorId ?? row.author_id;
+  const authorId = authorRaw != null ? String(authorRaw) : '';
+  const body = String(row.body ?? '');
+  const date = toYmd(row.date);
+  const createdAt =
+    typeof row.createdAt === 'string'
+      ? row.createdAt
+      : typeof row.created_at === 'string'
+        ? row.created_at
+        : new Date().toISOString();
+  const updatedAt =
+    typeof row.updatedAt === 'string'
+      ? row.updatedAt
+      : typeof row.updated_at === 'string'
+        ? row.updated_at
+        : createdAt;
+
+  const stableId =
+    id ||
+    (authorId || team || date
+      ? `tl-${authorId || 'na'}-${team || 'noteam'}-${date || 'nodate'}`
+      : '');
+  if (!stableId || (!team && !body && !authorId)) return null;
+
+  return {
+    id: stableId,
+    team,
+    date,
+    authorId,
+    body,
+    createdAt,
+    updatedAt,
+  };
+}
+
+function normalizeHrSummaryPayload(row: unknown): HRDailySummary | null {
+  if (!isPlainObject(row)) return null;
+  const idRaw = row.id;
+  const authorRaw = row.authorId ?? row.author_id;
+  if (idRaw == null || authorRaw == null) return null;
+  return mapHrRow({
+    id: idRaw as string | number,
+    date: String(row.date ?? ''),
+    authorId: authorRaw as string | number,
+    body: String(row.body ?? ''),
+    createdAt: typeof row.createdAt === 'string' ? row.createdAt : String(row.created_at ?? ''),
+    updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : String(row.updated_at ?? ''),
+  });
 }
 
 function mapHrRow(r: HrSummaryRow): HRDailySummary {
@@ -149,9 +216,23 @@ export async function fetchLeadershipOverviewApi(date: string): Promise<{
   hrSummary: HRDailySummary | null;
 }> {
   const res = await taskApiGet<LeadershipResponse>(DAILY_UPDATES_API_PATHS.leadershipOverview, { params: { date } });
+  const rawList = Array.isArray(res.team_leader_summaries)
+    ? res.team_leader_summaries
+    : Array.isArray(res.data?.team_leader_summaries)
+      ? res.data?.team_leader_summaries
+      : [];
+
+  const teamLeaderSummaries = rawList
+    .map((row) => normalizeTeamLeaderSummaryPayload(row))
+    .filter((r): r is TeamLeaderDailySummary => Boolean(r));
+
+  const rawHr =
+    res.hr_summary != null ? res.hr_summary : res.data?.hr_summary != null ? res.data?.hr_summary : null;
+  const hrSummaryNorm = normalizeHrSummaryPayload(rawHr);
+
   return {
-    teamLeaderSummaries: (res.team_leader_summaries || []).map(mapTlRow),
-    hrSummary: res.hr_summary ? mapHrRow(res.hr_summary) : null,
+    teamLeaderSummaries,
+    hrSummary: hrSummaryNorm,
   };
 }
 

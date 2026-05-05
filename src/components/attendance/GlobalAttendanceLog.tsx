@@ -47,7 +47,11 @@ function timeOnly(value?: string | null): string {
   return String(value).slice(0, 5);
 }
 
-export function GlobalAttendanceLog() {
+export function GlobalAttendanceLog({
+  externalRefreshSignal = 0,
+}: {
+  externalRefreshSignal?: number;
+}) {
   const currentUser = useStore((s) => s.currentUser);
   const users = useStore((s) => s.users);
   const currentUserId = currentUser?.id;
@@ -109,7 +113,15 @@ export function GlobalAttendanceLog() {
     return () => {
       cancelled = true;
     };
-  }, [currentUserId, providerFilter, siteFilter, idQuery, effectiveRangeStart, effectiveRangeEnd]);
+  }, [
+    currentUserId,
+    providerFilter,
+    siteFilter,
+    idQuery,
+    effectiveRangeStart,
+    effectiveRangeEnd,
+    externalRefreshSignal,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const pageSafe = Math.min(page, totalPages);

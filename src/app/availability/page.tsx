@@ -5,6 +5,9 @@ import { CalendarClock, AlertCircle, UserCheck, Clock, Activity, Filter } from '
 import { useStore, useShallow } from '@/lib/store';
 import type { Role } from '@/lib/store';
 import { fetchAttendanceSummaryApi, type AttendanceSummaryUser } from '@/services/attendance.service';
+import { fetchLeaveRequestsApi } from '@/services/attendance-requests.service';
+
+const AVAILABILITY_BACKGROUND_MS = 35_000;
 
 export default function AvailabilityPage() {
   const currentUser = useStore((s) => s.currentUser);
@@ -159,10 +162,15 @@ function AdminAvailabilityBoard() {
     void loadLeaves();
     const id = window.setInterval(() => {
       void loadLeaves();
-    }, 30000);
+    }, AVAILABILITY_BACKGROUND_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadLeaves();
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [currentUser?.id, roleFilter, statusFilter]);
 
@@ -406,12 +414,13 @@ function AdminAvailabilityBoard() {
 }
 
 function EmployeeAvailabilityView() {
-  const { currentUser, updateUser, timesheets, Leave } = useStore(
+  const { currentUser, updateUser, timesheets, Leave, setLeaveRequests } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
       updateUser: s.updateUser,
       timesheets: s.timesheets,
       Leave: s.Leave,
+      setLeaveRequests: s.setLeaveRequests,
     }))
   );
   const [status, setStatus] = useState(currentUser?.status || 'Available');
@@ -429,6 +438,30 @@ function EmployeeAvailabilityView() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const tick = () => {
+      void (async () => {
+        try {
+          const rows = await fetchLeaveRequestsApi();
+          setLeaveRequests(rows);
+        } catch {
+          /* keep cache */
+        }
+      })();
+    };
+    tick();
+    const intervalId = window.setInterval(tick, AVAILABILITY_BACKGROUND_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [currentUser?.id, setLeaveRequests]);
 
   const activeEntry = useMemo(() => {
     if (!currentUser) return null;

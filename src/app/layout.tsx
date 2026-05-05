@@ -4,6 +4,7 @@ import './globals.css';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import { RealtimeProvider } from '@/components/providers/RealtimeProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -31,17 +32,19 @@ export default function RootLayout({
     <html lang="en" className="min-h-dvh bg-slate-50" suppressHydrationWarning>
       <body className={`${inter.className} min-h-dvh bg-slate-50 antialiased`}>
         <AuthProvider>
-          <div className="flex min-h-0 h-dvh w-full overflow-hidden bg-slate-50">
-            <div className="hidden h-dvh min-h-0 shrink-0 self-stretch lg:flex lg:flex-col">
-              <Sidebar />
+          <RealtimeProvider>
+            <div className="flex min-h-0 h-dvh w-full overflow-hidden bg-slate-50">
+              <div className="hidden h-dvh min-h-0 shrink-0 self-stretch lg:flex lg:flex-col">
+                <Sidebar />
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
+                <Topbar />
+                <main className="scrollbar-hide min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-slate-50 p-8 has-[.messages-route-root]:overflow-hidden has-[.messages-route-root]:p-0">
+                  {children}
+                </main>
+              </div>
             </div>
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
-              <Topbar />
-              <main className="scrollbar-hide min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-slate-50 p-8 has-[.messages-route-root]:overflow-hidden has-[.messages-route-root]:p-0">
-                {children}
-              </main>
-            </div>
-          </div>
+          </RealtimeProvider>
         </AuthProvider>
       </body>
     </html>

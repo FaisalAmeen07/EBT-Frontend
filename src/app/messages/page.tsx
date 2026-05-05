@@ -379,6 +379,14 @@ export default function MessagesPage() {
   }, [targetChatId, visibleThreads]);
 
   useEffect(() => {
+    const { setActiveMessagesChatId } = useStore.getState();
+    setActiveMessagesChatId(selectedId);
+    return () => {
+      setActiveMessagesChatId(null);
+    };
+  }, [selectedId]);
+
+  useEffect(() => {
     if (!selectedId || !currentUser) return;
     void markChatRead(selectedId);
   }, [selectedId, selected?.messages.length, currentUser, markChatRead]);
@@ -392,7 +400,7 @@ export default function MessagesPage() {
     if (!currentUser) return;
     const id = window.setInterval(() => {
       void syncChatThreads();
-    }, 5000);
+    }, 60_000);
     return () => window.clearInterval(id);
   }, [currentUser?.id, syncChatThreads]);
 
@@ -405,7 +413,7 @@ export default function MessagesPage() {
     if (!selectedId || !currentUser) return;
     const id = window.setInterval(() => {
       void syncChatMessages(selectedId);
-    }, 2500);
+    }, 60_000);
     return () => window.clearInterval(id);
   }, [selectedId, currentUser?.id, syncChatMessages]);
 

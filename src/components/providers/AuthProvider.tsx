@@ -94,9 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted || !currentUser) return;
     void useStore.getState().refreshAttendanceFromApi();
     const t = setInterval(() => {
-      void useStore.getState().refreshTasksFromApi();
+      void useStore.getState().refreshTasksFromApi({ bumpList: false });
       void useStore.getState().refreshAttendanceFromApi();
-    }, 30_000);
+    }, 120_000);
     return () => clearInterval(t);
   }, [mounted, currentUser?.id]);
 

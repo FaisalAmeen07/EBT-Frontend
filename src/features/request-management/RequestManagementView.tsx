@@ -57,7 +57,9 @@ export function RequestManagementView() {
         {/* Minimal header controls (no card) */}
         <div className="pt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-base font-semibold text-slate-900">{sectionTitle}</h2>
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">{sectionTitle}</h2>
+            </div>
 
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <div className="relative w-fit">

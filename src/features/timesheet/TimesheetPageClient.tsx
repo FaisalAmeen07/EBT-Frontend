@@ -394,6 +394,22 @@ export function TimesheetPageClient() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  /** Bumps scoped API logs (overview / records / manual) on an interval while this page is open. */
+  const [sheetSurfaceSignal, setSheetSurfaceSignal] = useState(0);
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.role === 'Pending User') return;
+    const bump = () => setSheetSurfaceSignal((n) => n + 1);
+    const id = window.setInterval(bump, 35_000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') bump();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [currentUser?.id, currentUser?.role]);
+
   useEffect(() => {
     let cancelled = false;
     const loadDepartments = async () => {
@@ -417,13 +433,15 @@ export function TimesheetPageClient() {
 
   let tabBody: ReactNode = null;
   if (role === 'Admin' || role === 'HR') {
-    if (activeTab === 'overview') tabBody = <DailyAttendanceRoster />;
-    else if (activeTab === 'records') tabBody = <GlobalAttendanceLog />;
-    else tabBody = <ManualTimesheetLog />;
+    if (activeTab === 'overview') tabBody = <DailyAttendanceRoster externalRefreshSignal={sheetSurfaceSignal} />;
+    else if (activeTab === 'records')
+      tabBody = <GlobalAttendanceLog externalRefreshSignal={sheetSurfaceSignal} />;
+    else tabBody = <ManualTimesheetLog externalRefreshSignal={sheetSurfaceSignal} />;
   } else if (role === 'Team Leader') {
     if (activeTab === 'my') tabBody = <EmployeeTimesheetView />;
-    else if (activeTab === 'overview') tabBody = <DailyAttendanceRoster />;
-    else tabBody = <GlobalAttendanceLog />;
+    else if (activeTab === 'overview')
+      tabBody = <DailyAttendanceRoster externalRefreshSignal={sheetSurfaceSignal} />;
+    else tabBody = <GlobalAttendanceLog externalRefreshSignal={sheetSurfaceSignal} />;
   } else {
     tabBody = <EmployeeTimesheetView />;
   }

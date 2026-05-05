@@ -49,7 +49,11 @@ function timeOnly(value?: string | null): string {
   return String(value).slice(0, 5);
 }
 
-export function ManualTimesheetLog() {
+export function ManualTimesheetLog({
+  externalRefreshSignal = 0,
+}: {
+  externalRefreshSignal?: number;
+}) {
   const currentUser = useStore((s) => s.currentUser);
   const users = useStore((s) => s.users);
   const currentUserId = currentUser?.id;
@@ -113,7 +117,16 @@ export function ManualTimesheetLog() {
     return () => {
       cancelled = true;
     };
-  }, [currentUserId, providerFilter, siteFilter, statusFilter, idQuery, effectiveRangeStart, effectiveRangeEnd]);
+  }, [
+    currentUserId,
+    providerFilter,
+    siteFilter,
+    statusFilter,
+    idQuery,
+    effectiveRangeStart,
+    effectiveRangeEnd,
+    externalRefreshSignal,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const pageSafe = Math.min(page, totalPages);

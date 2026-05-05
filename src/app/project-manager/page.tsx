@@ -89,6 +89,7 @@ export default function TasksPage() {
   const searchParams = useSearchParams();
   const {
     tasks: allTasks,
+    tasksListGeneration,
     currentUser,
     users,
     availability,
@@ -104,6 +105,7 @@ export default function TasksPage() {
   } = useStore(
     useShallow((s) => ({
       tasks: s.tasks,
+      tasksListGeneration: s.tasksListGeneration,
       currentUser: s.currentUser,
       users: s.users,
       availability: s.availability,
@@ -148,6 +150,10 @@ export default function TasksPage() {
   }>({ page: 1, pageSize: PROJECT_MANAGER_PAGE_SIZE, total: 0, totalPages: 1 });
   const [pmListLoading, setPmListLoading] = useState(false);
   const createFileInputRef = useRef<HTMLInputElement>(null);
+  const pmPagedListMeta = useRef<{ filterKey: string; generation: number }>({
+    filterKey: '',
+    generation: -1,
+  });
 
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -255,9 +261,17 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (!currentUser) return;
+    const filterKey = `${pmPage}|${pmPageSize}|${apiStatus ?? ''}|${pmSearch.trim()}|${pmFrom}|${pmTo}`;
+    const prev = pmPagedListMeta.current;
+    const onlyGenerationBump =
+      prev.generation >= 0 &&
+      filterKey === prev.filterKey &&
+      tasksListGeneration !== prev.generation;
+    pmPagedListMeta.current = { filterKey, generation: tasksListGeneration };
+
     let cancelled = false;
     void (async () => {
-      setPmListLoading(true);
+      if (!onlyGenerationBump) setPmListLoading(true);
       try {
         const qTrim = pmSearch.trim();
         const res = await fetchTasksPageFromApi({
@@ -282,7 +296,17 @@ export default function TasksPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.id, pmPage, pmPageSize, apiStatus, pmSearch, pmFrom, pmTo]);
+    // Re-fetch paged grid once when tasks sync signals (socket / mutations / tab focus), not every silent poll.
+  }, [
+    currentUser?.id,
+    pmPage,
+    pmPageSize,
+    apiStatus,
+    pmSearch,
+    pmFrom,
+    pmTo,
+    tasksListGeneration,
+  ]);
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return null;

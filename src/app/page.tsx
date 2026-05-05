@@ -42,6 +42,8 @@ import { fetchAttendanceSummaryApi, getCurrentShiftApi, getShiftStatusApi } from
 import { fetchLeaveRequestsApi } from '@/services/attendance-requests.service';
 import { fetchOverdueTasksCountApi, fetchPendingTasksCountApi } from '@/services/tasks.service';
 
+const DASHBOARD_POLL_MS = 35_000;
+
 function availabilityStatusLabel(status: string | undefined): string {
   if (status === 'Available') return 'Present';
   if (status === 'Unavailable') return 'Absent';
@@ -175,10 +177,15 @@ function TimerWidget() {
     void loadShift();
     const id = window.setInterval(() => {
       void loadShift();
-    }, 30000);
+    }, DASHBOARD_POLL_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadShift();
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, []);
 
@@ -716,10 +723,15 @@ function AdminDashboard() {
     void loadCounts();
     const timerId = window.setInterval(() => {
       void loadCounts();
-    }, 30000);
+    }, DASHBOARD_POLL_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadCounts();
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       window.clearInterval(timerId);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [currentUser?.id, currentUser?.role]);
 
@@ -1318,9 +1330,12 @@ function UserDashboard() {
               <p className="text-blue-100 text-xs leading-relaxed mb-6 font-medium">
                 Remember to take regular breaks to stay productive and healthy. Your wellness is our priority.
               </p>
-              <button className="w-full py-3.5 bg-white text-blue-600 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 active:scale-95 transition-all">
+              <Link
+                href="/my-requests?tab=leave"
+                className="flex w-full items-center justify-center py-3.5 bg-white text-blue-600 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
+              >
                 Request Leave
-              </button>
+              </Link>
             </div>
           </div>
         </div>

@@ -406,6 +406,8 @@ interface AppState {
   users: User[];
   timesheets: TimesheetEntry[];
   tasks: Task[];
+  /** Bumped when callers refresh tasks with `bumpList` (default) so /project-manager paged grid can reload once. */
+  tasksListGeneration: number;
   Leave: LeaveRequest[];
   manualTimeRequests: ManualTimeRequest[];
   notifications: AppNotification[];
@@ -483,7 +485,8 @@ interface AppState {
   // Admin actions
   addUser: (user: User) => void;
   // Tasks (Task microservice — see `tasks.service.ts`)
-  refreshTasksFromApi: () => Promise<void>;
+  /** Use `{ bumpList: false }` for silent background polls (updates store without reloading paged grids). */
+  refreshTasksFromApi: (opts?: { bumpList?: boolean }) => Promise<void>;
   createTask: (input: {
     title: string;
     description?: string;
@@ -568,6 +571,9 @@ interface AppState {
   passwordResetTokens: PasswordResetToken[];
   /** In-app messaging (DMs + groups); rules in `@/lib/messaging`. */
   chatThreads: ChatThread[];
+  /** Open thread on `/messages` (for realtime message refetch). */
+  activeMessagesChatId: string | null;
+  setActiveMessagesChatId: (chatId: string | null) => void;
   /** Fetch all chats for current user from chat-backend. */
   syncChatThreads: () => Promise<{ ok: true } | { ok: false; error?: string }>;
   /** Fetch messages for a chatId (on open) from chat-backend. */
@@ -671,6 +677,7 @@ export const useStore = create<AppState>()((set, get) => ({
       departments: [...DEFAULT_DEPARTMENTS],
       sites: [],
       tasks: [],
+      tasksListGeneration: 0,
       Leave: [],
       manualTimeRequests: [],
       notifications: [],
@@ -756,9 +763,15 @@ export const useStore = create<AppState>()((set, get) => ({
       teamLeaderDailySummaries: [] as TeamLeaderDailySummary[],
       hrDailySummaries: [] as HRDailySummary[],
       chatThreads: [],
+      activeMessagesChatId: null,
       passwordResetTokens: [] as PasswordResetToken[],
       availability: [],
-      setCurrentUser: (user) => set({ currentUser: user }),
+      setCurrentUser: (user) =>
+        set({
+          currentUser: user,
+          ...(user ? {} : { activeMessagesChatId: null as string | null }),
+        }),
+      setActiveMessagesChatId: (chatId) => set({ activeMessagesChatId: chatId }),
       upsertUser: (user) =>
         set((s) => {
           const viewer = s.currentUser;
@@ -1230,12 +1243,16 @@ export const useStore = create<AppState>()((set, get) => ({
 
       addUser: (user) => set((state) => ({ users: [...state.users, user] })),
 
-      refreshTasksFromApi: async () => {
+      refreshTasksFromApi: async (opts?: { bumpList?: boolean }) => {
         const { currentUser } = get();
         if (!currentUser) return;
+        const bumpList = opts?.bumpList !== false;
         try {
           const tasks = await fetchTasksFromApi();
-          set({ tasks });
+          set((state) => ({
+            tasks,
+            ...(bumpList ? { tasksListGeneration: state.tasksListGeneration + 1 } : {}),
+          }));
         } catch {
           /* offline / task service down */
         }

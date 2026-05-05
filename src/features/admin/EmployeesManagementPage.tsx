@@ -22,7 +22,6 @@ import {
   Search,
   Sparkles,
   Loader2,
-  RefreshCw,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -89,22 +88,41 @@ export function EmployeesManagementPage() {
   const [busyRole, setBusyRole] = useState<Role | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const loadUsers = useCallback(async () => {
-    setLoadError(null);
-    setActionError(null);
-    setLoading(true);
+  const loadUsers = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) {
+      setLoadError(null);
+      setActionError(null);
+      setLoading(true);
+    }
     try {
       const merged = await buildUsersWithResolvedTeams();
       replaceDirectoryUsers(merged);
+      setLoadError(null);
     } catch (e) {
-      setLoadError(apiErrorMessage(e));
+      if (!silent) setLoadError(apiErrorMessage(e));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [replaceDirectoryUsers]);
 
   useEffect(() => {
     void loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void loadUsers({ silent: true });
+    }, 35_000);
+    return () => window.clearInterval(id);
+  }, [loadUsers]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadUsers({ silent: true });
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
   }, [loadUsers]);
 
   const directoryUsers = useMemo(() => mergeUsersWithSeed(users), [users]);
@@ -150,7 +168,7 @@ export function EmployeesManagementPage() {
       } else {
         await updateUserRoleApi(user.id, frontendRoleToApiRole(newRole));
       }
-      await loadUsers();
+      await loadUsers({ silent: true });
       setEditingUser(null);
     } catch (e) {
       setActionError(apiErrorMessage(e));
@@ -169,7 +187,7 @@ export function EmployeesManagementPage() {
     setBusy(true);
     try {
       await rejectUserApi(Number(userId));
-      await loadUsers();
+      await loadUsers({ silent: true });
     } catch (e) {
       setActionError(apiErrorMessage(e));
     } finally {
@@ -189,22 +207,13 @@ export function EmployeesManagementPage() {
     <div className="mx-auto min-h-full max-w-6xl space-y-8 pb-12">
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 p-8 shadow-sm">
         <div>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2">
             <h1 className="flex items-center gap-3 text-3xl font-light tracking-tight text-slate-800">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200/50">
                 <ShieldCheck className="h-7 w-7" />
               </span>
               Employees management
             </h1>
-            <button
-              type="button"
-              onClick={() => void loadUsers()}
-              disabled={loading || busy || !!busyRole}
-              className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 sm:self-auto"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Refresh from server
-            </button>
           </div>
         </div>
 

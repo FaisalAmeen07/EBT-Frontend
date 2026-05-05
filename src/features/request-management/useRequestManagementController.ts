@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useStore, useShallow } from '@/lib/store';
 import type { ReviewStatusFilter } from './constants';
@@ -46,27 +46,41 @@ export function useRequestManagementController() {
   const [activeRejectId, setActiveRejectId] = useState<string | null>(null);
   const [rejectFeedback, setRejectFeedback] = useState('');
 
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    let cancelled = false;
-
-    void (async () => {
+  const loadRequests = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? false;
       try {
         const [leaveRows, manualRows] = await Promise.all([fetchLeaveRequestsApi(), fetchManualRequestsApi()]);
-        if (cancelled) return;
         setLeaveRequests(leaveRows);
         setManualTimeRequests(manualRows);
       } catch (error) {
-        if (!cancelled) {
+        if (!silent) {
           toast(error instanceof Error ? error.message : 'Unable to load requests.', 'error');
         }
       }
-    })();
+    },
+    [setLeaveRequests, setManualTimeRequests]
+  );
 
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    void loadRequests({ silent: false });
+  }, [currentUser?.id, loadRequests]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const id = setInterval(() => void loadRequests({ silent: true }), 35_000);
+    return () => clearInterval(id);
+  }, [currentUser?.id, loadRequests]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadRequests({ silent: true });
     };
-  }, [currentUser?.id, setLeaveRequests, setManualTimeRequests]);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [currentUser?.id, loadRequests]);
 
   const getUsername = (userId: string) =>
     users.find((u) => u.id === userId)?.name ||
@@ -127,30 +141,24 @@ export function useRequestManagementController() {
     setRejectFeedback('');
   };
 
-  const refreshRequests = async () => {
-    const [leaveRows, manualRows] = await Promise.all([fetchLeaveRequestsApi(), fetchManualRequestsApi()]);
-    setLeaveRequests(leaveRows);
-    setManualTimeRequests(manualRows);
-  };
-
   const approveLeave = async (id: string) => {
     await approveLeaveRequestApi(id);
-    await refreshRequests();
+    await loadRequests({ silent: true });
   };
 
   const rejectLeave = async (id: string, reason: string) => {
     await rejectLeaveRequestApi(id, reason);
-    await refreshRequests();
+    await loadRequests({ silent: true });
   };
 
   const approveManual = async (id: string) => {
     await approveManualRequestApi(id);
-    await refreshRequests();
+    await loadRequests({ silent: true });
   };
 
   const rejectManual = async (id: string, reason: string) => {
     await rejectManualRequestApi(id, reason);
-    await refreshRequests();
+    await loadRequests({ silent: true });
   };
 
   return {

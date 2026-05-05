@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
       { source: "/api/profile/:path*", destination: `${backendProxy}/api/profile/:path*` },
       { source: "/api/admin/:path*", destination: `${backendProxy}/api/admin/:path*` },
       { source: "/api/teams/:path*", destination: `${backendProxy}/api/teams/:path*` },
+      // Socket.IO on gdc-backend — browser uses same origin + this proxy (no NEXT_PUBLIC_SOCKET_URL needed locally)
+      { source: "/socket.io/:path*", destination: `${backendProxy}/socket.io/:path*` },
     ];
   },
   async redirects() {

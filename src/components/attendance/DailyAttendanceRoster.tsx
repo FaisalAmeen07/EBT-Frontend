@@ -69,7 +69,12 @@ function StatusCell({ status }: { status: string }) {
 /**
  * Admin / HR / TL: attendance overview with Today, last 7 days (grid), or last 30 days (summary counts).
  */
-export function DailyAttendanceRoster() {
+export function DailyAttendanceRoster({
+  externalRefreshSignal = 0,
+}: {
+  /** Increment from parent on an interval so overview refetches without a manual action. */
+  externalRefreshSignal?: number;
+}) {
   const currentUser = useStore((s) => s.currentUser);
   const users = useStore((s) => s.users);
   const timesheets = useStore((s) => s.timesheets);
@@ -141,7 +146,7 @@ export function DailyAttendanceRoster() {
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.id, period, roleFilter, searchQuery]);
+  }, [currentUser?.id, period, roleFilter, searchQuery, externalRefreshSignal]);
 
   if (!currentUser || !['Admin', 'HR', 'Team Leader'].includes(currentUser.role)) {
     return null;

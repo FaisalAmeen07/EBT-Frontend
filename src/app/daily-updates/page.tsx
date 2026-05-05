@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, subDays } from 'date-fns';
 import {
@@ -47,6 +47,24 @@ function apiErrorMessage(e: unknown): string {
 /** Single-line preview for table cells; full text opens in `TextDetailModal`. */
 function oneLinePreview(s: string): string {
   return s.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function userLabel(u: User | undefined): string {
+  if (!u) return 'Unknown';
+  return u.name || u.email;
+}
+
+function findUserLoose(users: User[], id: string): User | undefined {
+  return users.find((u) => String(u.id).trim() === String(id).trim());
+}
+
+/** Prefer directory name; fall back to numeric id so TL still shows when roster ids differ slightly. */
+function leadDisplayLabel(users: User[], authorId: string): string {
+  const u = findUserLoose(users, authorId);
+  if (u) return userLabel(u);
+  const id = String(authorId ?? '').trim();
+  if (id) return `Lead #${id}`;
+  return 'Unknown lead';
 }
 
 function TextDetailModal({
@@ -142,7 +160,7 @@ function TeamLeadSummariesPanel({
         (s) =>
           s.team.toLowerCase().includes(q) ||
           s.body.toLowerCase().includes(q) ||
-          userLabel(users.find((u) => u.id === s.authorId)).toLowerCase().includes(q)
+          leadDisplayLabel(users, s.authorId).toLowerCase().includes(q)
       );
     }
     return rows;
@@ -210,7 +228,6 @@ function TeamLeadSummariesPanel({
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {filteredTlSummaries.map((s) => {
-                const author = users.find((u) => u.id === s.authorId);
                 return (
                   <tr
                     key={s.id}
@@ -218,13 +235,17 @@ function TeamLeadSummariesPanel({
                     onClick={() =>
                       setDetail({
                         title: 'Team lead summary',
-                        subtitle: `${s.team} · ${userLabel(author)}`,
+                        subtitle: `${s.team || 'Team'} · ${leadDisplayLabel(users, s.authorId)}`,
                         body: s.body,
                       })
                     }
                   >
-                    <td className="whitespace-nowrap px-4 py-3 align-middle font-semibold text-slate-900">{s.team}</td>
-                    <td className="whitespace-nowrap px-4 py-3 align-middle text-slate-600">{userLabel(author)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 align-middle font-semibold text-slate-900">
+                      {s.team ? s.team : '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 align-middle text-slate-600">
+                      {leadDisplayLabel(users, s.authorId)}
+                    </td>
                     <td className="max-w-0 min-w-[140px] px-4 py-3 align-middle text-slate-700">
                       <p className="truncate" title={oneLinePreview(s.body)}>
                         {oneLinePreview(s.body)}
@@ -292,10 +313,7 @@ function SubmitTodayOnlyHint() {
 
 const DAILY_UPDATES_ROLES: Role[] = ['Employee', 'Team Leader', 'HR', 'Admin'];
 
-function userLabel(u: User | undefined): string {
-  if (!u) return 'Unknown';
-  return u.name || u.email;
-}
+const DAILY_PAGE_BACKGROUND_REFRESH_MS = 35_000;
 
 export default function DailyUpdatesPage() {
   const router = useRouter();
@@ -331,14 +349,32 @@ function DailyUpdatesContent({ role }: { role: Role }) {
   const yesterday = toDateInputValue(subDays(new Date(), 1));
   const canSubmitToday = date === todayYmd;
 
-  const roleLabel =
-    role === 'Employee'
-      ? 'Employee'
-      : role === 'Team Leader'
-        ? 'Team lead'
-        : role === 'HR'
-          ? 'Human resources'
-          : 'Administrator';
+  type RealtimeDetail = { scopes?: string[] };
+  const [realtimeBump, setRealtimeBump] = useState(0);
+  useEffect(() => {
+    const onDirty = (ev: Event) => {
+      const d = (ev as CustomEvent<RealtimeDetail>).detail;
+      if (d?.scopes && !d.scopes.includes('daily-updates')) return;
+      setRealtimeBump((x) => x + 1);
+    };
+    window.addEventListener('gdc-realtime-dirty', onDirty as EventListener);
+    return () => window.removeEventListener('gdc-realtime-dirty', onDirty as EventListener);
+  }, []);
+
+  const [pollBump, setPollBump] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setPollBump((n) => n + 1), DAILY_PAGE_BACKGROUND_REFRESH_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') setPollBump((n) => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+
+  const dataRefreshKey = realtimeBump + pollBump;
 
   return (
     <div className="min-h-full bg-slate-50 pb-16">
@@ -401,10 +437,14 @@ function DailyUpdatesContent({ role }: { role: Role }) {
         </div>
 
         <div className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
-          {role === 'Employee' ? <EmployeeSection date={date} canSubmitToday={canSubmitToday} /> : null}
-          {role === 'Team Leader' ? <TeamLeaderSection date={date} canSubmitToday={canSubmitToday} /> : null}
-          {role === 'HR' ? <HRSection date={date} canSubmitToday={canSubmitToday} /> : null}
-          {role === 'Admin' ? <AdminSection date={date} /> : null}
+          {role === 'Employee' ? (
+            <EmployeeSection date={date} canSubmitToday={canSubmitToday} dataRefreshKey={dataRefreshKey} />
+          ) : null}
+          {role === 'Team Leader' ? (
+            <TeamLeaderSection date={date} canSubmitToday={canSubmitToday} dataRefreshKey={dataRefreshKey} />
+          ) : null}
+          {role === 'HR' ? <HRSection date={date} canSubmitToday={canSubmitToday} dataRefreshKey={dataRefreshKey} /> : null}
+          {role === 'Admin' ? <AdminSection date={date} dataRefreshKey={dataRefreshKey} /> : null}
         </div>
       </div>
     </div>
@@ -413,7 +453,15 @@ function DailyUpdatesContent({ role }: { role: Role }) {
 
 /* ——— Employee ——— */
 
-function EmployeeSection({ date, canSubmitToday }: { date: string; canSubmitToday: boolean }) {
+function EmployeeSection({
+  date,
+  canSubmitToday,
+  dataRefreshKey,
+}: {
+  date: string;
+  canSubmitToday: boolean;
+  dataRefreshKey: number;
+}) {
   const { currentUser } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
@@ -425,6 +473,7 @@ function EmployeeSection({ date, canSubmitToday }: { date: string; canSubmitToda
   const [historyDetail, setHistoryDetail] = useState<{ title: string; subtitle: string; body: string } | null>(null);
   const [myUpdates, setMyUpdates] = useState<EmployeeDailyUpdate[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
 
   const mine = useMemo(() => {
     if (!currentUser) return [];
@@ -461,21 +510,23 @@ function EmployeeSection({ date, canSubmitToday }: { date: string; canSubmitToda
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'Employee') return;
     let cancelled = false;
-    setLoading(true);
+    const silent = hasLoadedOnceRef.current;
+    if (!silent) setLoading(true);
     (async () => {
       try {
         const list = await fetchMyEmployeeDailyUpdatesApi();
         if (!cancelled) setMyUpdates(list);
+        if (!cancelled) hasLoadedOnceRef.current = true;
       } catch (e) {
         if (!cancelled) toast(apiErrorMessage(e), 'error');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !silent) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.id, currentUser?.role]);
+  }, [currentUser?.id, currentUser?.role, dataRefreshKey]);
 
   if (!currentUser || currentUser.role !== 'Employee') return null;
 
@@ -574,7 +625,15 @@ function startOfDayLocal(d: Date): Date {
 
 /* ——— Team Leader ——— */
 
-function TeamLeaderSection({ date, canSubmitToday }: { date: string; canSubmitToday: boolean }) {
+function TeamLeaderSection({
+  date,
+  canSubmitToday,
+  dataRefreshKey,
+}: {
+  date: string;
+  canSubmitToday: boolean;
+  dataRefreshKey: number;
+}) {
   const { currentUser, users } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
@@ -591,8 +650,13 @@ function TeamLeaderSection({ date, canSubmitToday }: { date: string; canSubmitTo
     []
   );
   const [loading, setLoading] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
 
   const myTeam = currentUser?.team?.trim();
+
+  useEffect(() => {
+    hasLoadedOnceRef.current = false;
+  }, [date]);
 
   const teamEmployees = useMemo(() => {
     // Prefer roster from API so TL always sees correct roster.
@@ -643,7 +707,8 @@ function TeamLeaderSection({ date, canSubmitToday }: { date: string; canSubmitTo
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'Team Leader') return;
     let cancelled = false;
-    setLoading(true);
+    const silent = hasLoadedOnceRef.current;
+    if (!silent) setLoading(true);
     (async () => {
       try {
         const bundle = await fetchTeamLeaderDailyBundleApi(date);
@@ -653,16 +718,17 @@ function TeamLeaderSection({ date, canSubmitToday }: { date: string; canSubmitTo
         setRosterMembers(bundle.members || []);
         if (bundle.mySummary?.body != null) setSummaryBody(bundle.mySummary.body);
         else setSummaryBody('');
+        hasLoadedOnceRef.current = true;
       } catch (e) {
         if (!cancelled) toast(apiErrorMessage(e), 'error');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !silent) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.id, currentUser?.role, date]);
+  }, [currentUser?.id, currentUser?.role, date, dataRefreshKey]);
 
   if (!currentUser || currentUser.role !== 'Team Leader') return null;
 
@@ -933,7 +999,15 @@ function SkeletonRows({ rows = 6 }: { rows?: number }) {
 
 /* ——— HR ——— */
 
-function HRSection({ date, canSubmitToday }: { date: string; canSubmitToday: boolean }) {
+function HRSection({
+  date,
+  canSubmitToday,
+  dataRefreshKey,
+}: {
+  date: string;
+  canSubmitToday: boolean;
+  dataRefreshKey: number;
+}) {
   const { currentUser, users, teams: teamRegistry } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
@@ -945,11 +1019,17 @@ function HRSection({ date, canSubmitToday }: { date: string; canSubmitToday: boo
   const [teamLeaderDailySummaries, setTeamLeaderDailySummaries] = useState<TeamLeaderDailySummary[]>([]);
   const [hrDailySummaries, setHrDailySummaries] = useState<{ date: string; body: string; authorId: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
+
+  useEffect(() => {
+    hasLoadedOnceRef.current = false;
+  }, [date]);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'HR') return;
     let cancelled = false;
-    setLoading(true);
+    const silent = hasLoadedOnceRef.current;
+    if (!silent) setLoading(true);
     (async () => {
       try {
         const data = await fetchLeadershipOverviewApi(date);
@@ -957,16 +1037,17 @@ function HRSection({ date, canSubmitToday }: { date: string; canSubmitToday: boo
         setTeamLeaderDailySummaries(data.teamLeaderSummaries);
         setHrDailySummaries(data.hrSummary ? [data.hrSummary] : []);
         setHrBody(data.hrSummary?.body ?? '');
+        hasLoadedOnceRef.current = true;
       } catch (e) {
         if (!cancelled) toast(apiErrorMessage(e), 'error');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !silent) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.id, currentUser?.role, date]);
+  }, [currentUser?.id, currentUser?.role, date, dataRefreshKey]);
 
   if (!currentUser || currentUser.role !== 'HR') return null;
 
@@ -1041,7 +1122,7 @@ function HRSection({ date, canSubmitToday }: { date: string; canSubmitToday: boo
 
 /* ——— Admin ——— */
 
-function AdminSection({ date }: { date: string }) {
+function AdminSection({ date, dataRefreshKey }: { date: string; dataRefreshKey: number }) {
   const { currentUser, users, teams: teamRegistry } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
@@ -1052,18 +1133,26 @@ function AdminSection({ date }: { date: string }) {
   const [teamLeaderDailySummaries, setTeamLeaderDailySummaries] = useState<TeamLeaderDailySummary[]>([]);
   const [hrDailySummaries, setHrDailySummaries] = useState<{ date: string; body: string; authorId: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
+
+  useEffect(() => {
+    hasLoadedOnceRef.current = false;
+  }, [date]);
 
   // Data is fetched scoped to `date`; keep first row if present.
   const hrNote = hrDailySummaries[0] ?? null;
-  const hrAuthor = hrNote ? users.find((u) => u.id === hrNote.authorId) : undefined;
+  const hrAuthor = hrNote ? findUserLoose(users, hrNote.authorId) : undefined;
 
   const teamsSorted = useMemo(() => {
     const set = new Set<string>();
     for (const u of users) {
       if (u.team?.trim()) set.add(u.team.trim());
     }
+    for (const s of teamLeaderDailySummaries) {
+      if (s.team?.trim()) set.add(s.team.trim());
+    }
     return [...set].sort((a, b) => a.localeCompare(b));
-  }, [users]);
+  }, [users, teamLeaderDailySummaries]);
 
   const adminStats = useMemo(() => {
     return { teams: teamsSorted.length, tlSummaries: teamLeaderDailySummaries.length };
@@ -1074,23 +1163,25 @@ function AdminSection({ date }: { date: string }) {
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'Admin') return;
     let cancelled = false;
-    setLoading(true);
+    const silent = hasLoadedOnceRef.current;
+    if (!silent) setLoading(true);
     (async () => {
       try {
         const data = await fetchLeadershipOverviewApi(date);
         if (cancelled) return;
         setTeamLeaderDailySummaries(data.teamLeaderSummaries);
         setHrDailySummaries(data.hrSummary ? [data.hrSummary] : []);
+        hasLoadedOnceRef.current = true;
       } catch (e) {
         if (!cancelled) toast(apiErrorMessage(e), 'error');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !silent) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.id, currentUser?.role, date]);
+  }, [currentUser?.id, currentUser?.role, date, dataRefreshKey]);
 
   if (!currentUser || currentUser.role !== 'Admin') return null;
 
