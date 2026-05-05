@@ -135,7 +135,7 @@ export function canDm(from: Role, to: Role): boolean {
   if (from === 'Pending User' || to === 'Pending User') return false;
   if (from === 'Admin') return to === 'HR' || to === 'Team Leader' || to === 'Employee';
   if (from === 'HR') return to === 'Admin' || to === 'Team Leader' || to === 'Employee';
-  if (from === 'Team Leader') return to === 'HR' || to === 'Employee';
+  if (from === 'Team Leader') return to === 'Admin' || to === 'HR' || to === 'Employee';
   if (from === 'Employee') return to === 'Admin' || to === 'HR' || to === 'Team Leader';
   return false;
 }
@@ -303,7 +303,9 @@ export function canAddToHrGroup(user: User): boolean {
 
 /** Who can be added to a new TL-scoped group (creator is TL). */
 export function canAddToTlGroup(user: User): boolean {
-  return user.role === 'HR' || user.role === 'Team Leader' || user.role === 'Employee';
+  return (
+    user.role === 'Admin' || user.role === 'HR' || user.role === 'Team Leader' || user.role === 'Employee'
+  );
 }
 
 /** Who can be added to a normal group chat. */
