@@ -1,5 +1,5 @@
 import { API_PATHS } from '@/lib/api/api-base-urls';
-import { apiGet, apiPut } from '@/lib/api/axios-request-handler';
+import { apiGet, apiPost, apiPut } from '@/lib/api/axios-request-handler';
 
 /** Shape returned by Express GET /api/profile/getProfile (see gdc-backend getProfileModel). */
 export interface UserProfileDto {
@@ -27,6 +27,25 @@ export type UpdateProfileResponse = {
  */
 export function getCurrentUserProfile(): Promise<UserProfileDto> {
   return apiGet<UserProfileDto>(API_PATHS.profile.get);
+}
+
+export type ChatParticipantSnapshot = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  profile_image: string | null;
+  team_name: string | null;
+};
+
+/**
+ * Hydrate message/group member labels for Employees who only receive a team roster (not full directory).
+ */
+export function fetchChatParticipantSnapshotsApi(userIds: string[]): Promise<{
+  success: boolean;
+  data: ChatParticipantSnapshot[];
+}> {
+  return apiPost(API_PATHS.profile.chatParticipants, { userIds });
 }
 
 /**

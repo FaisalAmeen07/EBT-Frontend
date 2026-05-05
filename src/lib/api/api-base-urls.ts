@@ -22,6 +22,7 @@ export const API_PATHS = {
   profile: {
     get: '/api/profile/getProfile',
     update: '/api/profile/updateProfile',
+    chatParticipants: '/api/profile/chat-participants',
   },
   admin: {
     pendingUsers: '/api/admin/pending-users',
@@ -118,5 +119,8 @@ export const API_PATHS = {
     message: (chatId: string, messageId: string) =>
       `/api/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
     markRead: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/read`,
+    promoteGroupAdmin: (chatId: string) => `/api/chats/${encodeURIComponent(chatId)}/admins:add`,
+    demoteGroupAdmin: (chatId: string, memberId: string) =>
+      `/api/chats/${encodeURIComponent(chatId)}/admins:remove/${encodeURIComponent(memberId)}`,
   },
 } as const;

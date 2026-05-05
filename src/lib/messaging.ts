@@ -109,6 +109,12 @@ export interface ChatThread {
   /** When set, this thread is the auto team chat for this team name. */
   teamKey?: string;
   createdById?: string;
+  /** Present on group chats: CRM user ids promoted as group admins. */
+  adminIds?: string[];
+  /** When true, only group admins (+ scope rules) may add members. */
+  privacyLockedInvites?: boolean;
+  /** When true, only group admins may send messages (announcements-style). */
+  adminsOnlyMessages?: boolean;
   /** DM: two user ids sorted; same as memberIds for dm */
   memberIds: string[];
   messages: ChatMessage[];
@@ -206,6 +212,20 @@ export function isThreadVisibleToViewer(
   return false;
 }
 
+function effectiveGroupAdminIds(thread: ChatThread): string[] {
+  if (thread.kind !== 'group') return [];
+  const explicit = (thread.adminIds ?? []).map((x) => String(x).trim()).filter(Boolean);
+  if (explicit.length > 0) return [...new Set(explicit)];
+  if (thread.createdById) return [String(thread.createdById).trim()];
+  return [];
+}
+
+/** Group chat: user is a group admin (can post when admins-only mode is on). Mirrors chat-backend `isGroupAdmin`. */
+export function isGroupMessagingAdmin(thread: ChatThread, user: User): boolean {
+  if (thread.kind !== 'group') return true;
+  return effectiveGroupAdminIds(thread).includes(String(user.id).trim());
+}
+
 /** Whether `user` may post a new message in this thread. */
 export function canSendInThread(
   thread: ChatThread,
@@ -213,33 +233,29 @@ export function canSendInThread(
   users: User[]
 ): boolean {
   if (user.role === 'Pending User') return false;
-  // Posting requires membership.
-  if (!thread.memberIds.includes(user.id)) return false;
+  const isMember = thread.memberIds.some((mid) => String(mid) === String(user.id));
+  if (!isMember) return false;
 
   if (thread.kind === 'dm') {
-    const otherId = thread.memberIds.find((id) => id !== user.id);
+    const otherId = thread.memberIds.find((id) => String(id) !== String(user.id));
     if (!otherId) return false;
-    const otherRole = roleOf(otherId, users);
-    const otherUser = users.find((u) => u.id === otherId);
-    // In some flows the DM thread can exist before the full user roster is hydrated.
-    // Avoid disabling chat input for a few seconds due to missing local role data.
+    const otherRole = roleOf(String(otherId), users);
+    const otherUser = users.find((u) => String(u.id) === String(otherId));
     if (!otherRole) return true;
     if (!otherUser) return canDm(user.role, otherRole);
     return canDmPair(user, otherUser);
   }
 
-  const r = user.role;
-
-  if (thread.scope === 'group') return true;
-
-  if (thread.scope === 'hr_group') {
-    // Same access as HR: Admin can participate if they're a member.
-    return r === 'Admin' || r === 'HR' || r === 'Team Leader' || r === 'Employee';
-  }
-
-  if (thread.scope === 'tl_group') {
-    // Same access as HR: Admin can participate if they're a member.
-    return r === 'Admin' || r === 'HR' || r === 'Team Leader' || r === 'Employee';
+  if (thread.kind === 'group') {
+    if (thread.adminsOnlyMessages && !isGroupMessagingAdmin(thread, user)) return false;
+    const r = user.role;
+    if (thread.scope === 'group') return true;
+    if (thread.scope === 'hr_group') {
+      return r === 'Admin' || r === 'HR' || r === 'Team Leader' || r === 'Employee';
+    }
+    if (thread.scope === 'tl_group') {
+      return r === 'Admin' || r === 'HR' || r === 'Team Leader' || r === 'Employee';
+    }
   }
 
   return false;

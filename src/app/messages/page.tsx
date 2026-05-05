@@ -22,13 +22,23 @@ import {
   UserMinus,
   Check,
   CheckCheck,
+  Crown,
 } from 'lucide-react';
-import { useStore, useShallow, canManageGroupSettings, canDeleteGroup } from '@/lib/store';
+import {
+  useStore,
+  useShallow,
+  canManageGroupSettings,
+  canDeleteGroup,
+  canAddMembersToGroupThread,
+  isGroupThreadAdmin,
+  groupThreadAdminIds,
+} from '@/lib/store';
 import type { User } from '@/lib/store';
 import type { ChatAttachment, ChatMessage, ChatThread } from '@/lib/messaging';
 import {
   isThreadVisibleToViewer,
   canSendInThread,
+  isGroupMessagingAdmin,
   dmTargetUserIds,
   canAddToGroup,
   canAddToHrGroup,
@@ -104,7 +114,7 @@ function UserAvatar({
   /** list | message: availability dot (no role letters on bubbles) */
   variant?: 'message' | 'list';
 }) {
-  const u = users.find((x) => x.id === userId);
+  const u = users.find((x) => String(x.id) === String(userId));
   const initial = u?.name?.charAt(0).toUpperCase() ?? '?';
   const src = u?.avatar;
   const dim = size === 'sm' ? 'h-9 w-9 text-xs' : size === 'lg' ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm';
@@ -142,26 +152,33 @@ function ThreadListAvatar({
   users: User[];
 }) {
   if (thread.kind === 'dm') {
-    const other = thread.memberIds.find((id) => id !== currentUserId);
+    const other = thread.memberIds.find((id) => String(id) !== String(currentUserId));
     if (!other) return <div className="h-11 w-11 shrink-0 rounded-2xl bg-slate-200" />;
     return <UserAvatar userId={other} users={users} size="md" variant="list" />;
   }
-  if (thread.avatarUrl) {
+  if (thread.kind === 'group') {
+    const fallbackAvatar =
+      thread.createdById != null &&
+      thread.createdById !== '' &&
+      users.find((u) => String(u.id) === String(thread.createdById))?.avatar;
+    const src = thread.avatarUrl || fallbackAvatar;
+    if (src) {
+      return (
+        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl ring-2 ring-white shadow-inner">
+          {/* eslint-disable-next-line @next/next/no-img-element -- user or group avatar URL */}
+          <img src={src} alt="" className="h-full w-full object-cover" />
+        </div>
+      );
+    }
     return (
-      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl ring-2 ring-white shadow-inner">
-        {/* eslint-disable-next-line @next/next/no-img-element -- group avatar data URL */}
-        <img src={thread.avatarUrl} alt="" className="h-full w-full object-cover" />
+      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 shadow-inner ring-2 ring-white">
+        <Hash className="h-5 w-5" strokeWidth={2} />
+        <span className="absolute -bottom-0.5 -right-0.5 rounded-md border-2 border-white bg-indigo-600 px-0.5 text-[7px] font-bold text-white">
+          G
+        </span>
       </div>
     );
   }
-  return (
-    <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 shadow-inner ring-2 ring-white">
-      <Hash className="h-5 w-5" strokeWidth={2} />
-      <span className="absolute -bottom-0.5 -right-0.5 rounded-md border-2 border-white bg-indigo-600 px-0.5 text-[7px] font-bold text-white">
-        G
-      </span>
-    </div>
-  );
 }
 
 export default function MessagesPage() {
@@ -173,6 +190,9 @@ export default function MessagesPage() {
     syncChatThreads,
     syncChatMessages,
     searchChatMessages,
+    hydrateChatParticipantUsers,
+    promoteGroupAdmin,
+    demoteGroupAdmin,
     sendChatMessage,
     editChatMessage,
     deleteChatMessage,
@@ -193,6 +213,9 @@ export default function MessagesPage() {
       syncChatThreads: s.syncChatThreads,
       syncChatMessages: s.syncChatMessages,
       searchChatMessages: s.searchChatMessages,
+      hydrateChatParticipantUsers: s.hydrateChatParticipantUsers,
+      promoteGroupAdmin: s.promoteGroupAdmin,
+      demoteGroupAdmin: s.demoteGroupAdmin,
       sendChatMessage: s.sendChatMessage,
       editChatMessage: s.editChatMessage,
       deleteChatMessage: s.deleteChatMessage,
@@ -223,6 +246,8 @@ export default function MessagesPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [groupMemberIds, setGroupMemberIds] = useState<string[]>([]);
+  const [newGroupPrivacyLocked, setNewGroupPrivacyLocked] = useState(false);
+  const [newGroupAdminsOnlyMessages, setNewGroupAdminsOnlyMessages] = useState(false);
   const [addUserIds, setAddUserIds] = useState<string[]>([]);
   const [pendingAttachment, setPendingAttachment] = useState<ChatAttachment | null>(null);
   const [lightbox, setLightbox] = useState<ChatAttachment | null>(null);
@@ -239,7 +264,7 @@ export default function MessagesPage() {
   const targetChatId = searchParams.get('chatId');
   const targetMessageId = searchParams.get('messageId');
 
-  const userName = (id: string) => users.find((u) => u.id === id)?.name ?? 'Unknown';
+  const userName = (id: string) => users.find((u) => String(u.id) === String(id))?.name ?? 'Unknown';
 
   const visibleThreads = useMemo(() => {
     if (!currentUser) return [];
@@ -263,6 +288,16 @@ export default function MessagesPage() {
     () => visibleThreads.find((t) => t.id === selectedId) ?? visibleThreads[0] ?? null,
     [visibleThreads, selectedId]
   );
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const ids = new Set<string>();
+    for (const t of visibleThreads) {
+      for (const mid of t.memberIds) ids.add(String(mid));
+      for (const m of t.messages) ids.add(String(m.authorId));
+    }
+    void hydrateChatParticipantUsers([...ids]);
+  }, [currentUser?.id, visibleThreads, hydrateChatParticipantUsers]);
 
   useEffect(() => {
     if (!selectedId && visibleThreads[0]) setSelectedId(visibleThreads[0].id);
@@ -479,7 +514,7 @@ export default function MessagesPage() {
   const eligibleToAddToSelected = useMemo(() => {
     if (!selected || selected.kind !== 'group' || !currentUser) return [];
     return users.filter((u) => {
-      if (u.id === currentUser.id || selected.memberIds.includes(u.id)) return false;
+      if (u.id === currentUser.id || selected.memberIds.some((mid) => String(mid) === String(u.id))) return false;
       if (selected.scope === 'group') return canAddToGroup(u);
       if (selected.scope === 'hr_group') return canAddToHrGroup(u);
       if (selected.scope === 'tl_group') return canAddToTlGroup(u);
@@ -487,11 +522,16 @@ export default function MessagesPage() {
     });
   }, [selected, users, currentUser]);
 
+  const selectedGroupAdmins = useMemo(
+    () => (selected?.kind === 'group' ? groupThreadAdminIds(selected) : []),
+    [selected]
+  );
+
   const canShowAddMembers =
-    selected?.kind === 'group' &&
-    ((selected.scope === 'group' && selected.createdById === currentUser?.id) ||
-      (selected.scope === 'hr_group' && (currentUser?.role === 'HR' || currentUser?.role === 'Admin')) ||
-      (selected.scope === 'tl_group' && currentUser?.role === 'Team Leader'));
+    !!selected &&
+    selected.kind === 'group' &&
+    !!currentUser &&
+    canAddMembersToGroupThread(selected, currentUser);
 
   const forwardTargets = useMemo(() => {
     if (!currentUser || !selected || !forwardingMessage) return [];
@@ -773,8 +813,8 @@ export default function MessagesPage() {
                       {chatThreadTitle(selected, currentUser.id, userName)}
                     </p>
                     {selected.kind === 'dm' && (() => {
-                      const other = selected.memberIds.find((id) => id !== currentUser.id);
-                      const u = other ? users.find((x) => x.id === other) : undefined;
+                      const other = selected.memberIds.find((id) => String(id) !== String(currentUser.id));
+                      const u = other ? users.find((x) => String(x.id) === String(other)) : undefined;
                       if (!u) return null;
                       return (
                         <p className={`mt-0.5 truncate text-[11px] font-medium ${presenceTextClass(u)}`}>
@@ -1052,6 +1092,18 @@ export default function MessagesPage() {
                     <p className="mb-2 text-xs font-medium text-rose-600">{errorHint}</p>
                   )}
                   <div className="mx-auto w-full min-w-0 max-w-3xl">
+                    {selected.kind === 'group' &&
+                      selected.adminsOnlyMessages &&
+                      currentUser &&
+                      !isGroupMessagingAdmin(selected, currentUser) && (
+                        <div className="mb-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/95 px-3 py-2 text-xs text-amber-950">
+                          <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                          <p>
+                            <span className="font-semibold"></span> Only group admins can send
+                            messages here.
+                          </p>
+                        </div>
+                      )}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -1125,11 +1177,17 @@ export default function MessagesPage() {
                         }}
                         disabled={!canSend}
                         placeholder={
-                          !canSend
-                            ? 'You cannot post here'
-                            : editingId
-                              ? 'Edit your message…'
-                              : 'Write a message…'
+                          !canSend &&
+                          selected?.kind === 'group' &&
+                          selected.adminsOnlyMessages &&
+                          currentUser &&
+                          !isGroupMessagingAdmin(selected, currentUser)
+                            ? 'Only group admins can send messages…'
+                            : !canSend
+                              ? 'You cannot post here'
+                              : editingId
+                                ? 'Edit your message…'
+                                : 'Write a message…'
                         }
                         rows={1}
                         className="min-h-[38px] max-h-28 min-w-0 flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm leading-snug text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -1229,6 +1287,44 @@ export default function MessagesPage() {
                   </button>
                 )}
               </div>
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
+                  checked={!!selected.privacyLockedInvites}
+                  disabled={!canEditSelectedGroup}
+                  onChange={async (e) => {
+                    setErrorHint(null);
+                    const r = await updateGroupChat(selected.id, { privacyLockedInvites: e.target.checked });
+                    if (!r.ok) setErrorHint(r.error ?? 'Could not update privacy setting');
+                  }}
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Lock className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                    Privacy lock
+                  </span>
+                </span>
+              </label>
+              <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
+                  checked={!!selected.adminsOnlyMessages}
+                  disabled={!canEditSelectedGroup}
+                  onChange={async (e) => {
+                    setErrorHint(null);
+                    const r = await updateGroupChat(selected.id, { adminsOnlyMessages: e.target.checked });
+                    if (!r.ok) setErrorHint(r.error ?? 'Could not update messaging mode');
+                  }}
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Crown className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                    Only admins can send messages
+                  </span>
+                </span>
+              </label>
               <label className="mt-4 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
                 Group name
               </label>
@@ -1294,10 +1390,17 @@ export default function MessagesPage() {
                 {[...selected.memberIds]
                   .sort((a, b) => userName(a).localeCompare(userName(b)))
                   .map((id) => {
-                    const u = users.find((x) => x.id === id);
-                    const isSelf = id === currentUser.id;
+                    const u = users.find((x) => String(x.id) === String(id));
+                    const isSelf = String(id) === String(currentUser.id);
                     const canLeaveGroup = isSelf && selected.memberIds.length > 1;
-                    const canRemoveOther = !isSelf && canManageGroupSettings(selected, currentUser);
+                    const canRemoveOther = !isSelf && isGroupThreadAdmin(selected, currentUser);
+                    const isRowAdmin = selectedGroupAdmins.some((a) => String(a) === String(id));
+                    const canPromote =
+                      isGroupThreadAdmin(selected, currentUser) && !isSelf && !isRowAdmin;
+                    const canDemote =
+                      isGroupThreadAdmin(selected, currentUser) &&
+                      isRowAdmin &&
+                      selectedGroupAdmins.length > 1;
                     return (
                       <li
                         key={id}
@@ -1305,10 +1408,49 @@ export default function MessagesPage() {
                       >
                         <UserAvatar userId={id} users={users} size="sm" variant="list" />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-slate-900">{userName(id)}</p>
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
+                            <span className="min-w-0 truncate">{userName(id)}</span>
+                            {isRowAdmin && (
+                              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-amber-100">
+                                <Crown className="h-3 w-3" aria-hidden />
+                                Admin
+                              </span>
+                            )}
+                          </p>
                           <p className="truncate text-xs text-slate-500">{u?.role ?? ''}</p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5">
+                          {canPromote && (
+                            <button
+                              type="button"
+                              className="rounded-lg p-2 text-amber-700 hover:bg-amber-50"
+                              title="Make group admin"
+                              aria-label={`Make ${userName(id)} a group admin`}
+                              onClick={() => {
+                                setErrorHint(null);
+                                void promoteGroupAdmin(selected.id, id).then((r) => {
+                                  if (!r.ok) setErrorHint(r.error ?? 'Could not promote');
+                                });
+                              }}
+                            >
+                              <Crown className="h-4 w-4" />
+                            </button>
+                          )}
+                          {canDemote && (
+                            <button
+                              type="button"
+                              className="rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                              title="Remove admin role"
+                              onClick={() => {
+                                setErrorHint(null);
+                                void demoteGroupAdmin(selected.id, id).then((r) => {
+                                  if (!r.ok) setErrorHint(r.error ?? 'Could not remove admin role');
+                                });
+                              }}
+                            >
+                              Revoke admin
+                            </button>
+                          )}
                           {canRemoveOther && (
                             <button
                               type="button"
@@ -1551,6 +1693,11 @@ export default function MessagesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {errorHint && (
+              <p className="mb-4 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+                {errorHint}
+              </p>
+            )}
             <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
               Name
             </label>
@@ -1578,18 +1725,63 @@ export default function MessagesPage() {
                 </label>
               ))}
             </div>
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
+                checked={newGroupPrivacyLocked}
+                onChange={(e) => setNewGroupPrivacyLocked(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <Lock className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                  Start with privacy lock
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  Only admins can add people later. You can change this anytime in group details.
+                </span>
+              </span>
+            </label>
+            <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
+                checked={newGroupAdminsOnlyMessages}
+                onChange={(e) => setNewGroupAdminsOnlyMessages(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <Crown className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                  Only admins can send messages
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  Announcements-style group; you can turn this off later in group details.
+                </span>
+              </span>
+            </label>
             <button
               type="button"
+              disabled={groupMemberIds.length < 1 || !groupName.trim()}
               onClick={async () => {
                 const sc = groupScope();
                 if (!sc) return;
-                const r = await createGroupChat({ name: groupName, memberIds: groupMemberIds, scope: sc });
+                setErrorHint(null);
+                const r = await createGroupChat({
+                  name: groupName,
+                  memberIds: groupMemberIds,
+                  scope: sc,
+                  privacyLockedInvites: newGroupPrivacyLocked,
+                  adminsOnlyMessages: newGroupAdminsOnlyMessages,
+                });
                 if (r.ok) {
                   setSelectedId(r.chatId);
                   setGroupOpen(false);
+                  setGroupMemberIds([]);
+                  setNewGroupPrivacyLocked(false);
+                  setNewGroupAdminsOnlyMessages(false);
                 } else setErrorHint(r.error ?? 'Could not create');
               }}
-              className="mt-4 w-full rounded-2xl bg-gradient-to-r from-[#6366f1] to-[#7c3aed] py-3 text-sm font-semibold text-white shadow-md"
+              className="mt-4 w-full rounded-2xl bg-gradient-to-r from-[#6366f1] to-[#7c3aed] py-3 text-sm font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-50"
             >
               Create
             </button>
@@ -1645,7 +1837,7 @@ export default function MessagesPage() {
               ) : (
                 <ul className="scrollbar-hide max-h-80 space-y-1 overflow-y-auto">
                   {msgSearchResults.map((m) => {
-                    const author = users.find((u) => u.id === m.authorId);
+                    const author = users.find((u) => String(u.id) === String(m.authorId));
                     const label = author?.name ?? (m.authorId === currentUser?.id ? 'You' : 'Unknown');
                     return (
                       <li key={m.id}>
