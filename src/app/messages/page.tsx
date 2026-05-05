@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare,
   Send,
@@ -22,6 +22,7 @@ import {
   UserMinus,
   Check,
   CheckCheck,
+  Pin,
   Crown,
 } from 'lucide-react';
 import {
@@ -53,6 +54,30 @@ import { useSearchParams } from 'next/navigation';
 function lastActivityMs(thread: ChatThread): number {
   const last = thread.messages[thread.messages.length - 1];
   return last ? new Date(last.createdAt).getTime() : 0;
+}
+
+const CHAT_PINS_STORAGE_PREFIX = 'gdc-crm-chat-pins:';
+const MAX_PINNED_CHATS = 30;
+
+function readPinnedThreadIds(userId: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(`${CHAT_PINS_STORAGE_PREFIX}${userId}`);
+    if (!raw) return [];
+    const p = JSON.parse(raw) as unknown;
+    return Array.isArray(p) ? p.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePinnedThreadIds(userId: string, ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${CHAT_PINS_STORAGE_PREFIX}${userId}`, JSON.stringify(ids));
+  } catch {
+    /* storage full / private mode */
+  }
 }
 
 function messageSnippet(m: ChatMessage): string {
@@ -264,14 +289,57 @@ export default function MessagesPage() {
   const targetChatId = searchParams.get('chatId');
   const targetMessageId = searchParams.get('messageId');
 
+  const [pinnedThreadIds, setPinnedThreadIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setPinnedThreadIds([]);
+      return;
+    }
+    setPinnedThreadIds(readPinnedThreadIds(currentUser.id));
+  }, [currentUser?.id]);
+
+  const togglePinThread = useCallback(
+    (threadId: string) => {
+      if (!currentUser?.id) return;
+      setPinnedThreadIds((prev) => {
+        const i = prev.indexOf(threadId);
+        if (i >= 0) {
+          const next = prev.filter((id) => id !== threadId);
+          writePinnedThreadIds(currentUser.id!, next);
+          queueMicrotask(() => setErrorHint(null));
+          return next;
+        }
+        if (prev.length >= MAX_PINNED_CHATS) {
+          queueMicrotask(() =>
+            setErrorHint(`You can pin up to ${MAX_PINNED_CHATS} chats. Unpin one first.`),
+          );
+          return prev;
+        }
+        const next = [threadId, ...prev];
+        writePinnedThreadIds(currentUser.id!, next);
+        queueMicrotask(() => setErrorHint(null));
+        return next;
+      });
+    },
+    [currentUser?.id],
+  );
+
   const userName = (id: string) => users.find((u) => String(u.id) === String(id))?.name ?? 'Unknown';
 
   const visibleThreads = useMemo(() => {
     if (!currentUser) return [];
     const filtered = chatThreads.filter((t) => isThreadVisibleToViewer(t, currentUser, users));
     const byActivity = (a: ChatThread, b: ChatThread) => lastActivityMs(b) - lastActivityMs(a);
-    return [...filtered].sort(byActivity);
-  }, [chatThreads, currentUser, users]);
+    const pinSet = new Set(pinnedThreadIds);
+    const pinned: ChatThread[] = [];
+    for (const id of pinnedThreadIds) {
+      const t = filtered.find((x) => x.id === id);
+      if (t) pinned.push(t);
+    }
+    const unpinned = filtered.filter((t) => !pinSet.has(t.id)).sort(byActivity);
+    return [...pinned, ...unpinned];
+  }, [chatThreads, currentUser, users, pinnedThreadIds]);
 
   const visibleThreadsFiltered = useMemo(() => {
     const q = threadSearchQ.trim().toLowerCase();
@@ -725,22 +793,28 @@ export default function MessagesPage() {
                   const unread = unreadCountForThread(t, currentUser.id);
                   const previewLine = lastMessagePreviewWithSender(last, currentUser.id, userName);
                   const hasUnread = unread > 0;
+                  const isPinned = pinnedThreadIds.includes(t.id);
                   return (
-                    <button
+                    <div
                       key={t.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedId(t.id);
-                        setErrorHint(null);
-                      }}
-                      className={`flex w-full gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
-                        active
-                          ? 'bg-slate-200 text-slate-900'
-                          : hasUnread
-                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/90 hover:bg-slate-50'
-                            : 'text-slate-900 hover:bg-slate-200'
+                      className={`flex w-full gap-0.5 rounded-xl transition-colors ${
+                        active ? 'bg-slate-200' : hasUnread ? 'bg-white shadow-sm ring-1 ring-slate-200/90' : ''
                       }`}
                     >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedId(t.id);
+                          setErrorHint(null);
+                        }}
+                        className={`flex min-w-0 flex-1 gap-3 rounded-l-xl px-3 py-3 text-left transition-colors ${
+                          active
+                            ? 'text-slate-900'
+                            : hasUnread
+                              ? 'hover:bg-slate-50 text-slate-900'
+                              : 'text-slate-900 hover:bg-slate-200'
+                        }`}
+                      >
                       <ThreadListAvatar thread={t} currentUserId={currentUser.id} users={users} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -786,6 +860,25 @@ export default function MessagesPage() {
                         </div>
                       </div>
                     </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          togglePinThread(t.id);
+                        }}
+                        className={`shrink-0 self-stretch rounded-r-xl px-2 transition-colors hover:bg-slate-300/50 ${
+                          isPinned ? 'text-amber-600' : 'text-slate-400'
+                        }`}
+                        title={isPinned ? 'Unpin from top' : 'Pin to top'}
+                        aria-label={isPinned ? 'Unpin chat' : 'Pin chat to top'}
+                      >
+                        <Pin
+                          className={`mx-auto h-4 w-4 ${isPinned ? 'fill-amber-500 text-amber-600' : ''}`}
+                          aria-hidden
+                        />
+                      </button>
+                    </div>
                   );
                 })
               )}
@@ -851,6 +944,24 @@ export default function MessagesPage() {
                       }}
                     >
                       <Search className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded-xl p-2 transition hover:bg-slate-100 ${
+                        pinnedThreadIds.includes(selected.id)
+                          ? 'text-amber-600 hover:bg-amber-50'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                      aria-label={
+                        pinnedThreadIds.includes(selected.id) ? 'Unpin chat from top' : 'Pin chat to top'
+                      }
+                      title={pinnedThreadIds.includes(selected.id) ? 'Unpin from top' : 'Pin to top'}
+                      onClick={() => togglePinThread(selected.id)}
+                    >
+                      <Pin
+                        className={`h-5 w-5 ${pinnedThreadIds.includes(selected.id) ? 'fill-amber-500' : ''}`}
+                        aria-hidden
+                      />
                     </button>
                     {selected.kind === 'group' && (
                       <button
