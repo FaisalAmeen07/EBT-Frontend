@@ -111,7 +111,7 @@ export function Topbar() {
     void run();
     const id = window.setInterval(() => {
       void run();
-    }, 8000);
+    }, 20000);
     return () => {
       cancelled = true;
       window.clearInterval(id);

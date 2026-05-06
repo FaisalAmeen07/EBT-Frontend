@@ -397,24 +397,8 @@ export default function MessagesPage() {
   }, [currentUser?.id, syncChatThreads]);
 
   useEffect(() => {
-    if (!currentUser) return;
-    const id = window.setInterval(() => {
-      void syncChatThreads();
-    }, 60_000);
-    return () => window.clearInterval(id);
-  }, [currentUser?.id, syncChatThreads]);
-
-  useEffect(() => {
     if (!selectedId || !currentUser) return;
     void syncChatMessages(selectedId);
-  }, [selectedId, currentUser?.id, syncChatMessages]);
-
-  useEffect(() => {
-    if (!selectedId || !currentUser) return;
-    const id = window.setInterval(() => {
-      void syncChatMessages(selectedId);
-    }, 60_000);
-    return () => window.clearInterval(id);
   }, [selectedId, currentUser?.id, syncChatMessages]);
 
   useEffect(() => {

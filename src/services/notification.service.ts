@@ -4,6 +4,9 @@ import { isAxiosError } from 'axios';
 
 export type NotificationCategory = 'attendance' | 'task' | 'request' | 'system';
 
+/** Single bell-row for unread chat messages (count in description). */
+export const CHAT_UNREAD_BELL_EVENT_KEY = 'chat-unread-summary';
+
 export interface NotificationDto {
   id: string;
   title: string;
@@ -98,6 +101,40 @@ export async function createMyNotificationApi(input: {
       console.warn('[notifications] POST failed', e.response?.status, e.response?.data ?? e.message);
     }
     return null;
+  }
+}
+
+/** Updates copy for the same `eventKey` (chat unread summary). */
+export async function upsertMyNotificationApi(input: {
+  title: string;
+  description: string;
+  category?: NotificationCategory;
+  eventKey: string;
+  targetPath?: string;
+}): Promise<NotificationDto | null> {
+  try {
+    const res = await apiClient.post<NotificationCreateResponse>(API_PATHS.auth.notifications, {
+      ...input,
+      upsert: true,
+    });
+    return normalizeNotificationRow(res.data?.data);
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development' && isAxiosError(e)) {
+      console.warn('[notifications] upsert POST failed', e.response?.status, e.response?.data ?? e.message);
+    }
+    return null;
+  }
+}
+
+export async function deleteMyNotificationByEventKeyApi(eventKey: string): Promise<void> {
+  try {
+    await apiClient.delete(API_PATHS.auth.deleteNotificationByEventKey(eventKey));
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development' && isAxiosError(e)) {
+      if (e.response?.status !== 404) {
+        console.warn('[notifications] delete by eventKey failed', e.response?.status, e.response?.data ?? e.message);
+      }
+    }
   }
 }
 

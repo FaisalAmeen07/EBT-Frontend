@@ -17,6 +17,8 @@ export const API_PATHS = {
     markAllNotificationsRead: '/api/auth/notifications/read-all',
     markNotificationRead: (id: string | number) => `/api/auth/notifications/${encodeURIComponent(String(id))}/read`,
     deleteNotification: (id: string | number) => `/api/auth/notifications/${encodeURIComponent(String(id))}`,
+    deleteNotificationByEventKey: (eventKey: string) =>
+      `/api/auth/notifications/event-key/${encodeURIComponent(eventKey)}`,
     deleteUser: (hashId: string) => `/api/auth/delete-user/${encodeURIComponent(hashId)}`,
   },
   profile: {

@@ -32,12 +32,15 @@ import {
 } from '@/services/tasks.service';
 import { checkInApi, checkOutApi, endBreakApi, fetchAttendanceRecordsApi, getShiftStatusApi } from '@/services/attendance.service';
 import {
+  CHAT_UNREAD_BELL_EVENT_KEY,
   createMyNotificationApi,
+  deleteMyNotificationByEventKeyApi,
   fetchMyNotificationsApi,
   markMyNotificationReadApi,
   markAllMyNotificationsReadApi,
   deleteMyNotificationApi,
   clearMyNotificationsApi,
+  upsertMyNotificationApi,
 } from '@/services/notification.service';
 import { fetchChatParticipantSnapshotsApi, type ChatParticipantSnapshot } from '@/services/user.service';
 import { dbRoleToFrontendRole } from '@/services/admin.service';
@@ -437,6 +440,8 @@ interface AppState {
   refreshAttendanceFromApi: () => Promise<void>;
   /** Load bell notifications from gdc-backend (not persisted — always fresh). */
   refreshNotificationsFromApi: () => Promise<void>;
+  /** One bell row for unread chat: description shows count; clears when unread is 0. */
+  reconcileChatUnreadBellNotification: () => Promise<void>;
   addManualTimesheetEntry: (input: {
     userId: string;
     date: string; // YYYY-MM-DD
@@ -577,7 +582,16 @@ interface AppState {
   /** Fetch all chats for current user from chat-backend. */
   syncChatThreads: () => Promise<{ ok: true } | { ok: false; error?: string }>;
   /** Fetch messages for a chatId (on open) from chat-backend. */
-  syncChatMessages: (chatId: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
+  syncChatMessages: (
+    chatId: string,
+    opts?: { skipReconcile?: boolean }
+  ) => Promise<{ ok: true } | { ok: false; error?: string }>;
+  /** Realtime fallback: pull messages from all chats to refresh unread count instantly. */
+  syncAllChatMessagesForUnread: () => Promise<void>;
+  /** Apply pushed message from Socket.IO without HTTP refetch. */
+  applyRealtimeReceivedMessage: (payload: { chatId?: string; message?: ChatMessage | null }) => void;
+  /** Create/refresh a bell notification for newest chat message (who sent + snippet). */
+  pushChatBellNotificationFromRealtime: (payload: { chatId?: string; message?: ChatMessage | null }) => Promise<void>;
   searchChatMessages: (
     chatId: string,
     q: string
@@ -659,6 +673,19 @@ export function deriveTeamsRegistryFromUsers(users: User[]): string[] {
     if (t) s.add(t);
   }
   return [...s].sort((a, b) => a.localeCompare(b));
+}
+
+function countUnreadIncomingChatMessages(viewerId: string, threads: ChatThread[]): number {
+  let n = 0;
+  for (const t of threads) {
+    for (const m of t.messages) {
+      if (m.deleted) continue;
+      if (m.authorId === viewerId) continue;
+      const readBy = m.readByUserIds ?? [];
+      if (!readBy.includes(viewerId)) n += 1;
+    }
+  }
+  return n;
 }
 
 export const useStore = create<AppState>()((set, get) => ({
@@ -813,6 +840,29 @@ export const useStore = create<AppState>()((set, get) => ({
           });
         } catch {
           /* keep existing list */
+        }
+      },
+
+      reconcileChatUnreadBellNotification: async () => {
+        const { currentUser, chatThreads } = get();
+        if (!currentUser) return;
+        const n = countUnreadIncomingChatMessages(currentUser.id, chatThreads);
+        try {
+          if (n === 0) {
+            await deleteMyNotificationByEventKeyApi(CHAT_UNREAD_BELL_EVENT_KEY);
+          } else {
+            const desc = n === 1 ? 'You have 1 new message.' : `You have ${n} new messages.`;
+            await upsertMyNotificationApi({
+              title: 'New messages',
+              description: desc,
+              category: 'system',
+              eventKey: CHAT_UNREAD_BELL_EVENT_KEY,
+              targetPath: '/messages',
+            });
+          }
+          await get().refreshNotificationsFromApi();
+        } catch {
+          /* best-effort */
         }
       },
 
@@ -2061,8 +2111,8 @@ export const useStore = create<AppState>()((set, get) => ({
         }
       },
 
-      syncChatMessages: async (chatId) => {
-        const { currentUser, chatThreads, users } = get();
+      syncChatMessages: async (chatId, opts) => {
+        const { currentUser, chatThreads } = get();
         if (!currentUser) return { ok: false, error: 'Not signed in' };
         const thread = chatThreads.find((t) => t.id === chatId);
         if (!thread) return { ok: false, error: 'Chat not found' };
@@ -2093,24 +2143,93 @@ export const useStore = create<AppState>()((set, get) => ({
           set({
             chatThreads: chatThreads.map((t) => (t.id === chatId ? { ...t, messages: msgs } : t)),
           });
-          const hasPreviousSnapshot = thread.messages.length > 0;
-          if (!hasPreviousSnapshot) return { ok: true };
-          const prevIds = new Set(thread.messages.map((m) => m.id));
-          const senderName = (id: string) => users.find((u) => String(u.id) === String(id))?.name || 'Someone';
-          for (const m of msgs) {
-            if (prevIds.has(m.id)) continue;
-            if (m.authorId === currentUser.id) continue;
-            get().addNotification({
-              title: 'New Message',
-              description: `${senderName(m.authorId)} sent you a message.`,
-              category: 'system',
-              eventKey: `chat-msg-${m.id}`,
-              targetPath: `/messages?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(m.id)}`,
-            });
+          if (!opts?.skipReconcile) {
+            await get().reconcileChatUnreadBellNotification();
           }
           return { ok: true };
         } catch (e: any) {
           return { ok: false, error: e?.message || 'Network error' };
+        }
+      },
+
+      syncAllChatMessagesForUnread: async () => {
+        const { currentUser, chatThreads } = get();
+        if (!currentUser) return;
+        const ids = [...new Set(chatThreads.map((t) => String(t.id)).filter(Boolean))];
+        if (ids.length === 0) {
+          await get().reconcileChatUnreadBellNotification();
+          return;
+        }
+        await Promise.allSettled(ids.map((id) => get().syncChatMessages(id, { skipReconcile: true })));
+        await get().reconcileChatUnreadBellNotification();
+      },
+
+      applyRealtimeReceivedMessage: (payload) => {
+        const chatId = payload?.chatId != null ? String(payload.chatId) : '';
+        const message = payload?.message ?? null;
+        if (!chatId || !message || typeof message !== 'object') return;
+        const normalized: ChatMessage = {
+          id: String((message as any).id ?? ''),
+          chatId,
+          authorId: String((message as any).authorId ?? ''),
+          body: String((message as any).body ?? ''),
+          createdAt: String((message as any).createdAt ?? new Date().toISOString()),
+          readByUserIds: Array.isArray((message as any).readByUserIds)
+            ? (message as any).readByUserIds.map((x: any) => String(x))
+            : [],
+          ...((message as any).senderId != null ? { senderId: String((message as any).senderId) } : {}),
+          ...((message as any).receiverId !== undefined ? { receiverId: (message as any).receiverId } : {}),
+          ...((message as any).groupId !== undefined ? { groupId: (message as any).groupId } : {}),
+          ...((message as any).attachment ? { attachment: (message as any).attachment as ChatAttachment } : {}),
+          ...((message as any).editedAt ? { editedAt: String((message as any).editedAt) } : {}),
+          ...((message as any).deleted ? { deleted: true } : {}),
+          ...((message as any).replyToId ? { replyToId: String((message as any).replyToId) } : {}),
+          ...((message as any).forwardedFrom ? { forwardedFrom: (message as any).forwardedFrom } : {}),
+        };
+        if (!normalized.id || !normalized.authorId) return;
+
+        set((state) => {
+          const exists = state.chatThreads.some((t) => t.id === chatId);
+          if (!exists) return state;
+          return {
+            chatThreads: state.chatThreads.map((t) => {
+              if (t.id !== chatId) return t;
+              const prev = t.messages ?? [];
+              if (prev.some((m) => m.id === normalized.id)) return t;
+              return { ...t, messages: [...prev, normalized] };
+            }),
+          };
+        });
+
+        // Keep unread bell count accurate; do not trigger HTTP refetch loops.
+        void get().reconcileChatUnreadBellNotification();
+      },
+
+      pushChatBellNotificationFromRealtime: async (payload) => {
+        const { currentUser, users } = get();
+        const chatId = payload?.chatId != null ? String(payload.chatId) : '';
+        const message = payload?.message ?? null;
+        if (!currentUser || !chatId || !message) return;
+        const authorId = message.authorId != null ? String(message.authorId) : '';
+        if (!authorId || authorId === currentUser.id) return;
+
+        const senderName = users.find((u) => String(u.id) === authorId)?.name || 'Someone';
+        const body = String(message.body ?? '').trim();
+        const snippet = body ? (body.length > 80 ? `${body.slice(0, 80)}…` : body) : 'Sent an attachment';
+
+        try {
+          await upsertMyNotificationApi({
+            title: 'New Message',
+            description: `${senderName}: ${snippet}`,
+            category: 'system',
+            eventKey: `chat-last-${chatId}`,
+            targetPath: `/messages?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(
+              String(message.id ?? '')
+            )}`,
+          });
+          await get().refreshNotificationsFromApi();
+        } catch {
+          /* best-effort */
         }
       },
 
@@ -2794,6 +2913,7 @@ export const useStore = create<AppState>()((set, get) => ({
             };
           }),
         }));
+        await get().reconcileChatUnreadBellNotification();
       },
 
       receiveIncomingChatMessage: (chatId, fromUserId, input) => {
@@ -2826,14 +2946,7 @@ export const useStore = create<AppState>()((set, get) => ({
             t.id === chatId ? { ...t, messages: [...t.messages, msg] } : t
           ),
         });
-        const senderName = users.find((u) => String(u.id) === String(fromUserId))?.name || 'Someone';
-        get().addNotification({
-          title: 'New Message',
-          description: `${senderName} sent you a message.`,
-          category: 'system',
-          eventKey: `chat-msg-${msg.id}`,
-          targetPath: `/messages?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(msg.id)}`,
-        });
+        void get().reconcileChatUnreadBellNotification();
         emitChatSocketEvent({ type: 'message:new', chatId, message: msg, source: 'incoming' });
         return { ok: true };
       },

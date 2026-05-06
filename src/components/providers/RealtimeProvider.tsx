@@ -117,9 +117,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           }
           if (scopes.includes('chat')) {
             await st.syncChatThreads();
-            const open = st.activeMessagesChatId;
-            if (focusChatId && open === focusChatId) {
+            if (focusChatId) {
               await st.syncChatMessages(focusChatId);
+            } else {
+              // Fallback when upstream event has no chatId: still refresh unread count quickly.
+              await st.syncAllChatMessagesForUnread();
             }
           }
           if (scopes.includes('directory')) await refreshDirectoryFromApi();
@@ -159,6 +161,34 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     socket.on('connect', onConnect);
     if (socket.connected) onConnect();
 
+    // Join/leave chat rooms when the chat screen focus changes (WhatsApp-like)
+    let lastJoined: string | null = null;
+    let lastSeenActiveId: string | null = useStore.getState().activeMessagesChatId;
+    const unsub = useStore.subscribe((s) => {
+      const next: string | null = s.activeMessagesChatId;
+      if (next === lastSeenActiveId) return;
+      lastSeenActiveId = next;
+      if (lastJoined) socket.emit('leaveRoom', lastJoined);
+      lastJoined = next ? String(next) : null;
+      if (lastJoined) socket.emit('joinRoom', lastJoined);
+    });
+
+    socket.on('receiveMessage', (payload: { chatId?: string; message?: any }) => {
+      const st = useStore.getState();
+      const chatId = payload?.chatId != null ? String(payload.chatId) : '';
+      const hasThreadAlready = chatId
+        ? st.chatThreads.some((t) => String(t.id) === chatId)
+        : false;
+      st.applyRealtimeReceivedMessage({
+        chatId,
+        message: payload?.message ?? null,
+      });
+      // Only fallback-sync when this thread is not yet in local list.
+      if (chatId && !hasThreadAlready) {
+        void st.syncChatThreads().then(() => st.syncChatMessages(chatId, { skipReconcile: false }));
+      }
+    });
+
     socket.on('newNotification', () => schedule(['notifications']));
     socket.on('task.updated', () => schedule(['tasks']));
     socket.on('chat.message', (payload: { chatId?: string }) => {
@@ -174,6 +204,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     socket.on('admin.directory.updated', () => schedule(['directory']));
 
     return () => {
+      unsub();
       socket.off('connect', onConnect);
       socket.disconnect();
       if (flushTimer !== undefined) clearTimeout(flushTimer);
