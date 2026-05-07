@@ -37,6 +37,7 @@ import {
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subDays, isWithinInterval } from 'date-fns';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { MAX_SHIFT_WORK_MS } from '@/lib/attendanceLimits';
 import { fetchPendingUsersCountApi, fetchWorkforceCountApi } from '@/services/admin.service';
 import { fetchAttendanceSummaryApi, getCurrentShiftApi, getShiftStatusApi } from '@/services/attendance.service';
 import { fetchLeaveRequestsApi } from '@/services/attendance-requests.service';
@@ -224,9 +225,11 @@ function TimerWidget() {
     return last.endTime ? null : last;
   })();
 
-  // Calculate elapsed time (pause during active break)
-  const elapsed = useMemo(() => {
-    if (!activeTimesheet) return null;
+  // Calculate elapsed time (pause during active break) and detect shift work-limit.
+  const { elapsed, reachedWorkLimit } = useMemo(() => {
+    if (!activeTimesheet) {
+      return { elapsed: null as string | null, reachedWorkLimit: false };
+    }
 
     const clockInMs = new Date(activeTimesheet.clockIn).getTime();
     const effectiveNowMs = activeBreak ? new Date(activeBreak.startTime).getTime() : now.getTime();
@@ -239,14 +242,20 @@ function TimerWidget() {
       }, 0);
     const completedBreakMsFromApi = Math.max(0, Number(activeTimesheet.breakDurationMinutes || 0)) * 60 * 1000;
 
-    const diffMs = Math.max(0, effectiveNowMs - clockInMs - Math.max(completedBreakMs, completedBreakMsFromApi));
+    const diffMsRaw = Math.max(0, effectiveNowMs - clockInMs - Math.max(completedBreakMs, completedBreakMsFromApi));
+    const reachedLimit = diffMsRaw >= MAX_SHIFT_WORK_MS;
+    const diffMs = Math.min(MAX_SHIFT_WORK_MS, diffMsRaw);
     const hours = Math.floor(diffMs / 3600000);
     const minutes = Math.floor((diffMs % 3600000) / 60000);
     const seconds = Math.floor((diffMs % 60000) / 1000);
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return {
+      elapsed: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+      reachedWorkLimit: reachedLimit,
+    };
   }, [activeTimesheet, now, activeBreak]);
 
   const isPaused = !!activeBreak;
+  const showBreakOutAction = !!activeBreak && !reachedWorkLimit;
   const hasAnyBreak = (activeTimesheet?.breaks?.length || 0) > 0;
   const lineColorClass = !isClockedIn
     ? 'bg-blue-600'
@@ -321,7 +330,7 @@ function TimerWidget() {
                       isPaused ? 'text-amber-700' : 'text-emerald-700'
                     }`}
                   >
-                    {isPaused ? 'On Break (Paused)' : 'Working'}
+                    {reachedWorkLimit ? 'Work Limit Reached (Paused)' : isPaused ? 'On Break (Paused)' : 'Working'}
                   </span>
                   <span
                     className={`text-sm font-mono font-black ${isPaused ? 'text-amber-800' : 'text-emerald-800'}`}
@@ -392,7 +401,7 @@ function TimerWidget() {
               </button>
             ) : (
               <div className="flex flex-row gap-4">
-                {activeBreak ? (
+                {showBreakOutAction ? (
                   <button
                     onClick={async () => {
                       setClockBusy(true);

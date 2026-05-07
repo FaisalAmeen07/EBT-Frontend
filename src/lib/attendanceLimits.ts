@@ -1,0 +1,4 @@
+export const MAX_SHIFT_WORK_HOURS = 15;
+export const MAX_SHIFT_WORK_MS = MAX_SHIFT_WORK_HOURS * 60 * 60 * 1000;
+
+

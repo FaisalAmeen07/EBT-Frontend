@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { fetchPublicDepartmentsApi } from '@/services/auth.service';
+import { MAX_SHIFT_WORK_HOURS } from '@/lib/attendanceLimits';
 
 // ─── PERSONAL ATTENDANCE (Employee + TL “My attendance” tab) ───
 function EmployeeTimesheetView() {
@@ -100,7 +101,7 @@ function EmployeeTimesheetView() {
         }
       }
 
-      return Math.max(0, hours);
+      return Math.min(MAX_SHIFT_WORK_HOURS, Math.max(0, hours));
     }
     return 0;
   };
