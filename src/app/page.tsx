@@ -127,6 +127,7 @@ function TimerWidget() {
   const {
     currentUser,
     timesheets,
+    Leave,
     clockOut,
     endBreak,
     adhocShiftsEnabled,
@@ -141,6 +142,7 @@ function TimerWidget() {
     useShallow((s) => ({
       currentUser: s.currentUser,
       timesheets: s.timesheets,
+      Leave: s.Leave,
       clockOut: s.clockOut,
       endBreak: s.endBreak,
       adhocShiftsEnabled: s.adhocShiftsEnabled,
@@ -191,11 +193,15 @@ function TimerWidget() {
 
   const shiftEnabled = shiftEnabledApi ?? adhocShiftsEnabled;
   const clockInBlocked = !shiftEnabled && currentUser?.role !== 'Admin';
+  const leaveBlocked =
+    !!currentUser &&
+    currentUser.role !== 'Admin' &&
+    isApprovedLeaveOnDate(now, String(currentUser.id), Leave);
   const beforeOfficeStartMsg =
     currentUser?.role !== 'Admin'
       ? clockInBlockedBeforeOfficeStart(now, attendanceDayOverrides)
       : null;
-  const clockInDisabled = clockInBlocked || !!beforeOfficeStartMsg;
+  const clockInDisabled = leaveBlocked || clockInBlocked || !!beforeOfficeStartMsg;
   const geoRadiusMiles = (() => {
     if (!geoFencingEnabled) return 0;
     if (geoFencingUseGlobalRadius) return Math.max(0, geoFencingGlobalRadiusMiles);
@@ -333,7 +339,12 @@ function TimerWidget() {
                 Clock-in is turned off by your administrator.
               </p>
             )}
-            {!clockInBlocked && beforeOfficeStartMsg && (
+            {leaveBlocked && (
+              <p className="max-w-[14rem] text-center text-[11px] font-semibold text-amber-800 md:text-right">
+                You are currently on leave today.
+              </p>
+            )}
+            {!clockInBlocked && !leaveBlocked && beforeOfficeStartMsg && (
               <p className="max-w-[14rem] text-center text-[11px] font-semibold text-amber-800 md:text-right">
                 {beforeOfficeStartMsg}
               </p>
@@ -347,18 +358,29 @@ function TimerWidget() {
             {!isClockedIn ? (
               <button
                 type="button"
-                disabled={clockInDisabled || clockBusy}
+                aria-disabled={leaveBlocked ? 'true' : undefined}
+                disabled={!leaveBlocked && (clockInDisabled || clockBusy)}
                 onClick={async () => {
+                  if (leaveBlocked) {
+                    toast('You are currently on leave today.', 'error');
+                    return;
+                  }
                   setClockBusy(true);
                   try {
                     const res = await performClockInWithPolicies();
                     if (!res.ok) toast(res.error, 'error');
+                  } catch (error) {
+                    toast(error instanceof Error ? error.message : 'Unable to clock in.', 'error');
                   } finally {
                     setClockBusy(false);
                   }
                 }}
-                className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-100 transition-all hover:bg-blue-500 active:scale-95 focus:outline-none ring-8 ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none disabled:hover:bg-slate-400"
-                title={clockInDisabled ? 'Clock-in disabled' : 'Clock in'}
+                className={`group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full text-white shadow-lg ring-8 ring-blue-600/10 focus:outline-none ${
+                  leaveBlocked
+                    ? 'cursor-not-allowed bg-slate-400 shadow-none'
+                    : 'bg-blue-600 shadow-blue-100 transition-all hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none disabled:hover:bg-slate-400'
+                }`}
+                title={leaveBlocked ? 'You are currently on leave today.' : clockInDisabled ? 'Clock-in disabled' : 'Clock in'}
               >
                 <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40 group-disabled:opacity-0" />
                 <div className="relative z-10 flex flex-col items-center">

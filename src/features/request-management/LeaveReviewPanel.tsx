@@ -19,6 +19,15 @@ export function LeaveReviewPanel({
   onApprove,
   onReject,
 }: LeaveReviewPanelProps) {
+  const roleLabel = (leave: LeaveRequest): string => {
+    const raw = String(leave.requesterRole || '').trim().toUpperCase();
+    if (raw === 'ADMIN') return 'Admin';
+    if (raw === 'HR') return 'HR';
+    if (raw === 'TEAM_LEADER' || raw === 'TEAMLEADER' || raw === 'TEAM_LEAD') return 'Team Leader';
+    if (raw === 'EMPLOYEE') return 'Employee';
+    return 'Employee';
+  };
+
   return (
     <table className="w-full border-collapse text-left text-sm">
         <thead>
@@ -54,7 +63,9 @@ export function LeaveReviewPanel({
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{getUsername(leave.userId)}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Employee</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        {roleLabel(leave)}
+                      </p>
                     </div>
                   </div>
                 </td>

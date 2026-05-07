@@ -10,6 +10,7 @@ type LeaveRow = {
   id: string;
   user_id: string;
   requester_name?: string | null;
+  role_snapshot?: string | null;
   leave_type: ApiLeaveType;
   start_date: string;
   end_date: string;
@@ -66,6 +67,7 @@ const toLeaveRequest = (row: LeaveRow): LeaveRequest => ({
   id: row.id,
   userId: row.user_id,
   requesterName: row.requester_name ?? undefined,
+  requesterRole: row.role_snapshot ?? undefined,
   type: leaveTypeFromApi(row.leave_type),
   startDate: row.start_date,
   endDate: row.end_date,

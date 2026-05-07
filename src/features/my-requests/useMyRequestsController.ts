@@ -37,6 +37,7 @@ export function useMyRequestsController() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
+  const [leaveSubmitting, setLeaveSubmitting] = useState(false);
 
   const [manualDate, setManualDate] = useState('');
   const [clockInTime, setClockInTime] = useState('09:00');
@@ -99,6 +100,7 @@ export function useMyRequestsController() {
 
   const submitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (leaveSubmitting) return;
     if (!currentUser) return;
     if (!startDate || !endDate) {
       toast('Please fill in both start and end dates.', 'error');
@@ -108,6 +110,24 @@ export function useMyRequestsController() {
       toast('End date cannot be before start date.', 'error');
       return;
     }
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+    const leaveDays = Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    if (!Number.isFinite(leaveDays) || leaveDays > 2) {
+      toast('Maximum leave duration is 2 days.', 'error');
+      return;
+    }
+    const hasOverlap = myLeave.some((l) => {
+      if (l.status === 'Rejected') return false;
+      const existingStart = new Date(`${l.startDate.slice(0, 10)}T00:00:00`);
+      const existingEnd = new Date(`${l.endDate.slice(0, 10)}T00:00:00`);
+      return existingStart <= end && existingEnd >= start;
+    });
+    if (hasOverlap) {
+      toast('You already have a leave request for these dates.', 'error');
+      return;
+    }
+    setLeaveSubmitting(true);
     try {
       await createLeaveRequestApi({ type: leaveType, startDate, endDate, reason });
       const leaveRows = await fetchLeaveRequestsApi();
@@ -119,6 +139,8 @@ export function useMyRequestsController() {
       setLeaveFormOpen(false);
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Unable to submit leave request.', 'error');
+    } finally {
+      setLeaveSubmitting(false);
     }
   };
 
@@ -189,6 +211,7 @@ export function useMyRequestsController() {
       reason,
       setReason,
       onSubmit: submitLeave,
+      submitting: leaveSubmitting,
     },
     manualForm: {
       manualDate,

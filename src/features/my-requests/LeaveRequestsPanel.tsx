@@ -19,6 +19,7 @@ type LeaveForm = {
   reason: string;
   setReason: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  submitting: boolean;
 };
 
 type LeaveRequestsPanelProps = {
@@ -50,6 +51,7 @@ export function LeaveRequestsPanel({
     reason,
     setReason,
     onSubmit,
+    submitting,
   } = form;
 
   return (
@@ -151,10 +153,15 @@ export function LeaveRequestsPanel({
           </div>
           <button
             type="submit"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            disabled={submitting}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-sm ${
+              submitting
+                ? 'bg-slate-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
             <Send className="h-4 w-4" />
-            Submit request
+            {submitting ? 'Submitting…' : 'Submit request'}
           </button>
         </form>
       </RequestModal>

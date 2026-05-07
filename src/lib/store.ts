@@ -294,6 +294,7 @@ export interface LeaveRequest {
   id: string;
   userId: string;
   requesterName?: string;
+  requesterRole?: string;
   type: LeaveType;
   startDate: string;
   endDate: string;

@@ -91,12 +91,17 @@ export function useRequestManagementController() {
   const filteredLeave = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return Leave.filter((leave) => {
+      // HR should only see Employee / TL leave, not HR/Admin leave.
+      if (currentUser?.role === 'HR') {
+        const role = String(leave.requesterRole || '').trim().toUpperCase();
+        if (role === 'HR' || role === 'ADMIN') return false;
+      }
       const userName = getUsername(leave.userId).toLowerCase();
       const matchesSearch = userName.includes(q);
       const matchesStatus = statusFilter === 'All' || leave.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [Leave, searchTerm, statusFilter, users, manualTimeRequests]);
+  }, [Leave, searchTerm, statusFilter, users, manualTimeRequests, currentUser?.role]);
 
   const filteredManual = useMemo(() => {
     const q = searchTerm.toLowerCase();

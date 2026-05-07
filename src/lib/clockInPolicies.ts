@@ -21,13 +21,31 @@ function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
+function isOnApprovedLeaveToday(
+  leaves: { userId: string; status: string; startDate: string; endDate: string }[],
+  userId: string,
+  today: Date
+): boolean {
+  const day = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  return leaves.some((l) => {
+    if (String(l.userId) !== String(userId)) return false;
+    if (String(l.status || '').trim().toUpperCase() !== 'APPROVED') return false;
+    const start = new Date(String(l.startDate || '').slice(0, 10));
+    const end = new Date(String(l.endDate || '').slice(0, 10));
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return false;
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+    return day >= startDay && day <= endDay;
+  });
+}
+
 /**
  * Clock in with admin policies: ad-hoc master switch, optional geo-fence.
  * Call from the dashboard Clock In button (async).
  */
 export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok: false; error: string }> {
   const state = useStore.getState();
-  const { currentUser, timesheets } = state;
+  const { currentUser, timesheets, Leave } = state;
   if (!currentUser) return { ok: false, error: 'You must be signed in to clock in.' };
 
   // Backend is source of truth for shift enable/disable.
@@ -45,6 +63,9 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
   }
 
   const today = new Date();
+  if (isOnApprovedLeaveToday(Leave, currentUser.id, today)) {
+    return { ok: false, error: 'You are currently on leave today.' };
+  }
   const alreadyCompletedShiftToday = timesheets.some((t) => {
     if (t.userId !== currentUser.id || !t.clockOut) return false;
     const clockInDate = new Date(t.clockIn);
@@ -81,6 +102,13 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
     }
   }
 
-  await state.clockIn();
-  return { ok: true };
+  try {
+    await state.clockIn();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unable to clock in.',
+    };
+  }
 }
