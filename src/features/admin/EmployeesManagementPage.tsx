@@ -23,6 +23,7 @@ import {
   Sparkles,
   Loader2,
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 function apiErrorMessage(e: unknown): string {
@@ -72,6 +73,7 @@ function promotableRolesForUser(currentRole: Role): Role[] {
 }
 
 export function EmployeesManagementPage() {
+  const searchParams = useSearchParams();
   const { users, replaceDirectoryUsers, currentUser } = useStore(
     useShallow((s) => ({
       users: s.users,
@@ -202,6 +204,16 @@ export function EmployeesManagementPage() {
     { key: 'HR', label: 'HR' },
     { key: 'Pending User', label: 'Pending' },
   ];
+
+  useEffect(() => {
+    const rawRole = searchParams.get('role');
+    if (!rawRole) return;
+    const decodedRole = decodeURIComponent(rawRole).trim();
+    const allowedRoles: RoleFilter[] = ['All', 'Employee', 'Team Leader', 'HR', 'Pending User'];
+    if (allowedRoles.includes(decodedRole as RoleFilter)) {
+      setRoleFilter(decodedRole as RoleFilter);
+    }
+  }, [searchParams]);
 
   return (
     <div className="mx-auto min-h-full max-w-6xl space-y-8 pb-12">

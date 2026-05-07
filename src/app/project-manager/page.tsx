@@ -180,6 +180,16 @@ export default function TasksPage() {
   }, [searchParams, allTasks, currentUser, users]);
 
   useEffect(() => {
+    const rawStatus = searchParams.get('status');
+    if (!rawStatus) return;
+    const decodedStatus = decodeURIComponent(rawStatus).trim();
+    const allowed: StatusFilter[] = ['All', 'Pending', 'In Progress', 'Submitted', 'Review', 'Approved'];
+    if (allowed.includes(decodedStatus as StatusFilter)) {
+      setStatusFilter(decodedStatus as StatusFilter);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (!pmDateOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setPmDateOpen(false);

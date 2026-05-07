@@ -1,3 +1,7 @@
+import {
+  clockInBlockedAfterLateWindow,
+  clockInBlockedBeforeOfficeStart,
+} from '@/lib/attendanceRules';
 import { useStore } from '@/lib/store';
 import { getCurrentLatLng, haversineMiles } from '@/lib/geoDistance';
 import { getShiftStatusApi } from '@/services/attendance.service';
@@ -63,6 +67,12 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
   }
 
   const today = new Date();
+  if (currentUser.role !== 'Admin') {
+    const beforeStartMsg = clockInBlockedBeforeOfficeStart(today, state.attendanceDayOverrides);
+    if (beforeStartMsg) return { ok: false, error: beforeStartMsg };
+    const afterWindowMsg = clockInBlockedAfterLateWindow(today, state.attendanceDayOverrides);
+    if (afterWindowMsg) return { ok: false, error: afterWindowMsg };
+  }
   if (isOnApprovedLeaveToday(Leave, currentUser.id, today)) {
     return { ok: false, error: 'You are currently on leave today.' };
   }

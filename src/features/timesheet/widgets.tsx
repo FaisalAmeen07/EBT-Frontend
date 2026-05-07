@@ -17,9 +17,10 @@ export function PersonalStats({ userId, timesheets }: { userId?: string; timeshe
     .filter((t) => isWithinInterval(new Date(t.clockIn), { start: weekStart, end: weekEnd }));
 
   const totalHours = weeklyTimesheets.reduce((acc: number, t: any) => acc + (t.totalHours || 0), 0);
-  const lateMarks = weeklyTimesheets.filter((t: any) =>
-    isClockInLate(t.clockIn, attendanceDayOverrides)
-  ).length;
+  const lateMarks = weeklyTimesheets.filter((t: any) => {
+    if (typeof t?.lateMark === 'boolean') return t.lateMark;
+    return isClockInLate(t.clockIn, attendanceDayOverrides);
+  }).length;
 
   return (
     <div className="grid grid-cols-2 gap-6">
@@ -58,9 +59,10 @@ export function TeamAttendanceStats({
   );
 
   const totalHours = weeklyTimesheets.reduce((acc: number, t: any) => acc + (t.totalHours || 0), 0);
-  const lateMarks = weeklyTimesheets.filter((t: any) =>
-    isClockInLate(t.clockIn, attendanceDayOverrides)
-  ).length;
+  const lateMarks = weeklyTimesheets.filter((t: any) => {
+    if (typeof t?.lateMark === 'boolean') return t.lateMark;
+    return isClockInLate(t.clockIn, attendanceDayOverrides);
+  }).length;
 
   return (
     <div className="grid grid-cols-2 gap-6">

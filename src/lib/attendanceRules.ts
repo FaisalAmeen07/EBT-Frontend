@@ -11,6 +11,8 @@ export const LATE_AFTER_MINUTES = 15;
 
 /** Absent if there is still no clock-in by start + this many minutes (9:45). */
 export const ABSENT_AFTER_MINUTES = 45;
+/** Hard clock-in cutoff: block new clock-ins after office start + this many minutes. */
+export const CLOCK_IN_CUTOFF_AFTER_START_MINUTES = 60;
 
 /** Admin-set office timings for a calendar day (YYYY-MM-DD, local) — applies to all staff. */
 export type AttendanceDayOverride = {
@@ -91,12 +93,45 @@ export function clockInBlockedBeforeOfficeStart(
   return null;
 }
 
+/**
+ * Block live clock-in after the allowed late window (e.g. start + 60 mins).
+ */
+export function clockInBlockedAfterLateWindow(
+  now: Date,
+  overrides?: AttendanceDayOverridesMap | null
+): string | null {
+  const { hour, minute } = getOfficeStartForDay(now, overrides);
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+  cutoff.setMinutes(cutoff.getMinutes() + CLOCK_IN_CUTOFF_AFTER_START_MINUTES);
+  if (now.getTime() > cutoff.getTime()) {
+    return 'You are late. Clock-in is closed for today.';
+  }
+  return null;
+}
+
+/** Warning only: clock-in is still allowed, but user is beyond late grace window. */
+export function clockInLateWarningAfterGrace(
+  now: Date,
+  overrides?: AttendanceDayOverridesMap | null
+): string | null {
+  const { hour, minute } = getOfficeStartForDay(now, overrides);
+  const lateAfter = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+  lateAfter.setMinutes(lateAfter.getMinutes() + LATE_AFTER_MINUTES);
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+  cutoff.setMinutes(cutoff.getMinutes() + CLOCK_IN_CUTOFF_AFTER_START_MINUTES);
+
+  if (now.getTime() > lateAfter.getTime() && now.getTime() <= cutoff.getTime()) {
+    return 'You are late.';
+  }
+  return null;
+}
+
 export function isClockInLate(clockInIso: string, overrides?: AttendanceDayOverridesMap | null): boolean {
   const day = new Date(clockInIso);
   const startMins = startMinutesForDay(day, overrides);
   const thresholdMins = startMins + LATE_AFTER_MINUTES;
   const mins = localMinutesFromMidnight(clockInIso);
-  return mins >= thresholdMins;
+  return mins > thresholdMins;
 }
 
 export type DayAttendanceUiStatus = 'on_time' | 'late' | 'absent' | 'pending';

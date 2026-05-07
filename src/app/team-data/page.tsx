@@ -56,22 +56,41 @@ function StatCard({
   value,
   color,
   bg,
+  href,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   value: number | string;
   color: string;
   bg: string;
+  href?: string;
 }) {
-  return (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm group hover:shadow-md transition-all">
-      <div className={`${bg} ${color} w-10 h-10 rounded-xl flex items-center justify-center mb-4`}>
-        <Icon className="w-5 h-5" />
+  const cardClassName = `group relative overflow-hidden min-h-[8rem] rounded-xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] ${
+    href ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2' : ''
+  }`;
+  const cardBody = (
+    <>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-slate-200/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="mb-3 flex items-center justify-between">
+        <div className={`${bg} ${color} flex h-10 w-10 items-center justify-center rounded-lg`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-slate-200" />
       </div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <p className="text-2xl font-black text-slate-900 tracking-tight">{value}</p>
-    </div>
+      <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <p className="text-[1.65rem] leading-none font-black tracking-tight text-slate-900 tabular-nums">{value}</p>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={cardClassName} aria-label={`${label} details`}>
+        {cardBody}
+      </Link>
+    );
+  }
+
+  return <div className={cardClassName}>{cardBody}</div>;
 }
 
 function statusChipClass(status: TaskWorkflowStatus): string {
@@ -185,8 +204,10 @@ export default function TeamDataPage() {
   }
 
   const now = new Date();
-  const completedTasks = teamTasks.filter((t) => t.status === 'Approved').length;
+  const pendingTasks = teamTasks.filter((t) => t.status === 'Pending').length;
   const inProgressTasks = teamTasks.filter((t) => t.status === 'In Progress').length;
+  const reviewTasks = teamTasks.filter((t) => t.status === 'Review').length;
+  const submittedTasks = teamTasks.filter((t) => t.status === 'Submitted').length;
   const overdueTasks = teamTasks.filter(
     (t) => t.status !== 'Approved' && new Date(t.deadline) < now
   ).length;
@@ -207,7 +228,7 @@ export default function TeamDataPage() {
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <Target className="w-5 h-5 text-indigo-500" />
-            Work progress
+            Team Dashboard
           </h2>
           <Link
             href="/project-manager"
@@ -218,23 +239,27 @@ export default function TeamDataPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          <StatCard icon={Users} label="Employees" value={teamEmployees.length} color="text-blue-500" bg="bg-blue-50" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-5">
+          <StatCard icon={Users} label="Employees" value={teamEmployees.length} color="text-blue-500" bg="bg-blue-50" href="/team-data" />
+          <StatCard icon={Clock} label="Pending" value={pendingTasks} color="text-amber-500" bg="bg-amber-50" href="/project-manager?status=Pending" />
           <StatCard
             icon={BarChart3}
             label="In progress"
             value={inProgressTasks}
             color="text-indigo-500"
             bg="bg-indigo-50"
+            href="/project-manager?status=In%20Progress"
           />
           <StatCard
-            icon={CheckCircle2}
-            label="Completed"
-            value={completedTasks}
-            color="text-emerald-500"
-            bg="bg-emerald-50"
+            icon={Timer}
+            label="Review"
+            value={reviewTasks}
+            color="text-violet-500"
+            bg="bg-violet-50"
+            href="/project-manager?status=Review"
           />
-          <StatCard icon={AlertCircle} label="Overdue" value={overdueTasks} color="text-rose-500" bg="bg-rose-50" />
+          <StatCard icon={ArrowUpRight} label="Submitted" value={submittedTasks} color="text-cyan-600" bg="bg-cyan-50" href="/project-manager?status=Submitted" />
+          <StatCard icon={AlertCircle} label="Overdue" value={overdueTasks} color="text-rose-500" bg="bg-rose-50" href="/project-manager" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -40,6 +40,11 @@ function EmployeeTimesheetView() {
   /** Personal attendance window: today, last 7 days, or last 30 days. */
   const [attendanceWindow, setAttendanceWindow] = useState<'today' | '7d' | '30d'>('7d');
 
+  const isEntryLate = (entry: any): boolean => {
+    if (typeof entry?.lateMark === 'boolean') return entry.lateMark;
+    return isClockInLate(entry.clockIn, attendanceDayOverrides);
+  };
+
   useEffect(() => {
     // Update running totals for active (not yet clocked-out) entries.
     const interval = setInterval(() => setNow(new Date()), 30000);
@@ -115,9 +120,7 @@ function EmployeeTimesheetView() {
   const totals = useMemo(() => {
     const totalHours = rangeTimesheets.reduce((acc, t) => acc + computedHoursForEntry(t), 0);
     const totalOvertime = rangeTimesheets.reduce((acc, t) => acc + computedOvertimeForEntry(t), 0);
-    const totalLateMarks = rangeTimesheets.filter((t) =>
-      isClockInLate(t.clockIn, attendanceDayOverrides)
-    ).length;
+    const totalLateMarks = rangeTimesheets.filter((t) => isEntryLate(t)).length;
     return { totalHours, totalOvertime, totalLateMarks };
   }, [now, rangeTimesheets, attendanceWindow, attendanceDayOverrides]);
 
@@ -353,7 +356,7 @@ function EmployeeTimesheetView() {
                             <span className="text-xs font-semibold text-slate-400">hrs</span>
                           </div>
                           <div className="flex flex-wrap justify-center gap-1.5">
-                            {isClockInLate(entry.clockIn, attendanceDayOverrides) ? (
+                            {isEntryLate(entry) ? (
                               <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
                                 Late
                               </span>

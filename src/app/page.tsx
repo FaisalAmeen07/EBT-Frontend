@@ -27,9 +27,11 @@ import { performClockInWithPolicies } from '@/lib/clockInPolicies';
 import { toast } from '@/lib/toast';
 import {
   clockInBlockedBeforeOfficeStart,
+  clockInBlockedAfterLateWindow,
   dateKeyLocal,
   dayAttendanceStatus,
   filterUsersForAttendanceViewer,
+  clockInLateWarningAfterGrace,
   getOfficeEndForDay,
   getOfficeStartForDay,
   isClockInLate,
@@ -99,6 +101,7 @@ function StatCard({
   color,
   bg,
   className = '',
+  href,
 }: {
   icon: LucideIcon;
   label: string;
@@ -106,11 +109,11 @@ function StatCard({
   color: string;
   bg: string;
   className?: string;
+  href?: string;
 }) {
-  return (
-    <div
-      className={`group relative overflow-hidden min-h-[8rem] rounded-xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] ${className}`}
-    >
+  const cardClassName = `group relative overflow-hidden min-h-[8rem] rounded-xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] ${href ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2' : ''} ${className}`;
+  const cardBody = (
+    <>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-slate-200/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
       <div className="mb-3 flex items-center justify-between">
         <div className={`${bg} ${color} flex h-10 w-10 items-center justify-center rounded-lg`}>
@@ -120,8 +123,18 @@ function StatCard({
       </div>
       <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
       <p className="text-[1.65rem] leading-none font-black tracking-tight text-slate-900 tabular-nums">{value}</p>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={cardClassName} aria-label={`${label} details`}>
+        {cardBody}
+      </Link>
+    );
+  }
+
+  return <div className={cardClassName}>{cardBody}</div>;
 }
 
 function TimerWidget() {
@@ -201,6 +214,14 @@ function TimerWidget() {
   const beforeOfficeStartMsg =
     currentUser?.role !== 'Admin'
       ? clockInBlockedBeforeOfficeStart(now, attendanceDayOverrides)
+      : null;
+  const afterLateWindowMsg =
+    currentUser?.role !== 'Admin'
+      ? clockInBlockedAfterLateWindow(now, attendanceDayOverrides)
+      : null;
+  const lateWarningMsg =
+    currentUser?.role !== 'Admin'
+      ? clockInLateWarningAfterGrace(now, attendanceDayOverrides)
       : null;
   const clockInDisabled = leaveBlocked || clockInBlocked || !!beforeOfficeStartMsg;
   const geoRadiusMiles = (() => {
@@ -374,10 +395,15 @@ function TimerWidget() {
                     toast('You are currently on leave today.', 'error');
                     return;
                   }
+                  if (afterLateWindowMsg) {
+                    toast('You are late. Clock-in is closed for today.', 'error');
+                    return;
+                  }
                   setClockBusy(true);
                   try {
                     const res = await performClockInWithPolicies();
                     if (!res.ok) toast(res.error, 'error');
+                    else if (lateWarningMsg) toast(lateWarningMsg, 'error');
                   } catch (error) {
                     toast(error instanceof Error ? error.message : 'Unable to clock in.', 'error');
                   } finally {
@@ -888,12 +914,13 @@ function AdminDashboard() {
             value={workforceCount}
             color="text-blue-500"
             bg="bg-blue-50"
+            href="/admin/employees-management"
           />
-          <StatCard icon={Activity} label="Active now" value={activeEmployees} color="text-emerald-500" bg="bg-emerald-50" />
-          <StatCard icon={Calendar} label="Pending Leave" value={pendingLeave} color="text-amber-500" bg="bg-amber-50" />
-          <StatCard icon={Target} label="Pending Tasks" value={pendingTasksCount} color="text-indigo-500" bg="bg-indigo-50" />
-          <StatCard icon={AlertCircle} label="Overdue tasks" value={overdueTasksCount} color="text-rose-500" bg="bg-rose-50" />
-          <StatCard icon={Shield} label="Pending approval" value={pendingUsers} color="text-purple-500" bg="bg-purple-50" />
+          <StatCard icon={Activity} label="Active now" value={activeEmployees} color="text-emerald-500" bg="bg-emerald-50" href="/timesheet" />
+          <StatCard icon={Calendar} label="Pending Leave" value={pendingLeave} color="text-amber-500" bg="bg-amber-50" href="/request-management?tab=leave" />
+          <StatCard icon={Target} label="Pending Tasks" value={pendingTasksCount} color="text-indigo-500" bg="bg-indigo-50" href="/project-manager?status=Pending" />
+          <StatCard icon={AlertCircle} label="Overdue tasks" value={overdueTasksCount} color="text-rose-500" bg="bg-rose-50" href="/project-manager" />
+          <StatCard icon={Shield} label="Pending approval" value={pendingUsers} color="text-purple-500" bg="bg-purple-50" href="/admin/employees-management?role=Pending%20User" />
         </div>
       </div>
 
@@ -1174,21 +1201,43 @@ function TeamLeaderDashboard() {
   const myTeam = currentUser?.team;
   const teamEmployees = users.filter(u => u.team === myTeam && u.role === 'Employee');
   const teamTasks = tasks.filter(t => teamEmployees.some(m => m.id === t.assignedTo));
-  const completedTasks = teamTasks.filter(t => t.status === 'Approved').length;
-  const inProgressTasks = teamTasks.filter(t => t.status === 'In Progress').length;
-  const overdueTasks = teamTasks.filter(t => t.status !== 'Approved' && new Date(t.deadline) < now).length;
+  const myTasks = tasks.filter(t => t.assignedTo === currentUser?.id);
+
+  const isOverdue = (task: Task) => task.status !== 'Approved' && new Date(task.deadline) < now;
+  const countByStatus = (taskList: Task[], status: Task['status']) =>
+    taskList.filter(t => t.status === status).length;
+
+  const myPendingCount = countByStatus(myTasks, 'Pending');
+  const myInProgressCount = countByStatus(myTasks, 'In Progress');
+  const myReviewCount = countByStatus(myTasks, 'Review');
+  const mySubmittedCount = countByStatus(myTasks, 'Submitted');
+  const myCompletedCount = countByStatus(myTasks, 'Approved');
+  const myOverdueCount = myTasks.filter(isOverdue).length;
+
+  const teamPendingCount = countByStatus(teamTasks, 'Pending');
+  const teamInProgressCount = countByStatus(teamTasks, 'In Progress');
+  const teamReviewCount = countByStatus(teamTasks, 'Review');
+  const teamSubmittedCount = countByStatus(teamTasks, 'Submitted');
+  const teamOverdueCount = teamTasks.filter(isOverdue).length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
       <TimerWidget />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-        <StatCard icon={Users} label="Employees" value={teamEmployees.length} color="text-blue-500" bg="bg-blue-50" />
-        <StatCard icon={BarChart3} label="In Progress" value={inProgressTasks} color="text-indigo-500" bg="bg-indigo-50" />
-        <StatCard icon={CheckCircle2} label="Completed" value={completedTasks} color="text-emerald-500" bg="bg-emerald-50" />
-        <StatCard icon={AlertCircle} label="Overdue" value={overdueTasks} color="text-rose-500" bg="bg-rose-50" />
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <LayoutDashboard className="w-5 h-5 text-indigo-500" />
+          My Dashboard
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-5">
+          <StatCard icon={Clock} label="Pending" value={myPendingCount} color="text-amber-500" bg="bg-amber-50" href="/project-manager?status=Pending" />
+          <StatCard icon={BarChart3} label="In Progress" value={myInProgressCount} color="text-indigo-500" bg="bg-indigo-50" href="/project-manager?status=In%20Progress" />
+          <StatCard icon={Activity} label="Review" value={myReviewCount} color="text-violet-500" bg="bg-violet-50" href="/project-manager?status=Review" />
+          <StatCard icon={Target} label="Submitted" value={mySubmittedCount} color="text-cyan-600" bg="bg-cyan-50" href="/project-manager?status=Submitted" />
+          <StatCard icon={CheckCircle2} label="Completed" value={myCompletedCount} color="text-emerald-500" bg="bg-emerald-50" href="/project-manager?status=Approved" />
+          <StatCard icon={AlertCircle} label="Overdue" value={myOverdueCount} color="text-rose-500" bg="bg-rose-50" href="/project-manager" />
+        </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <WeeklyChart />
@@ -1284,7 +1333,16 @@ function UserDashboard() {
   );
   const [now, setNow] = useState(new Date());
 
-  const userTasks = tasks.filter(t => t.assignedTo === currentUser?.id && t.status !== 'Approved');
+  const allUserTasks = tasks.filter(t => t.assignedTo === currentUser?.id);
+  const userTasks = allUserTasks.filter(t => t.status !== 'Approved');
+  const myPendingCount = allUserTasks.filter(t => t.status === 'Pending').length;
+  const myInProgressCount = allUserTasks.filter(t => t.status === 'In Progress').length;
+  const myReviewCount = allUserTasks.filter(t => t.status === 'Review').length;
+  const mySubmittedCount = allUserTasks.filter(t => t.status === 'Submitted').length;
+  const myCompletedCount = allUserTasks.filter(t => t.status === 'Approved').length;
+  const myOverdueCount = allUserTasks.filter(
+    (t) => t.status !== 'Approved' && new Date(t.deadline) < now
+  ).length;
 
   const recentActivity = useMemo(() => {
     const activities = [
@@ -1309,6 +1367,15 @@ function UserDashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
       <TimerWidget />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-5">
+        <StatCard icon={Clock} label="Pending" value={myPendingCount} color="text-amber-500" bg="bg-amber-50" href="/project-manager?status=Pending" />
+        <StatCard icon={BarChart3} label="In Progress" value={myInProgressCount} color="text-indigo-500" bg="bg-indigo-50" href="/project-manager?status=In%20Progress" />
+        <StatCard icon={Activity} label="Review" value={myReviewCount} color="text-violet-500" bg="bg-violet-50" href="/project-manager?status=Review" />
+        <StatCard icon={Target} label="Submitted" value={mySubmittedCount} color="text-cyan-600" bg="bg-cyan-50" href="/project-manager?status=Submitted" />
+        <StatCard icon={CheckCircle2} label="Completed" value={myCompletedCount} color="text-emerald-500" bg="bg-emerald-50" href="/project-manager?status=Approved" />
+        <StatCard icon={AlertCircle} label="Overdue" value={myOverdueCount} color="text-rose-500" bg="bg-rose-50" href="/project-manager" />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
