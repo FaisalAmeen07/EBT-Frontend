@@ -7,6 +7,7 @@ import type { LeaveRequest } from '@/lib/store';
 type LeaveReviewPanelProps = {
   rows: LeaveRequest[];
   getUsername: (userId: string) => string;
+  getUserAvatar: (userId: string) => string | undefined;
   canReview: boolean;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
@@ -15,6 +16,7 @@ type LeaveReviewPanelProps = {
 export function LeaveReviewPanel({
   rows,
   getUsername,
+  getUserAvatar,
   canReview,
   onApprove,
   onReject,
@@ -58,8 +60,17 @@ export function LeaveReviewPanel({
               <tr key={leave.id} className="transition-colors hover:bg-slate-50">
                 <td className="px-4 py-5 sm:px-6">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600">
-                      {getUsername(leave.userId).charAt(0)}
+                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600">
+                      {(leave.requesterAvatar || getUserAvatar(leave.userId)) ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- user-uploaded or CDN profile image
+                        <img
+                          src={leave.requesterAvatar || getUserAvatar(leave.userId)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        getUsername(leave.userId).charAt(0)
+                      )}
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{getUsername(leave.userId)}</p>

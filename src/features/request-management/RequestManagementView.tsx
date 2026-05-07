@@ -90,6 +90,7 @@ export function RequestManagementView() {
                 <LeaveReviewPanel
                   rows={c.sortedLeave}
                   getUsername={c.getUsername}
+                  getUserAvatar={c.getUserAvatar}
                   canReview={c.canReviewLeave}
                   onApprove={(id) => {
                     void (async () => {
@@ -116,6 +117,7 @@ export function RequestManagementView() {
                 <ManualReviewPanel
                   rows={c.sortedManual}
                   getUsername={c.getUsername}
+                  getUserAvatar={c.getUserAvatar}
                   canReview={c.canReviewManual}
                   activeRejectId={c.activeRejectId}
                   rejectFeedback={c.rejectFeedback}

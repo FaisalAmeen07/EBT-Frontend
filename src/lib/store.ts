@@ -295,6 +295,7 @@ export interface LeaveRequest {
   userId: string;
   requesterName?: string;
   requesterRole?: string;
+  requesterAvatar?: string;
   type: LeaveType;
   startDate: string;
   endDate: string;
@@ -310,6 +311,7 @@ export interface ManualTimeRequest {
   userId: string;
   requesterName?: string;
   requesterRole?: string;
+  requesterAvatar?: string;
   date: string; // YYYY-MM-DD
   clockInTime: string; // HH:mm
   clockOutTime: string; // HH:mm

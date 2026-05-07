@@ -12,6 +12,7 @@ import { RequestStatusBadge } from './RequestStatusBadge';
 type ManualForm = {
   manualDate: string;
   setManualDate: (v: string) => void;
+  allowedDate: string;
   clockInTime: string;
   setClockInTime: (v: string) => void;
   clockOutTime: string;
@@ -48,6 +49,7 @@ export function ManualTimeRequestsPanel({
   const {
     manualDate,
     setManualDate,
+    allowedDate,
     clockInTime,
     setClockInTime,
     clockOutTime,
@@ -137,6 +139,7 @@ export function ManualTimeRequestsPanel({
                 required
                 value={manualDate}
                 onChange={(e) => setManualDate(e.target.value)}
+                max={allowedDate}
                 className={FIELD_CLASS_NEUTRAL}
               />
             </div>

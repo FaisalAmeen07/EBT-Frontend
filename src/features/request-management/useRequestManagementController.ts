@@ -88,6 +88,12 @@ export function useRequestManagementController() {
     manualTimeRequests.find((m) => m.userId === userId)?.requesterName ||
     `User ${String(userId).slice(0, 8)}`;
 
+  const getUserAvatar = (userId: string) =>
+    users.find((u) => String(u.id) === String(userId))?.avatar ||
+    Leave.find((l) => String(l.userId) === String(userId))?.requesterAvatar ||
+    manualTimeRequests.find((m) => String(m.userId) === String(userId))?.requesterAvatar ||
+    undefined;
+
   const filteredLeave = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return Leave.filter((leave) => {
@@ -176,6 +182,7 @@ export function useRequestManagementController() {
     sortedLeave,
     sortedManual,
     getUsername,
+    getUserAvatar,
     canReviewLeave,
     canReviewManual,
     approveLeave,

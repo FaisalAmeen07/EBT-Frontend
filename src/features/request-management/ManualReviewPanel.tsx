@@ -7,6 +7,7 @@ import type { ManualTimeRequest } from '@/lib/store';
 type ManualReviewPanelProps = {
   rows: ManualTimeRequest[];
   getUsername: (userId: string) => string;
+  getUserAvatar: (userId: string) => string | undefined;
   canReview: boolean;
   activeRejectId: string | null;
   rejectFeedback: string;
@@ -19,6 +20,7 @@ type ManualReviewPanelProps = {
 export function ManualReviewPanel({
   rows,
   getUsername,
+  getUserAvatar,
   canReview,
   activeRejectId,
   rejectFeedback,
@@ -66,8 +68,17 @@ export function ManualReviewPanel({
               <tr key={req.id} className="transition-colors hover:bg-slate-50">
                 <td className="px-4 py-5 sm:px-6">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600">
-                      {getUsername(req.userId).charAt(0)}
+                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600">
+                      {(req.requesterAvatar || getUserAvatar(req.userId)) ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- user-uploaded or CDN profile image
+                        <img
+                          src={req.requesterAvatar || getUserAvatar(req.userId)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        getUsername(req.userId).charAt(0)
+                      )}
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{getUsername(req.userId)}</p>

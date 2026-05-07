@@ -10,6 +10,7 @@ type LeaveRow = {
   id: string;
   user_id: string;
   requester_name?: string | null;
+  requester_avatar?: string | null;
   role_snapshot?: string | null;
   leave_type: ApiLeaveType;
   start_date: string;
@@ -23,6 +24,7 @@ type ManualRow = {
   id: string;
   user_id: string;
   requester_name?: string | null;
+  requester_avatar?: string | null;
   role?: string | null;
   date: string;
   check_in: string | null;
@@ -68,6 +70,7 @@ const toLeaveRequest = (row: LeaveRow): LeaveRequest => ({
   id: row.id,
   userId: row.user_id,
   requesterName: row.requester_name ?? undefined,
+  requesterAvatar: row.requester_avatar ?? undefined,
   requesterRole: row.role_snapshot ?? undefined,
   type: leaveTypeFromApi(row.leave_type),
   startDate: row.start_date,
@@ -81,6 +84,7 @@ const toManualRequest = (row: ManualRow): ManualTimeRequest => ({
   id: row.id,
   userId: row.user_id,
   requesterName: row.requester_name ?? undefined,
+  requesterAvatar: row.requester_avatar ?? undefined,
   requesterRole: row.role ?? undefined,
   date: row.date,
   clockInTime: normalizeTime(row.check_in),
