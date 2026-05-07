@@ -27,6 +27,15 @@ export function ManualReviewPanel({
   onApprove,
   onRejectConfirm,
 }: ManualReviewPanelProps) {
+  const roleLabel = (req: ManualTimeRequest): string => {
+    const raw = String(req.requesterRole || '').trim().toUpperCase();
+    if (raw === 'ADMIN') return 'Admin';
+    if (raw === 'HR') return 'HR';
+    if (raw === 'TEAM_LEADER' || raw === 'TEAMLEADER' || raw === 'TEAM_LEAD') return 'Team Leader';
+    if (raw === 'EMPLOYEE') return 'Employee';
+    return 'Employee';
+  };
+
   return (
     <table className="w-full border-collapse text-left text-sm">
         <thead>
@@ -62,7 +71,9 @@ export function ManualReviewPanel({
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{getUsername(req.userId)}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Employee</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        {roleLabel(req)}
+                      </p>
                     </div>
                   </div>
                 </td>

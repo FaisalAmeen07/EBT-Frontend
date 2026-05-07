@@ -23,6 +23,7 @@ type ManualRow = {
   id: string;
   user_id: string;
   requester_name?: string | null;
+  role?: string | null;
   date: string;
   check_in: string | null;
   check_out: string | null;
@@ -80,6 +81,7 @@ const toManualRequest = (row: ManualRow): ManualTimeRequest => ({
   id: row.id,
   userId: row.user_id,
   requesterName: row.requester_name ?? undefined,
+  requesterRole: row.role ?? undefined,
   date: row.date,
   clockInTime: normalizeTime(row.check_in),
   clockOutTime: normalizeTime(row.check_out),

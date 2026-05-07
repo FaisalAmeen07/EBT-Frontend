@@ -23,6 +23,7 @@ type ManualForm = {
   manualReason: string;
   setManualReason: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  submitting: boolean;
 };
 
 type ManualTimeRequestsPanelProps = {
@@ -58,6 +59,7 @@ export function ManualTimeRequestsPanel({
     manualReason,
     setManualReason,
     onSubmit,
+    submitting,
   } = form;
 
   return (
@@ -190,10 +192,13 @@ export function ManualTimeRequestsPanel({
           </div>
           <button
             type="submit"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+            disabled={submitting}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white ${
+              submitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
             <Send className="h-4 w-4" />
-            Submit manual time request
+            {submitting ? 'Submitting…' : 'Submit manual time request'}
           </button>
         </form>
       </RequestModal>

@@ -11,6 +11,7 @@ import {
   fetchLeaveRequestsApi,
   fetchManualRequestsApi,
 } from '@/services/attendance-requests.service';
+import { getCurrentShiftApi } from '@/services/attendance.service';
 
 export function useMyRequestsController() {
   const searchParams = useSearchParams();
@@ -45,6 +46,7 @@ export function useMyRequestsController() {
   const [breakInTime, setBreakInTime] = useState('');
   const [breakOutTime, setBreakOutTime] = useState('');
   const [manualReason, setManualReason] = useState('');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -67,6 +69,31 @@ export function useMyRequestsController() {
       cancelled = true;
     };
   }, [currentUser?.id, setLeaveRequests, setManualTimeRequests]);
+
+  // Prefill manual clock-in/out with current shift timing configured by admin.
+  useEffect(() => {
+    let cancelled = false;
+    const loadShiftForManual = async () => {
+      try {
+        const current = await getCurrentShiftApi();
+        if (cancelled) return;
+        const start = current.shift_start;
+        const end = current.shift_end;
+        if (start && /^\d{2}:\d{2}/.test(start)) {
+          setClockInTime(start.slice(0, 5));
+        }
+        if (end && /^\d{2}:\d{2}/.test(end)) {
+          setClockOutTime(end.slice(0, 5));
+        }
+      } catch {
+        // silently keep existing defaults (09:00 / 18:00) if shift API fails
+      }
+    };
+    void loadShiftForManual();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleTabChange = (tab: 'leave' | 'manual') => {
     setActiveTab(tab);
@@ -146,6 +173,7 @@ export function useMyRequestsController() {
 
   const submitManual = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (manualSubmitting) return;
     if (!currentUser) return;
     if (!manualDate) {
       toast('Please select a date.', 'error');
@@ -159,6 +187,15 @@ export function useMyRequestsController() {
       toast('If you add Break Out, you must also add Break In.', 'error');
       return;
     }
+    const hasExisting = myManualTimeRequests.some((r) => {
+      if (r.status === 'Rejected') return false;
+      return r.date.slice(0, 10) === manualDate;
+    });
+    if (hasExisting) {
+      toast('You already have a manual time request for this date.', 'error');
+      return;
+    }
+    setManualSubmitting(true);
     try {
       await createManualRequestApi({
         date: manualDate,
@@ -178,6 +215,8 @@ export function useMyRequestsController() {
       setManualFormOpen(false);
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Unable to submit manual request.', 'error');
+    } finally {
+      setManualSubmitting(false);
     }
   };
 
@@ -227,6 +266,7 @@ export function useMyRequestsController() {
       manualReason,
       setManualReason,
       onSubmit: submitManual,
+      submitting: manualSubmitting,
     },
   };
 }

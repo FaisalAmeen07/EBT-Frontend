@@ -309,6 +309,7 @@ export interface ManualTimeRequest {
   id: string;
   userId: string;
   requesterName?: string;
+  requesterRole?: string;
   date: string; // YYYY-MM-DD
   clockInTime: string; // HH:mm
   clockOutTime: string; // HH:mm
