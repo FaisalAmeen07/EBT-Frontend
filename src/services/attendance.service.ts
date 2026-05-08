@@ -342,6 +342,41 @@ export async function setShiftStatusApi(input: { shift_id: number; is_enabled: b
   }
 }
 
+export type AttendanceControlSettingsApi = {
+  geo_fencing_enabled: boolean;
+  geo_fencing_use_global_radius: boolean;
+  geo_fencing_global_radius_miles: number;
+  geo_fencing_site_radius_miles: Record<string, number>;
+  geo_fencing_office_lat: number | null;
+  geo_fencing_office_lng: number | null;
+};
+
+export async function getAttendanceControlSettingsApi(): Promise<AttendanceControlSettingsApi> {
+  const { data } = await attendanceApiClient.get<AttendanceControlSettingsApi>(
+    API_PATHS.attendance.attendanceControlSettings
+  );
+  return {
+    geo_fencing_enabled: Boolean(data?.geo_fencing_enabled),
+    geo_fencing_use_global_radius:
+      data?.geo_fencing_use_global_radius == null ? true : Boolean(data.geo_fencing_use_global_radius),
+    geo_fencing_global_radius_miles: Number(data?.geo_fencing_global_radius_miles ?? 0),
+    geo_fencing_site_radius_miles:
+      data?.geo_fencing_site_radius_miles && typeof data.geo_fencing_site_radius_miles === 'object'
+        ? data.geo_fencing_site_radius_miles
+        : {},
+    geo_fencing_office_lat: data?.geo_fencing_office_lat == null ? null : Number(data.geo_fencing_office_lat),
+    geo_fencing_office_lng: data?.geo_fencing_office_lng == null ? null : Number(data.geo_fencing_office_lng),
+  };
+}
+
+export async function setAttendanceControlSettingsApi(input: AttendanceControlSettingsApi): Promise<void> {
+  try {
+    await attendanceApiClient.post(API_PATHS.attendance.attendanceControlSettings, input);
+  } catch (error) {
+    throw new Error(errorMessage(error, 'Unable to save geo-fencing settings.'));
+  }
+}
+
 function toQueryString(params: Record<string, string | undefined>): string {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {

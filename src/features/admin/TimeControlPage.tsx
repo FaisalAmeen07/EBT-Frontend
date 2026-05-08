@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore, useShallow } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Timer, CalendarClock, MapPin } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import {
+  getAttendanceControlSettingsApi,
   getCurrentShiftApi,
   getShiftStatusApi,
+  setAttendanceControlSettingsApi,
   setShiftStatusApi,
   setShiftTimingApi,
 } from '@/services/attendance.service';
@@ -83,19 +85,33 @@ export function TimeControlPage() {
   const [shiftEnabled, setShiftEnabled] = useState(false);
   const [shiftId, setShiftId] = useState<number | null>(null);
   const [loadingShift, setLoadingShift] = useState(false);
+  const hasLoadedGeoFromApiRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       setLoadingShift(true);
       try {
-        const [status, current] = await Promise.all([getShiftStatusApi(), getCurrentShiftApi()]);
+        const [status, current, control] = await Promise.all([
+          getShiftStatusApi(),
+          getCurrentShiftApi(),
+          getAttendanceControlSettingsApi(),
+        ]);
         if (cancelled) return;
         setShiftEnabled(Boolean(status.is_enabled));
         setShiftId(status.shift_id ?? null);
         if (current.shift_start) setCompanyStartTime(String(current.shift_start).slice(0, 5));
         if (current.shift_end) setCompanyEndTime(String(current.shift_end).slice(0, 5));
         useStore.getState().setCompanyShiftTimes(companyShiftTimesFromApi(current.shift_start, current.shift_end));
+        patchAttendanceControlSettings({
+          geoFencingEnabled: control.geo_fencing_enabled,
+          geoFencingUseGlobalRadius: control.geo_fencing_use_global_radius,
+          geoFencingGlobalRadiusMiles: control.geo_fencing_global_radius_miles,
+          geoFencingSiteRadiusMiles: control.geo_fencing_site_radius_miles,
+          geoFencingOfficeLat: control.geo_fencing_office_lat,
+          geoFencingOfficeLng: control.geo_fencing_office_lng,
+        });
+        hasLoadedGeoFromApiRef.current = true;
       } catch (error) {
         if (!cancelled) toast(error instanceof Error ? error.message : 'Unable to load shift config.', 'error');
       } finally {
@@ -105,7 +121,31 @@ export function TimeControlPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [patchAttendanceControlSettings]);
+
+  useEffect(() => {
+    if (!hasLoadedGeoFromApiRef.current) return;
+    const timer = window.setTimeout(() => {
+      void setAttendanceControlSettingsApi({
+        geo_fencing_enabled: geoFencingEnabled,
+        geo_fencing_use_global_radius: geoFencingUseGlobalRadius,
+        geo_fencing_global_radius_miles: geoFencingGlobalRadiusMiles,
+        geo_fencing_site_radius_miles: geoFencingSiteRadiusMiles,
+        geo_fencing_office_lat: geoFencingOfficeLat,
+        geo_fencing_office_lng: geoFencingOfficeLng,
+      }).catch((error) => {
+        toast(error instanceof Error ? error.message : 'Unable to save geo-fencing settings.', 'error');
+      });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [
+    geoFencingEnabled,
+    geoFencingUseGlobalRadius,
+    geoFencingGlobalRadiusMiles,
+    geoFencingSiteRadiusMiles,
+    geoFencingOfficeLat,
+    geoFencingOfficeLng,
+  ]);
 
   const saveShiftTiming = async () => {
     const [h, m] = companyStartTime.split(':').map((x) => parseInt(x, 10));

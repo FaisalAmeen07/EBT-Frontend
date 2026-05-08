@@ -95,6 +95,7 @@ export const API_PATHS = {
     shiftTiming: '/api/shift-timing',
     currentShift: '/api/current-shift',
     shiftStatus: '/api/shift-status',
+    attendanceControlSettings: '/api/attendance-control-settings',
     createLeave: '/api/createLeave',
     getLeave: '/api/getLeave',
     approveLeave: (id: string) => `/api/approveLeave/${encodeURIComponent(id)}`,
