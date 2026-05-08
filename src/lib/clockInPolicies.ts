@@ -1,10 +1,11 @@
 import {
   clockInBlockedAfterLateWindow,
   clockInBlockedBeforeOfficeStart,
+  companyShiftTimesFromApi,
 } from '@/lib/attendanceRules';
 import { useStore } from '@/lib/store';
 import { getCurrentLatLng, haversineMiles } from '@/lib/geoDistance';
-import { getShiftStatusApi } from '@/services/attendance.service';
+import { getCurrentShiftApi, getShiftStatusApi } from '@/services/attendance.service';
 
 function radiusMilesForUser(): number {
   const s = useStore.getState();
@@ -68,9 +69,25 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
 
   const today = new Date();
   if (currentUser.role !== 'Admin') {
-    const beforeStartMsg = clockInBlockedBeforeOfficeStart(today, state.attendanceDayOverrides);
+    let companyShift = state.companyShiftTimes;
+    try {
+      const cur = await getCurrentShiftApi();
+      companyShift = companyShiftTimesFromApi(cur.shift_start, cur.shift_end);
+      useStore.getState().setCompanyShiftTimes(companyShift);
+    } catch {
+      /* use cached companyShift */
+    }
+    const beforeStartMsg = clockInBlockedBeforeOfficeStart(
+      today,
+      state.attendanceDayOverrides,
+      companyShift
+    );
     if (beforeStartMsg) return { ok: false, error: beforeStartMsg };
-    const afterWindowMsg = clockInBlockedAfterLateWindow(today, state.attendanceDayOverrides);
+    const afterWindowMsg = clockInBlockedAfterLateWindow(
+      today,
+      state.attendanceDayOverrides,
+      companyShift
+    );
     if (afterWindowMsg) return { ok: false, error: afterWindowMsg };
   }
   if (isOnApprovedLeaveToday(Leave, currentUser.id, today)) {

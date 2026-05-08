@@ -11,6 +11,7 @@ import {
   setShiftStatusApi,
   setShiftTimingApi,
 } from '@/services/attendance.service';
+import { companyShiftTimesFromApi } from '@/lib/attendanceRules';
 
 function todayDateInput(): string {
   const d = new Date();
@@ -94,6 +95,7 @@ export function TimeControlPage() {
         setShiftId(status.shift_id ?? null);
         if (current.shift_start) setCompanyStartTime(String(current.shift_start).slice(0, 5));
         if (current.shift_end) setCompanyEndTime(String(current.shift_end).slice(0, 5));
+        useStore.getState().setCompanyShiftTimes(companyShiftTimesFromApi(current.shift_start, current.shift_end));
       } catch (error) {
         if (!cancelled) toast(error instanceof Error ? error.message : 'Unable to load shift config.', 'error');
       } finally {
@@ -122,6 +124,9 @@ export function TimeControlPage() {
         shift_end: `${companyEndTime}:00`,
         effective_date: companyDay,
       });
+      useStore
+        .getState()
+        .setCompanyShiftTimes(companyShiftTimesFromApi(`${companyStartTime}:00`, `${companyEndTime}:00`));
       toast('Shift timing updated.');
       void useStore.getState().refreshNotificationsFromApi();
     } catch (error) {

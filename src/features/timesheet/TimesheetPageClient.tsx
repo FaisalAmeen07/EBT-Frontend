@@ -28,11 +28,12 @@ import { MAX_SHIFT_WORK_HOURS } from '@/lib/attendanceLimits';
 
 // ─── PERSONAL ATTENDANCE (Employee + TL “My attendance” tab) ───
 function EmployeeTimesheetView() {
-  const { timesheets, currentUser, attendanceDayOverrides } = useStore(
+  const { timesheets, currentUser, attendanceDayOverrides, companyShiftTimes } = useStore(
     useShallow((s) => ({
       timesheets: s.timesheets,
       currentUser: s.currentUser,
       attendanceDayOverrides: s.attendanceDayOverrides,
+      companyShiftTimes: s.companyShiftTimes,
     }))
   );
 
@@ -42,7 +43,7 @@ function EmployeeTimesheetView() {
 
   const isEntryLate = (entry: any): boolean => {
     if (typeof entry?.lateMark === 'boolean') return entry.lateMark;
-    return isClockInLate(entry.clockIn, attendanceDayOverrides);
+    return isClockInLate(entry.clockIn, attendanceDayOverrides, companyShiftTimes);
   };
 
   useEffect(() => {
@@ -122,7 +123,7 @@ function EmployeeTimesheetView() {
     const totalOvertime = rangeTimesheets.reduce((acc, t) => acc + computedOvertimeForEntry(t), 0);
     const totalLateMarks = rangeTimesheets.filter((t) => isEntryLate(t)).length;
     return { totalHours, totalOvertime, totalLateMarks };
-  }, [now, rangeTimesheets, attendanceWindow, attendanceDayOverrides]);
+  }, [now, rangeTimesheets, attendanceWindow, attendanceDayOverrides, companyShiftTimes]);
 
   const totalHoursInRange = totals.totalHours;
   const totalOvertimeInRange = totals.totalOvertime;

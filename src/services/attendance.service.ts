@@ -116,8 +116,13 @@ export type AttendanceSummaryData = {
 const errorMessage = (error: unknown, fallback: string): string => {
   if (!isAxiosError(error)) return fallback;
   const data = error.response?.data;
-  if (data && typeof data === 'object' && 'message' in data) {
-    return String((data as { message: unknown }).message);
+  if (data && typeof data === 'object') {
+    if ('message' in data && (data as { message: unknown }).message != null) {
+      return String((data as { message: unknown }).message);
+    }
+    if ('error' in data && (data as { error: unknown }).error != null) {
+      return String((data as { error: unknown }).error);
+    }
   }
   if (typeof error.message === 'string' && error.message.trim()) {
     return error.message;

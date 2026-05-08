@@ -8,6 +8,7 @@ import { useStore } from '@/lib/store';
 
 export function PersonalStats({ userId, timesheets }: { userId?: string; timesheets: any[] }) {
   const attendanceDayOverrides = useStore((s) => s.attendanceDayOverrides);
+  const companyShiftTimes = useStore((s) => s.companyShiftTimes);
   const now = new Date();
   const weekStart = startOfWeek(now);
   const weekEnd = endOfWeek(now);
@@ -19,7 +20,7 @@ export function PersonalStats({ userId, timesheets }: { userId?: string; timeshe
   const totalHours = weeklyTimesheets.reduce((acc: number, t: any) => acc + (t.totalHours || 0), 0);
   const lateMarks = weeklyTimesheets.filter((t: any) => {
     if (typeof t?.lateMark === 'boolean') return t.lateMark;
-    return isClockInLate(t.clockIn, attendanceDayOverrides);
+    return isClockInLate(t.clockIn, attendanceDayOverrides, companyShiftTimes);
   }).length;
 
   return (
@@ -49,6 +50,7 @@ export function TeamAttendanceStats({
   timesheets: any[];
 }) {
   const attendanceDayOverrides = useStore((s) => s.attendanceDayOverrides);
+  const companyShiftTimes = useStore((s) => s.companyShiftTimes);
   const now = new Date();
   const weekStart = startOfWeek(now);
   const weekEnd = endOfWeek(now);
@@ -61,7 +63,7 @@ export function TeamAttendanceStats({
   const totalHours = weeklyTimesheets.reduce((acc: number, t: any) => acc + (t.totalHours || 0), 0);
   const lateMarks = weeklyTimesheets.filter((t: any) => {
     if (typeof t?.lateMark === 'boolean') return t.lateMark;
-    return isClockInLate(t.clockIn, attendanceDayOverrides);
+    return isClockInLate(t.clockIn, attendanceDayOverrides, companyShiftTimes);
   }).length;
 
   return (

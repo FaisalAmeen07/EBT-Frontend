@@ -28,6 +28,7 @@ import { toast } from '@/lib/toast';
 import {
   clockInBlockedBeforeOfficeStart,
   clockInBlockedAfterLateWindow,
+  companyShiftTimesFromApi,
   dateKeyLocal,
   dayAttendanceStatus,
   filterUsersForAttendanceViewer,
@@ -146,6 +147,8 @@ function TimerWidget() {
     endBreak,
     adhocShiftsEnabled,
     attendanceDayOverrides,
+    companyShiftTimes,
+    setCompanyShiftTimes,
     geoFencingEnabled,
     geoFencingUseGlobalRadius,
     geoFencingGlobalRadiusMiles,
@@ -161,6 +164,8 @@ function TimerWidget() {
       endBreak: s.endBreak,
       adhocShiftsEnabled: s.adhocShiftsEnabled,
       attendanceDayOverrides: s.attendanceDayOverrides,
+      companyShiftTimes: s.companyShiftTimes,
+      setCompanyShiftTimes: s.setCompanyShiftTimes,
       geoFencingEnabled: s.geoFencingEnabled,
       geoFencingUseGlobalRadius: s.geoFencingUseGlobalRadius,
       geoFencingGlobalRadiusMiles: s.geoFencingGlobalRadiusMiles,
@@ -186,6 +191,7 @@ function TimerWidget() {
         setShiftEnabledApi(Boolean(status.is_enabled));
         setShiftStartApi(current.shift_start ?? null);
         setShiftEndApi(current.shift_end ?? null);
+        setCompanyShiftTimes(companyShiftTimesFromApi(current.shift_start, current.shift_end));
       } catch {
         // Keep timer usable with local fallback values.
       }
@@ -213,15 +219,15 @@ function TimerWidget() {
     isApprovedLeaveOnDate(now, String(currentUser.id), Leave);
   const beforeOfficeStartMsg =
     currentUser?.role !== 'Admin'
-      ? clockInBlockedBeforeOfficeStart(now, attendanceDayOverrides)
+      ? clockInBlockedBeforeOfficeStart(now, attendanceDayOverrides, companyShiftTimes)
       : null;
   const afterLateWindowMsg =
     currentUser?.role !== 'Admin'
-      ? clockInBlockedAfterLateWindow(now, attendanceDayOverrides)
+      ? clockInBlockedAfterLateWindow(now, attendanceDayOverrides, companyShiftTimes)
       : null;
   const lateWarningMsg =
     currentUser?.role !== 'Admin'
-      ? clockInLateWarningAfterGrace(now, attendanceDayOverrides)
+      ? clockInLateWarningAfterGrace(now, attendanceDayOverrides, companyShiftTimes)
       : null;
   const clockInDisabled = leaveBlocked || clockInBlocked || !!beforeOfficeStartMsg;
   const geoRadiusMiles = (() => {
@@ -484,11 +490,12 @@ function TimerWidget() {
 }
 
 function WeeklyChart() {
-  const { currentUser, timesheets, attendanceDayOverrides } = useStore(
+  const { currentUser, timesheets, attendanceDayOverrides, companyShiftTimes } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
       timesheets: s.timesheets,
       attendanceDayOverrides: s.attendanceDayOverrides,
+      companyShiftTimes: s.companyShiftTimes,
     }))
   );
   const now = new Date();
@@ -512,7 +519,9 @@ function WeeklyChart() {
       t => t.userId === currentUser?.id && isSameDay(new Date(t.clockIn), day)
     );
     const hours = dayEntries.reduce((acc, t) => acc + (t.totalHours || 0), 0);
-    const isLate = dayEntries.some((t) => isClockInLate(t.clockIn, attendanceDayOverrides));
+    const isLate = dayEntries.some((t) =>
+      isClockInLate(t.clockIn, attendanceDayOverrides, companyShiftTimes)
+    );
     return { day, label: range === '7d' ? format(day, 'EEE') : format(day, 'd MMM'), hours, isLate };
   });
 
@@ -658,6 +667,7 @@ function AdminDashboard() {
     geoFencingOfficeLat,
     geoFencingOfficeLng,
     attendanceDayOverrides,
+    companyShiftTimes,
   } = useStore(
     useShallow((s) => ({
       currentUser: s.currentUser,
@@ -673,6 +683,7 @@ function AdminDashboard() {
       geoFencingOfficeLat: s.geoFencingOfficeLat,
       geoFencingOfficeLng: s.geoFencingOfficeLng,
       attendanceDayOverrides: s.attendanceDayOverrides,
+      companyShiftTimes: s.companyShiftTimes,
     }))
   );
 
@@ -770,6 +781,11 @@ function AdminDashboard() {
       if (currentShiftRes.status === 'fulfilled') {
         setApiShiftStart(currentShiftRes.value.shift_start ?? null);
         setApiShiftEnd(currentShiftRes.value.shift_end ?? null);
+        useStore
+          .getState()
+          .setCompanyShiftTimes(
+            companyShiftTimesFromApi(currentShiftRes.value.shift_start, currentShiftRes.value.shift_end)
+          );
       }
 
       const shiftStatusRes = results[7];
@@ -805,12 +821,12 @@ function AdminDashboard() {
         counts.leave += 1;
         continue;
       }
-      const s = dayAttendanceStatus(u.id, now, timesheets, now, attendanceDayOverrides);
+      const s = dayAttendanceStatus(u.id, now, timesheets, now, attendanceDayOverrides, companyShiftTimes);
       if (s === 'on_time' || s === 'late' || s === 'absent') counts[s] += 1;
       else counts.absent += 1;
     }
     return counts;
-  }, [attendanceScopeUsers, now, timesheets, attendanceDayOverrides, Leave]);
+  }, [attendanceScopeUsers, now, timesheets, attendanceDayOverrides, companyShiftTimes, Leave]);
 
   const effectiveGeoRadiusMiles = useMemo(() => {
     if (!geoFencingEnabled) return 0;
@@ -830,7 +846,7 @@ function AdminDashboard() {
     effectiveGeoRadiusMiles > 0 &&
     (geoFencingOfficeLat == null || geoFencingOfficeLng == null);
 
-  const officeStartParts = getOfficeStartForDay(now, attendanceDayOverrides);
+  const officeStartParts = getOfficeStartForDay(now, attendanceDayOverrides, companyShiftTimes);
   const officeStartToday = new Date(
     now.getFullYear(),
     now.getMonth(),
@@ -840,7 +856,7 @@ function AdminDashboard() {
     0,
     0
   );
-  const officeEndParts = getOfficeEndForDay(now, attendanceDayOverrides);
+  const officeEndParts = getOfficeEndForDay(now, attendanceDayOverrides, companyShiftTimes);
   const officeEndToday = new Date(
     now.getFullYear(),
     now.getMonth(),

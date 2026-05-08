@@ -15,7 +15,12 @@ import {
 } from '@/lib/messaging';
 import { emitChatSocketEvent } from '@/lib/chat-socket';
 import { MAX_UPLOAD_FILE_BYTES } from '@/lib/file-upload-limits';
-import { clockInBlockedBeforeOfficeStart, isClockInLate, type AttendanceDayOverride } from '@/lib/attendanceRules';
+import {
+  clockInBlockedBeforeOfficeStart,
+  isClockInLate,
+  type AttendanceDayOverride,
+  type CompanyShiftTimes,
+} from '@/lib/attendanceRules';
 import { API_PATHS } from '@/lib/api/api-base-urls';
 import { resolveChatBaseURL } from '@/lib/api/chat-api.config';
 import {
@@ -474,6 +479,9 @@ interface AppState {
     endMinute?: number
   ) => void;
   clearAttendanceDayOverride: (date: string) => void;
+  /** Latest company shift from `/api/current-shift` (drives clock-in windows when no per-day override). */
+  companyShiftTimes: CompanyShiftTimes | null;
+  setCompanyShiftTimes: (t: CompanyShiftTimes | null) => void;
   /** When false, non-Admin users cannot use live Clock In (dashboard). Admin-only toggle in Time control. */
   adhocShiftsEnabled: boolean;
   geoFencingEnabled: boolean;
@@ -697,6 +705,8 @@ export const useStore = create<AppState>()((set, get) => ({
       users: [],
       timesheets: [],
       attendanceDayOverrides: {} as Record<string, AttendanceDayOverride>,
+      companyShiftTimes: null as CompanyShiftTimes | null,
+      setCompanyShiftTimes: (t) => set({ companyShiftTimes: t }),
       adhocShiftsEnabled: true,
       geoFencingEnabled: false,
       geoFencingUseGlobalRadius: true,
@@ -800,7 +810,12 @@ export const useStore = create<AppState>()((set, get) => ({
       setCurrentUser: (user) =>
         set({
           currentUser: user,
-          ...(user ? {} : { activeMessagesChatId: null as string | null }),
+          ...(user
+            ? {}
+            : {
+                activeMessagesChatId: null as string | null,
+                companyShiftTimes: null as CompanyShiftTimes | null,
+              }),
         }),
       setActiveMessagesChatId: (chatId) => set({ activeMessagesChatId: chatId }),
       upsertUser: (user) =>
@@ -871,7 +886,7 @@ export const useStore = create<AppState>()((set, get) => ({
       },
 
       clockIn: async () => {
-        const { currentUser, adhocShiftsEnabled, attendanceDayOverrides } = get();
+        const { currentUser, adhocShiftsEnabled, attendanceDayOverrides, companyShiftTimes } = get();
         if (!currentUser) return;
         if (currentUser.role !== 'Admin') {
           try {
@@ -885,7 +900,8 @@ export const useStore = create<AppState>()((set, get) => ({
           return;
         }
         if (currentUser.role !== 'Admin') {
-          if (clockInBlockedBeforeOfficeStart(new Date(), attendanceDayOverrides)) return;
+          if (clockInBlockedBeforeOfficeStart(new Date(), attendanceDayOverrides, companyShiftTimes))
+            return;
         }
 
         await checkInApi();
@@ -991,7 +1007,7 @@ export const useStore = create<AppState>()((set, get) => ({
       },
 
       addManualTimesheetEntry: (input) => {
-        const { currentUser, timesheets, users, attendanceDayOverrides } = get();
+        const { currentUser, timesheets, users, attendanceDayOverrides, companyShiftTimes } = get();
         if (!currentUser || (currentUser.role !== 'HR' && currentUser.role !== 'Admin')) return;
 
         const { userId, date, clockInTime, clockOutTime, breakInTime, breakOutTime } = input;
@@ -1009,8 +1025,8 @@ export const useStore = create<AppState>()((set, get) => ({
         const outMs = new Date(outIso).getTime();
         if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs) return;
 
-        // Late mark uses that day’s office start (default 9:00 or Admin override).
-        const lateMark = isClockInLate(inIso, attendanceDayOverrides);
+        // Late mark uses that day’s office start (per-day override, API shift, or fallback).
+        const lateMark = isClockInLate(inIso, attendanceDayOverrides, companyShiftTimes);
 
         // Optional single break interval
         const breaks: BreakEntry[] = [];
@@ -1064,7 +1080,7 @@ export const useStore = create<AppState>()((set, get) => ({
       },
 
       updateTimesheetEntryTimes: (input) => {
-        const { currentUser, timesheets, users, attendanceDayOverrides } = get();
+        const { currentUser, timesheets, users, attendanceDayOverrides, companyShiftTimes } = get();
         if (!currentUser || (currentUser.role !== 'HR' && currentUser.role !== 'Admin')) return;
 
         const { entryId, userId, date, clockInTime, clockOutTime, breakInTime, breakOutTime } = input;
@@ -1084,7 +1100,7 @@ export const useStore = create<AppState>()((set, get) => ({
         const outMs = new Date(outIso).getTime();
         if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs) return;
 
-        const lateMark = isClockInLate(inIso, attendanceDayOverrides);
+        const lateMark = isClockInLate(inIso, attendanceDayOverrides, companyShiftTimes);
 
         const breaks: BreakEntry[] = [];
         let breakDurationHours = 0;
@@ -1183,7 +1199,8 @@ export const useStore = create<AppState>()((set, get) => ({
       },
 
       approveManualTimeRequest: (requestId) => {
-        const { currentUser, manualTimeRequests, timesheets, attendanceDayOverrides } = get();
+        const { currentUser, manualTimeRequests, timesheets, attendanceDayOverrides, companyShiftTimes } =
+          get();
         if (!currentUser) return;
         const canReview = currentUser.role === 'Admin' || currentUser.role === 'HR';
         if (!canReview) return;
@@ -1199,7 +1216,7 @@ export const useStore = create<AppState>()((set, get) => ({
         const outMs = new Date(outIso).getTime();
         if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs) return;
 
-        const lateMark = isClockInLate(inIso, attendanceDayOverrides);
+        const lateMark = isClockInLate(inIso, attendanceDayOverrides, companyShiftTimes);
 
         const breaks: BreakEntry[] = [];
         let breakDurationHours = 0;
