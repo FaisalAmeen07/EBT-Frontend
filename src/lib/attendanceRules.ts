@@ -177,7 +177,7 @@ export function clockInLateWarningAfterGrace(
   const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
   cutoff.setMinutes(cutoff.getMinutes() + CLOCK_IN_CUTOFF_AFTER_START_MINUTES);
 
-  if (now.getTime() > lateAfter.getTime() && now.getTime() <= cutoff.getTime()) {
+  if (now.getTime() >= lateAfter.getTime() && now.getTime() <= cutoff.getTime()) {
     return 'You are late.';
   }
   return null;
@@ -192,7 +192,7 @@ export function isClockInLate(
   const startMins = startMinutesForDay(day, overrides, companyShift);
   const thresholdMins = startMins + LATE_AFTER_MINUTES;
   const mins = localMinutesFromMidnight(clockInIso);
-  return mins > thresholdMins;
+  return mins >= thresholdMins;
 }
 
 export type DayAttendanceUiStatus = 'on_time' | 'late' | 'absent' | 'pending';

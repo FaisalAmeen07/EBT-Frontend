@@ -49,10 +49,12 @@ function StatusCell({ status }: { status: string }) {
   const c =
     s === 'NA'
       ? { label: '-', className: 'border-slate-200 bg-white text-slate-400' }
+      : s === 'LATE'
+        ? { label: 'L', className: 'border-amber-200 bg-amber-50 text-amber-900' }
       : s === 'PRESENT'
       ? { label: 'P', className: 'border-emerald-200 bg-emerald-50 text-emerald-800' }
       : s === 'LEAVE'
-        ? { label: 'L', className: 'border-amber-200 bg-amber-50 text-amber-900' }
+        ? { label: 'L', className: 'border-rose-200 bg-rose-50 text-rose-800' }
         : { label: 'A', className: 'border-slate-200 bg-slate-100 text-slate-700' };
   return (
     <span
@@ -175,6 +177,20 @@ export function DailyAttendanceRoster({
     return map;
   })();
 
+  const lateByUserDay = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const t of timesheets) {
+      const d = new Date(t.clockIn);
+      if (!Number.isFinite(d.getTime())) continue;
+      const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const key = `${String(t.userId)}|${dayKey}`;
+      const prev = map.get(key);
+      if (prev === true) continue;
+      map.set(key, Boolean(t.lateMark));
+    }
+    return map;
+  }, [timesheets]);
+
   const parseDateOnly = (value: string): Date | null => {
     const d = new Date(`${value}T00:00:00`);
     if (!Number.isFinite(d.getTime())) return null;
@@ -186,13 +202,23 @@ export function DailyAttendanceRoster({
     return ms < 0 ? 0 : Math.floor(ms / 86400000) + 1;
   };
 
-  const visibleTodayRows = todayRows.filter((row) => {
-    const effectiveRole = row.role || roleByUserId.get(String(row.id));
-    if (isHiddenRole(effectiveRole)) return false;
-    if (!matchesSelectedRole(effectiveRole)) return false;
-    const isApprovedLeaveToday = String(row.attendance_status || '').trim().toUpperCase() === 'LEAVE';
-    return firstClockInByUser.has(String(row.id)) || isApprovedLeaveToday;
-  });
+  const visibleTodayRows = todayRows
+    .filter((row) => {
+      const effectiveRole = row.role || roleByUserId.get(String(row.id));
+      if (isHiddenRole(effectiveRole)) return false;
+      if (!matchesSelectedRole(effectiveRole)) return false;
+      const isApprovedLeaveToday = String(row.attendance_status || '').trim().toUpperCase() === 'LEAVE';
+      return firstClockInByUser.has(String(row.id)) || isApprovedLeaveToday;
+    })
+    .map((row) => {
+      const baseStatus = String(row.attendance_status || '').trim().toUpperCase();
+      const inDate = row.check_in ? new Date(row.check_in) : null;
+      if (!inDate || !Number.isFinite(inDate.getTime()) || baseStatus !== 'PRESENT') return row;
+      const dayKey = `${inDate.getFullYear()}-${String(inDate.getMonth() + 1).padStart(2, '0')}-${String(inDate.getDate()).padStart(2, '0')}`;
+      const isLateDay = lateByUserDay.get(`${String(row.id)}|${dayKey}`) === true;
+      if (!isLateDay) return row;
+      return { ...row, attendance_status: 'LATE' };
+    });
 
   const visibleGrid7 = grid7
     .filter((row) => !isHiddenRole(row.role))
@@ -218,8 +244,15 @@ export function DailyAttendanceRoster({
         ...row,
         attendance: row.attendance.map((entry) => {
           const day = parseDateOnly(entry.date);
-          if (!day || day.getTime() >= firstClockIn.getTime()) return entry;
-          return { ...entry, attendance_status: 'NA' };
+          if (!day) return entry;
+          if (day.getTime() < firstClockIn.getTime()) {
+            return { ...entry, attendance_status: 'NA' };
+          }
+          const baseStatus = String(entry.attendance_status || '').trim().toUpperCase();
+          if (baseStatus !== 'PRESENT') return entry;
+          const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+          const isLateDay = lateByUserDay.get(`${String(row.id)}|${dayKey}`) === true;
+          return isLateDay ? { ...entry, attendance_status: 'LATE' } : entry;
         }),
       };
     });
@@ -353,7 +386,7 @@ export function DailyAttendanceRoster({
             Present
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-rose-200 bg-rose-50 text-[9px] font-bold text-rose-800">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-amber-200 bg-amber-50 text-[9px] font-bold text-amber-900">
               L
             </span>
             Late
@@ -365,7 +398,7 @@ export function DailyAttendanceRoster({
             Absent
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-amber-200 bg-amber-50 text-[9px] font-bold text-amber-900">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-rose-200 bg-rose-50 text-[9px] font-bold text-rose-800">
               L
             </span>
             Leave
@@ -535,9 +568,9 @@ export function DailyAttendanceRoster({
                     </td>
                     <td className="px-5 py-3.5 font-mono text-xs text-slate-600">{row.gdc_id || row.id}</td>
                     <td className="px-5 py-3.5 text-center tabular-nums font-semibold text-emerald-800">{row.on_time}</td>
-                    <td className="px-5 py-3.5 text-center tabular-nums font-semibold text-rose-800">{row.late}</td>
+                    <td className="px-5 py-3.5 text-center tabular-nums font-semibold text-amber-900">{row.late}</td>
                     <td className="px-5 py-3.5 text-center tabular-nums font-semibold text-slate-700">{row.absent}</td>
-                    <td className="px-5 py-3.5 text-center tabular-nums font-semibold text-amber-900">{row.leave_days}</td>
+                    <td className="px-5 py-3.5 text-center tabular-nums font-semibold text-rose-800">{row.leave_days}</td>
                   </tr>
                 ))
               )}
