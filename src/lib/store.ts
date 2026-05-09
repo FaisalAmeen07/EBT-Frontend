@@ -21,6 +21,11 @@ import {
   type AttendanceDayOverride,
   type CompanyShiftTimes,
 } from '@/lib/attendanceRules';
+import {
+  geoFenceRequiresClientCoordinates,
+  getGeoAttendanceRequestBody,
+  type GeoAttendanceRequestBody,
+} from '@/lib/geoFencingAttendance';
 import { API_PATHS } from '@/lib/api/api-base-urls';
 import { resolveChatBaseURL } from '@/lib/api/chat-api.config';
 import {
@@ -442,7 +447,7 @@ interface AppState {
   upsertTeamLeaderDailySummary: (input: { date: string; body: string }) => { ok: true } | { ok: false; error: string };
   upsertHRDailySummary: (input: { date: string; body: string }) => { ok: true } | { ok: false; error: string };
   setCurrentUser: (user: User | null) => void;
-  clockIn: () => Promise<void>;
+  clockIn: (geoBody?: GeoAttendanceRequestBody) => Promise<void>;
   clockOut: () => Promise<void>;
   startBreak: () => Promise<void>;
   endBreak: () => Promise<void>;
@@ -885,7 +890,7 @@ export const useStore = create<AppState>()((set, get) => ({
         }
       },
 
-      clockIn: async () => {
+      clockIn: async (geoBody?: GeoAttendanceRequestBody) => {
         const { currentUser, adhocShiftsEnabled, attendanceDayOverrides, companyShiftTimes } = get();
         if (!currentUser) return;
         if (currentUser.role !== 'Admin') {
@@ -904,7 +909,11 @@ export const useStore = create<AppState>()((set, get) => ({
             return;
         }
 
-        await checkInApi();
+        const s = get();
+        const body =
+          geoBody ??
+          (geoFenceRequiresClientCoordinates(s) ? await getGeoAttendanceRequestBody(s) : undefined);
+        await checkInApi(body);
         const timesheets = await fetchAttendanceRecordsApi();
         // UX: Clock-in implies "Present" (stored as Available in this app's status enum).
         set((s) => ({
@@ -924,7 +933,11 @@ export const useStore = create<AppState>()((set, get) => ({
         const { currentUser } = get();
         if (!currentUser) return;
 
-        await checkOutApi();
+        const s = get();
+        const geoBody = geoFenceRequiresClientCoordinates(s)
+          ? await getGeoAttendanceRequestBody(s)
+          : undefined;
+        await checkOutApi(geoBody);
         const timesheets = await fetchAttendanceRecordsApi();
         set({ timesheets });
         get().addNotification({
@@ -945,7 +958,11 @@ export const useStore = create<AppState>()((set, get) => ({
         const { currentUser } = get();
         if (!currentUser) return;
 
-        await endBreakApi();
+        const s = get();
+        const geoBody = geoFenceRequiresClientCoordinates(s)
+          ? await getGeoAttendanceRequestBody(s)
+          : undefined;
+        await endBreakApi(geoBody);
         const timesheets = await fetchAttendanceRecordsApi();
         set({ timesheets });
         get().addNotification({

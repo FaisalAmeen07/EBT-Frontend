@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios';
 import { API_PATHS } from '@/lib/api/api-base-urls';
 import { attendanceApiClient } from '@/lib/api/attendance-api.config';
 import type { TimesheetEntry } from '@/lib/store';
+import type { GeoAttendanceRequestBody } from '@/lib/geoFencingAttendance';
 
 type AttendanceRow = {
   id: number;
@@ -208,25 +209,25 @@ export async function fetchManualTimesheetApi(params?: {
   };
 }
 
-export async function checkInApi(): Promise<void> {
+export async function checkInApi(body?: GeoAttendanceRequestBody): Promise<void> {
   try {
-    await attendanceApiClient.post(API_PATHS.attendance.checkIn);
+    await attendanceApiClient.post(API_PATHS.attendance.checkIn, body ?? {});
   } catch (error) {
     throw new Error(errorMessage(error, 'Unable to clock in.'));
   }
 }
 
-export async function checkOutApi(): Promise<void> {
+export async function checkOutApi(body?: GeoAttendanceRequestBody): Promise<void> {
   try {
-    await attendanceApiClient.post(API_PATHS.attendance.checkOut);
+    await attendanceApiClient.post(API_PATHS.attendance.checkOut, body ?? {});
   } catch (error) {
     throw new Error(errorMessage(error, 'Unable to clock out.'));
   }
 }
 
-export async function endBreakApi(): Promise<void> {
+export async function endBreakApi(body?: GeoAttendanceRequestBody): Promise<void> {
   try {
-    await attendanceApiClient.post(API_PATHS.attendance.breakEnd);
+    await attendanceApiClient.post(API_PATHS.attendance.breakEnd, body ?? {});
   } catch (error) {
     throw new Error(errorMessage(error, 'Unable to end break.'));
   }

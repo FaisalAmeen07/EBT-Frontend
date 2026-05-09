@@ -5,18 +5,11 @@ import {
 } from '@/lib/attendanceRules';
 import { useStore } from '@/lib/store';
 import { getCurrentLatLng, haversineMiles } from '@/lib/geoDistance';
+import {
+  geoFenceRequiresClientCoordinates,
+  radiusMilesForGeoSlice,
+} from '@/lib/geoFencingAttendance';
 import { getCurrentShiftApi, getShiftStatusApi } from '@/services/attendance.service';
-
-function radiusMilesForUser(): number {
-  const s = useStore.getState();
-  if (!s.geoFencingEnabled) return 0;
-  if (s.geoFencingUseGlobalRadius) return Math.max(0, s.geoFencingGlobalRadiusMiles);
-  const site = s.currentUser?.workSite?.trim();
-  if (site && s.geoFencingSiteRadiusMiles[site] != null) {
-    return Math.max(0, s.geoFencingSiteRadiusMiles[site]!);
-  }
-  return Math.max(0, s.geoFencingGlobalRadiusMiles);
-}
 
 function isSameLocalDay(a: Date, b: Date): boolean {
   return (
@@ -102,8 +95,9 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
     return { ok: false, error: 'You have already complete shift.' };
   }
 
-  const radius = radiusMilesForUser();
-  if (state.geoFencingEnabled && radius > 0) {
+  const radius = radiusMilesForGeoSlice(state);
+  let geoBodyForApi: { latitude: number; longitude: number; work_site?: string } | undefined;
+  if (geoFenceRequiresClientCoordinates(state)) {
     const lat = state.geoFencingOfficeLat;
     const lng = state.geoFencingOfficeLng;
     if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -121,6 +115,9 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
           error: `You are about ${miles.toFixed(1)} mi from the office anchor — outside the allowed ${radius} mi radius.`,
         };
       }
+      geoBodyForApi = { latitude: pos.lat, longitude: pos.lng };
+      const site = state.currentUser?.workSite?.trim();
+      if (site) geoBodyForApi.work_site = site;
     } catch {
       return {
         ok: false,
@@ -130,7 +127,7 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
   }
 
   try {
-    await state.clockIn();
+    await state.clockIn(geoBodyForApi);
     return { ok: true };
   } catch (error) {
     return {
