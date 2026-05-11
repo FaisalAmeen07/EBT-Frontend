@@ -43,6 +43,8 @@ function resolveAttendanceBaseURL(): string {
   return DEFAULT_ATTENDANCE_DEV;
 }
 
+const ATTENDANCE_API_BASE_URL = resolveAttendanceBaseURL();
+
 function attachAuth(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
   const headers = AxiosHeaders.from(config.headers ?? {});
   const token = Cookies.get(ACCESS_TOKEN_COOKIE);
@@ -53,10 +55,14 @@ function attachAuth(config: InternalAxiosRequestConfig): InternalAxiosRequestCon
 }
 
 export const attendanceApiClient: AxiosInstance = axios.create({
-  baseURL: resolveAttendanceBaseURL(),
+  baseURL: ATTENDANCE_API_BASE_URL,
   timeout: 90_000,
   withCredentials: true,
 });
+
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ATTENDANCE_API_DEBUG === '1') {
+  console.info('[attendance-api] NEXT_PUBLIC_ATTENDANCE_API_DEBUG: using baseURL', ATTENDANCE_API_BASE_URL);
+}
 
 attendanceApiClient.interceptors.request.use((config) => attachAuth(config), (e) => Promise.reject(e));
 
