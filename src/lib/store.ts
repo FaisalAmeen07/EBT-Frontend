@@ -40,7 +40,14 @@ import {
   submitTaskApi,
   updatePendingTaskMultipart,
 } from '@/services/tasks.service';
-import { checkInApi, checkOutApi, endBreakApi, fetchAttendanceRecordsApi, getShiftStatusApi } from '@/services/attendance.service';
+import {
+  checkInApi,
+  checkOutApi,
+  endBreakApi,
+  fetchAttendanceRecordsApi,
+  getAttendanceControlSettingsApi,
+  getShiftStatusApi,
+} from '@/services/attendance.service';
 import {
   CHAT_UNREAD_BELL_EVENT_KEY,
   createMyNotificationApi,
@@ -504,6 +511,8 @@ interface AppState {
     geoFencingOfficeLat?: number | null;
     geoFencingOfficeLng?: number | null;
   }) => void;
+  /** Load geo-fencing (and related) settings from the attendance API for any signed-in user. */
+  hydrateAttendanceControlSettingsFromApi: () => Promise<void>;
   // Admin actions
   addUser: (user: User) => void;
   // Tasks (Task microservice — see `tasks.service.ts`)
@@ -933,6 +942,7 @@ export const useStore = create<AppState>()((set, get) => ({
         const { currentUser } = get();
         if (!currentUser) return;
 
+        await get().hydrateAttendanceControlSettingsFromApi();
         const s = get();
         const geoBody = geoFenceRequiresClientCoordinates(s)
           ? await getGeoAttendanceRequestBody(s)
@@ -958,6 +968,7 @@ export const useStore = create<AppState>()((set, get) => ({
         const { currentUser } = get();
         if (!currentUser) return;
 
+        await get().hydrateAttendanceControlSettingsFromApi();
         const s = get();
         const geoBody = geoFenceRequiresClientCoordinates(s)
           ? await getGeoAttendanceRequestBody(s)
@@ -1021,6 +1032,26 @@ export const useStore = create<AppState>()((set, get) => ({
           geoFencingOfficeLng:
             patch.geoFencingOfficeLng !== undefined ? patch.geoFencingOfficeLng : s.geoFencingOfficeLng,
         }));
+      },
+
+      hydrateAttendanceControlSettingsFromApi: async () => {
+        if (!get().currentUser) return;
+        try {
+          const control = await getAttendanceControlSettingsApi();
+          set({
+            geoFencingEnabled: control.geo_fencing_enabled,
+            geoFencingUseGlobalRadius: control.geo_fencing_use_global_radius,
+            geoFencingGlobalRadiusMiles: Math.max(0, control.geo_fencing_global_radius_miles),
+            geoFencingSiteRadiusMiles:
+              control.geo_fencing_site_radius_miles && typeof control.geo_fencing_site_radius_miles === 'object'
+                ? control.geo_fencing_site_radius_miles
+                : {},
+            geoFencingOfficeLat: control.geo_fencing_office_lat,
+            geoFencingOfficeLng: control.geo_fencing_office_lng,
+          });
+        } catch {
+          /* keep cached values */
+        }
       },
 
       addManualTimesheetEntry: (input) => {

@@ -42,9 +42,13 @@ function isOnApprovedLeaveToday(
  * Call from the dashboard Clock In button (async).
  */
 export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok: false; error: string }> {
-  const state = useStore.getState();
-  const { currentUser, timesheets, Leave } = state;
+  const state0 = useStore.getState();
+  const { currentUser } = state0;
   if (!currentUser) return { ok: false, error: 'You must be signed in to clock in.' };
+
+  await state0.hydrateAttendanceControlSettingsFromApi();
+  const state = useStore.getState();
+  const { timesheets, Leave } = state;
 
   // Backend is source of truth for shift enable/disable.
   if (currentUser.role !== 'Admin') {

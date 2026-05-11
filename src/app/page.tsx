@@ -183,6 +183,11 @@ function TimerWidget() {
   const [shiftEndApi, setShiftEndApi] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!currentUser) return;
+    void useStore.getState().hydrateAttendanceControlSettingsFromApi();
+  }, [currentUser?.id]);
+
+  useEffect(() => {
     let cancelled = false;
     const loadShift = async () => {
       try {
