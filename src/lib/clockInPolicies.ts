@@ -116,7 +116,7 @@ export async function performClockInWithPolicies(): Promise<{ ok: true } | { ok:
       if (miles > radius) {
         return {
           ok: false,
-          error: `You are about ${miles.toFixed(1)} mi from the office anchor — outside the allowed ${radius} mi radius.`,
+          error: `Your location is approximately ${miles.toFixed(1)} mile(s) from the office. Clock-in is only permitted within ${radius} mile(s) of the authorized site. Please move to an approved location or contact your administrator if you need assistance.`,
         };
       }
       geoBodyForApi = { latitude: pos.lat, longitude: pos.lng };

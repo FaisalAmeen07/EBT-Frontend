@@ -287,6 +287,8 @@ function TimerWidget() {
   }, [activeTimesheet, now, activeBreak]);
 
   const isPaused = !!activeBreak;
+  /** Treat max work duration like a break: timer display is frozen and primary action is clock out. */
+  const timerFrozen = isPaused || reachedWorkLimit;
   const showBreakOutAction = !!activeBreak && !reachedWorkLimit;
   const hasAnyBreak = (activeTimesheet?.breaks?.length || 0) > 0;
   const lineColorClass = !isClockedIn
@@ -354,18 +356,18 @@ function TimerWidget() {
               {elapsed && (
                 <div
                   className={`mt-5 inline-flex items-center gap-3 rounded-2xl border px-4 py-2 ${
-                    isPaused ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'
+                    timerFrozen ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'
                   }`}
                 >
                   <span
                     className={`text-[10px] font-black uppercase tracking-widest ${
-                      isPaused ? 'text-amber-700' : 'text-emerald-700'
+                      timerFrozen ? 'text-amber-700' : 'text-emerald-700'
                     }`}
                   >
                     {reachedWorkLimit ? 'Work Limit Reached (Paused)' : isPaused ? 'On Break (Paused)' : 'Working'}
                   </span>
                   <span
-                    className={`text-sm font-mono font-black ${isPaused ? 'text-amber-800' : 'text-emerald-800'}`}
+                    className={`text-sm font-mono font-black ${timerFrozen ? 'text-amber-800' : 'text-emerald-800'}`}
                   >
                     {elapsed}
                   </span>

@@ -243,11 +243,11 @@ export default function ProfilePage() {
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</label>
               <input
                 type="email"
-                className={inputClass}
+                className={`${inputClass} cursor-pointer bg-slate-50 text-slate-700`}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={saving}
+                disabled
+                title="Email is managed by your administrator and cannot be changed here."
               />
             </div>
             <div className="space-y-1.5">

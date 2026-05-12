@@ -3,6 +3,7 @@ import { API_PATHS } from '@/lib/api/api-base-urls';
 import { attendanceApiClient } from '@/lib/api/attendance-api.config';
 import type { TimesheetEntry } from '@/lib/store';
 import type { GeoAttendanceRequestBody } from '@/lib/geoFencingAttendance';
+import { normalizeGeoRadiusUnit } from '@/lib/geoRadiusUnits';
 
 type AttendanceRow = {
   id: number;
@@ -350,6 +351,7 @@ export type AttendanceControlSettingsApi = {
   geo_fencing_site_radius_miles: Record<string, number>;
   geo_fencing_office_lat: number | null;
   geo_fencing_office_lng: number | null;
+  geo_fencing_radius_unit: 'miles' | 'meters';
 };
 
 export async function getAttendanceControlSettingsApi(): Promise<AttendanceControlSettingsApi> {
@@ -367,6 +369,7 @@ export async function getAttendanceControlSettingsApi(): Promise<AttendanceContr
         : {},
     geo_fencing_office_lat: data?.geo_fencing_office_lat == null ? null : Number(data.geo_fencing_office_lat),
     geo_fencing_office_lng: data?.geo_fencing_office_lng == null ? null : Number(data.geo_fencing_office_lng),
+    geo_fencing_radius_unit: normalizeGeoRadiusUnit(data?.geo_fencing_radius_unit),
   };
 }
 

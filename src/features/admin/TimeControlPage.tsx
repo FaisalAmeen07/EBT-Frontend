@@ -14,6 +14,17 @@ import {
   setShiftTimingApi,
 } from '@/services/attendance.service';
 import { companyShiftTimesFromApi } from '@/lib/attendanceRules';
+import {
+  GEO_RADIUS_MAX_METERS,
+  GEO_RADIUS_MAX_MILES,
+  clampRadiusFromMetersInput,
+  clampRadiusMiles,
+  formatMetersShort,
+  formatMilesShort,
+  milesToMeters,
+  metersToMiles,
+  type GeoRadiusUnit,
+} from '@/lib/geoRadiusUnits';
 
 function todayDateInput(): string {
   const d = new Date();
@@ -65,6 +76,7 @@ export function TimeControlPage() {
     geoFencingSiteRadiusMiles,
     geoFencingOfficeLat,
     geoFencingOfficeLng,
+    geoFencingRadiusUnit,
     patchAttendanceControlSettings,
   } = useStore(
     useShallow((s) => ({
@@ -75,6 +87,7 @@ export function TimeControlPage() {
       geoFencingSiteRadiusMiles: s.geoFencingSiteRadiusMiles,
       geoFencingOfficeLat: s.geoFencingOfficeLat,
       geoFencingOfficeLng: s.geoFencingOfficeLng,
+      geoFencingRadiusUnit: s.geoFencingRadiusUnit,
       patchAttendanceControlSettings: s.patchAttendanceControlSettings,
     }))
   );
@@ -110,6 +123,7 @@ export function TimeControlPage() {
           geoFencingSiteRadiusMiles: control.geo_fencing_site_radius_miles,
           geoFencingOfficeLat: control.geo_fencing_office_lat,
           geoFencingOfficeLng: control.geo_fencing_office_lng,
+          geoFencingRadiusUnit: control.geo_fencing_radius_unit,
         });
         hasLoadedGeoFromApiRef.current = true;
       } catch (error) {
@@ -133,6 +147,7 @@ export function TimeControlPage() {
         geo_fencing_site_radius_miles: geoFencingSiteRadiusMiles,
         geo_fencing_office_lat: geoFencingOfficeLat,
         geo_fencing_office_lng: geoFencingOfficeLng,
+        geo_fencing_radius_unit: geoFencingRadiusUnit,
       }).catch((error) => {
         toast(error instanceof Error ? error.message : 'Unable to save geo-fencing settings.', 'error');
       });
@@ -145,6 +160,7 @@ export function TimeControlPage() {
     geoFencingSiteRadiusMiles,
     geoFencingOfficeLat,
     geoFencingOfficeLng,
+    geoFencingRadiusUnit,
   ]);
 
   const saveShiftTiming = async () => {
@@ -183,6 +199,56 @@ export function TimeControlPage() {
       toast(error instanceof Error ? error.message : 'Unable to update shift status.', 'error');
     }
   };
+
+  const globalDisplayValue =
+    geoFencingRadiusUnit === 'miles'
+      ? geoFencingGlobalRadiusMiles
+      : milesToMeters(geoFencingGlobalRadiusMiles);
+
+  const onGlobalRadiusChange = (raw: string) => {
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v) || v < 0) {
+      patchAttendanceControlSettings({ geoFencingGlobalRadiusMiles: 0 });
+      return;
+    }
+    if (geoFencingRadiusUnit === 'miles') {
+      if (v > GEO_RADIUS_MAX_MILES) {
+        toast(`Radius cannot exceed ${GEO_RADIUS_MAX_MILES} miles.`, 'error');
+      }
+      patchAttendanceControlSettings({ geoFencingGlobalRadiusMiles: clampRadiusMiles(v) });
+      return;
+    }
+    if (v > GEO_RADIUS_MAX_METERS) {
+      toast(`Radius cannot exceed ${Math.round(GEO_RADIUS_MAX_METERS).toLocaleString()} meters.`, 'error');
+    }
+    patchAttendanceControlSettings({ geoFencingGlobalRadiusMiles: clampRadiusFromMetersInput(v) });
+  };
+
+  const onSiteRadiusChange = (site: string, raw: string) => {
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v) || v < 0) {
+      patchAttendanceControlSettings({ geoFencingSiteRadiusMiles: { [site]: 0 } });
+      return;
+    }
+    if (geoFencingRadiusUnit === 'miles') {
+      if (v > GEO_RADIUS_MAX_MILES) {
+        toast(`Radius cannot exceed ${GEO_RADIUS_MAX_MILES} miles.`, 'error');
+      }
+      patchAttendanceControlSettings({ geoFencingSiteRadiusMiles: { [site]: clampRadiusMiles(v) } });
+      return;
+    }
+    if (v > GEO_RADIUS_MAX_METERS) {
+      toast(`Radius cannot exceed ${Math.round(GEO_RADIUS_MAX_METERS).toLocaleString()} meters.`, 'error');
+    }
+    patchAttendanceControlSettings({
+      geoFencingSiteRadiusMiles: { [site]: clampRadiusFromMetersInput(v) },
+    });
+  };
+
+  const globalHelperLine =
+    geoFencingRadiusUnit === 'miles'
+      ? `${formatMilesShort(geoFencingGlobalRadiusMiles)} miles ≈ ${formatMetersShort(milesToMeters(geoFencingGlobalRadiusMiles))} meters`
+      : `${formatMetersShort(globalDisplayValue)} meters ≈ ${formatMilesShort(metersToMiles(globalDisplayValue))} miles`;
 
   return (
     <div className="mx-auto min-h-full max-w-6xl space-y-8 pb-12">
@@ -293,22 +359,40 @@ export function TimeControlPage() {
                 />
                 <span>
                   <span className="block text-sm font-semibold text-slate-800">Use radius as global</span>
-                  <span className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                     <input
                       type="number"
                       min={0}
-                      step={0.1}
+                      step={geoFencingRadiusUnit === 'miles' ? 'any' : 1}
                       disabled={!geoFencingUseGlobalRadius}
-                      value={geoFencingGlobalRadiusMiles}
+                      value={globalDisplayValue}
+                      placeholder={geoFencingRadiusUnit === 'miles' ? '0.05' : '50'}
+                      onChange={(e) => onGlobalRadiusChange(e.target.value)}
+                      className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 disabled:opacity-50"
+                    />
+                    <label className="sr-only" htmlFor="geo-global-radius-unit">
+                      Radius unit
+                    </label>
+                    <select
+                      id="geo-global-radius-unit"
+                      disabled={!geoFencingUseGlobalRadius}
+                      value={geoFencingRadiusUnit}
                       onChange={(e) =>
                         patchAttendanceControlSettings({
-                          geoFencingGlobalRadiusMiles: Math.max(0, parseFloat(e.target.value) || 0),
+                          geoFencingRadiusUnit: e.target.value as GeoRadiusUnit,
                         })
                       }
-                      className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 disabled:opacity-50"
-                    />
-                    miles
-                  </span>
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
+                    >
+                      <option value="miles">Miles</option>
+                      <option value="meters">Meters</option>
+                    </select>
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-500">{globalHelperLine}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    Stored in miles on the server (meters are converted automatically). Use 0 to disable distance check
+                    while geo-fencing is on.
+                  </p>
                 </span>
               </label>
               <label className="flex cursor-pointer items-start gap-3">
@@ -322,7 +406,8 @@ export function TimeControlPage() {
                 <span>
                   <span className="block text-sm font-semibold text-slate-800">Set custom radius per site</span>
                   <p className="mt-1 text-xs text-slate-500">
-                    Uses each user&apos;s work site; falls back to global miles if a site has no value.
+                    Uses each user&apos;s work site; falls back to global radius (miles) if a site has no value.
+                    Per-site values use the same unit as global.
                   </p>
                 </span>
               </label>
@@ -330,26 +415,25 @@ export function TimeControlPage() {
 
             {!geoFencingUseGlobalRadius && (
               <div className="grid gap-3 sm:grid-cols-2">
-                {sites.map((site) => (
-                  <div key={site} className="flex items-center gap-2 text-sm">
-                    <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{site}</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={geoFencingSiteRadiusMiles[site] ?? 0}
-                      onChange={(e) =>
-                        patchAttendanceControlSettings({
-                          geoFencingSiteRadiusMiles: {
-                            [site]: Math.max(0, parseFloat(e.target.value) || 0),
-                          },
-                        })
-                      }
-                      className="w-20 rounded-lg border border-slate-200 px-2 py-1.5"
-                    />
-                    <span className="text-slate-500">mi</span>
-                  </div>
-                ))}
+                {sites.map((site) => {
+                  const mi = geoFencingSiteRadiusMiles[site] ?? 0;
+                  const display = geoFencingRadiusUnit === 'miles' ? mi : milesToMeters(mi);
+                  return (
+                    <div key={site} className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{site}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={geoFencingRadiusUnit === 'miles' ? 'any' : 1}
+                        value={display}
+                        placeholder={geoFencingRadiusUnit === 'miles' ? '0.05' : '50'}
+                        onChange={(e) => onSiteRadiusChange(site, e.target.value)}
+                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5"
+                      />
+                      <span className="text-slate-500">{geoFencingRadiusUnit === 'miles' ? 'mi' : 'm'}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

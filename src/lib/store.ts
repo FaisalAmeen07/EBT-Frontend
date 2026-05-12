@@ -21,6 +21,7 @@ import {
   type AttendanceDayOverride,
   type CompanyShiftTimes,
 } from '@/lib/attendanceRules';
+import { clampRadiusMiles, normalizeGeoRadiusUnit } from '@/lib/geoRadiusUnits';
 import {
   geoFenceRequiresClientCoordinates,
   getGeoAttendanceRequestBody,
@@ -502,6 +503,8 @@ interface AppState {
   geoFencingSiteRadiusMiles: Record<string, number>;
   geoFencingOfficeLat: number | null;
   geoFencingOfficeLng: number | null;
+  /** Admin Time control: radius input unit; API always stores miles. */
+  geoFencingRadiusUnit: 'miles' | 'meters';
   patchAttendanceControlSettings: (patch: {
     adhocShiftsEnabled?: boolean;
     geoFencingEnabled?: boolean;
@@ -510,6 +513,7 @@ interface AppState {
     geoFencingSiteRadiusMiles?: Record<string, number>;
     geoFencingOfficeLat?: number | null;
     geoFencingOfficeLng?: number | null;
+    geoFencingRadiusUnit?: 'miles' | 'meters';
   }) => void;
   /** Load geo-fencing (and related) settings from the attendance API for any signed-in user. */
   hydrateAttendanceControlSettingsFromApi: () => Promise<void>;
@@ -728,6 +732,7 @@ export const useStore = create<AppState>()((set, get) => ({
       geoFencingSiteRadiusMiles: {} as Record<string, number>,
       geoFencingOfficeLat: null as number | null,
       geoFencingOfficeLng: null as number | null,
+      geoFencingRadiusUnit: 'miles' as 'miles' | 'meters',
       teams: [],
       departments: [...DEFAULT_DEPARTMENTS],
       sites: [],
@@ -1015,39 +1020,53 @@ export const useStore = create<AppState>()((set, get) => ({
 
       patchAttendanceControlSettings: (patch) => {
         if (get().currentUser?.role !== 'Admin') return;
-        set((s) => ({
-          adhocShiftsEnabled: patch.adhocShiftsEnabled ?? s.adhocShiftsEnabled,
-          geoFencingEnabled: patch.geoFencingEnabled ?? s.geoFencingEnabled,
-          geoFencingUseGlobalRadius: patch.geoFencingUseGlobalRadius ?? s.geoFencingUseGlobalRadius,
-          geoFencingGlobalRadiusMiles:
-            patch.geoFencingGlobalRadiusMiles !== undefined
-              ? Math.max(0, patch.geoFencingGlobalRadiusMiles)
-              : s.geoFencingGlobalRadiusMiles,
-          geoFencingSiteRadiusMiles:
+        set((s) => {
+          const nextSites =
             patch.geoFencingSiteRadiusMiles !== undefined
               ? { ...s.geoFencingSiteRadiusMiles, ...patch.geoFencingSiteRadiusMiles }
-              : s.geoFencingSiteRadiusMiles,
-          geoFencingOfficeLat:
-            patch.geoFencingOfficeLat !== undefined ? patch.geoFencingOfficeLat : s.geoFencingOfficeLat,
-          geoFencingOfficeLng:
-            patch.geoFencingOfficeLng !== undefined ? patch.geoFencingOfficeLng : s.geoFencingOfficeLng,
-        }));
+              : s.geoFencingSiteRadiusMiles;
+          const clampedSites: Record<string, number> = {};
+          for (const [k, v] of Object.entries(nextSites)) {
+            clampedSites[k] = clampRadiusMiles(Number(v));
+          }
+          return {
+            adhocShiftsEnabled: patch.adhocShiftsEnabled ?? s.adhocShiftsEnabled,
+            geoFencingEnabled: patch.geoFencingEnabled ?? s.geoFencingEnabled,
+            geoFencingUseGlobalRadius: patch.geoFencingUseGlobalRadius ?? s.geoFencingUseGlobalRadius,
+            geoFencingGlobalRadiusMiles:
+              patch.geoFencingGlobalRadiusMiles !== undefined
+                ? clampRadiusMiles(patch.geoFencingGlobalRadiusMiles)
+                : s.geoFencingGlobalRadiusMiles,
+            geoFencingSiteRadiusMiles: patch.geoFencingSiteRadiusMiles !== undefined ? clampedSites : s.geoFencingSiteRadiusMiles,
+            geoFencingOfficeLat:
+              patch.geoFencingOfficeLat !== undefined ? patch.geoFencingOfficeLat : s.geoFencingOfficeLat,
+            geoFencingOfficeLng:
+              patch.geoFencingOfficeLng !== undefined ? patch.geoFencingOfficeLng : s.geoFencingOfficeLng,
+            geoFencingRadiusUnit: patch.geoFencingRadiusUnit ?? s.geoFencingRadiusUnit,
+          };
+        });
       },
 
       hydrateAttendanceControlSettingsFromApi: async () => {
         if (!get().currentUser) return;
         try {
           const control = await getAttendanceControlSettingsApi();
+          const rawSites =
+            control.geo_fencing_site_radius_miles && typeof control.geo_fencing_site_radius_miles === 'object'
+              ? control.geo_fencing_site_radius_miles
+              : {};
+          const siteMiles: Record<string, number> = {};
+          for (const [k, v] of Object.entries(rawSites)) {
+            siteMiles[k] = clampRadiusMiles(Number(v));
+          }
           set({
             geoFencingEnabled: control.geo_fencing_enabled,
             geoFencingUseGlobalRadius: control.geo_fencing_use_global_radius,
-            geoFencingGlobalRadiusMiles: Math.max(0, control.geo_fencing_global_radius_miles),
-            geoFencingSiteRadiusMiles:
-              control.geo_fencing_site_radius_miles && typeof control.geo_fencing_site_radius_miles === 'object'
-                ? control.geo_fencing_site_radius_miles
-                : {},
+            geoFencingGlobalRadiusMiles: clampRadiusMiles(control.geo_fencing_global_radius_miles),
+            geoFencingSiteRadiusMiles: siteMiles,
             geoFencingOfficeLat: control.geo_fencing_office_lat,
             geoFencingOfficeLng: control.geo_fencing_office_lng,
+            geoFencingRadiusUnit: normalizeGeoRadiusUnit(control.geo_fencing_radius_unit),
           });
         } catch {
           /* keep cached values */
