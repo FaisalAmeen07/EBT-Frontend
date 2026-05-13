@@ -4,6 +4,26 @@
     {
       "name": "@theme",
       "description": "Tailwind CSS v4: define design tokens (inline theme)."
+    },
+    {
+      "name": "@custom-variant",
+      "description": "Tailwind CSS v4: register a custom variant selector."
+    },
+    {
+      "name": "@source",
+      "description": "Tailwind CSS v4: configure source detection."
+    },
+    {
+      "name": "@utility",
+      "description": "Tailwind CSS v4: define a custom utility."
+    },
+    {
+      "name": "@variant",
+      "description": "Tailwind CSS v4: apply a variant to nested styles."
+    },
+    {
+      "name": "@reference",
+      "description": "Tailwind CSS v4: import theme variables and utilities for reference."
     }
   ]
 }

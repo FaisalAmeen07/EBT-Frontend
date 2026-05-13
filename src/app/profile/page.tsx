@@ -161,8 +161,8 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-4xl pb-12">
       <h1 className="mb-6 text-2xl font-light tracking-tight text-sky-600">Profile</h1>
 
-      <div className="mb-8 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
-        <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" aria-hidden />
+      <div className="mb-8 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-100">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 dark:text-sky-300" aria-hidden />
         <p>
           Details load from your account on the server. Save changes to update via the API. Unique ID is
           system-assigned and cannot be changed here. Profile photos are limited to {PROFILE_IMAGE_MAX_MB} MB.

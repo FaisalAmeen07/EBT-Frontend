@@ -22,6 +22,7 @@ import {
   UserCog,
   BarChart3,
   MessageSquare,
+  PlugZap,
   ScrollText,
   X,
 } from 'lucide-react';
@@ -32,6 +33,8 @@ const navItems = [
    { name: 'Daily Updates', href: '/daily-updates', icon: ScrollText },
    { name: 'Team Data', href: '/team-data', icon: BarChart3 },
    { name: 'Project Manager', href: '/project-manager', icon: Calendar },
+   { name: 'App Integrations', href: '/app/integrations', icon: PlugZap },
+   { name: 'Desktop Work diary', href: '/desktop-work-diary', icon: Clock },
    { name: 'Timesheet', href: '/timesheet', icon: Clock },
    { name: 'Availability', href: '/availability', icon: CalendarClock },
    { name: 'My Requests', href: '/my-requests', icon: ClipboardList },
@@ -70,6 +73,8 @@ const navItems = [
        return false;
      if (item.name === 'Team assign to TL' && currentUser?.role !== 'Admin' && currentUser?.role !== 'HR') return false;
      if (item.name === 'Team Data' && currentUser?.role !== 'Team Leader') return false;
+     if (item.name === 'Desktop Work diary' && currentUser?.role !== 'Employee' && currentUser?.role !== 'Team Leader')
+       return false;
      if (
        item.name === 'Daily Updates' &&
        currentUser?.role !== 'Employee' &&

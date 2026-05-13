@@ -1,6 +1,14 @@
 'use client';
 
-import { Bell, CheckCheck, Menu, Trash2, User as UserIcon, X } from 'lucide-react';
+import {
+  Bell,
+  CheckCheck,
+  Menu,
+  Search,
+  Trash2,
+  User as UserIcon,
+  X,
+} from 'lucide-react';
 import { useStore, type User } from '@/lib/store';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -117,7 +125,7 @@ export function Topbar() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [currentUser?.id, setNotifications]);
+  }, [currentUser, setNotifications]);
 
   const pillLabel = currentUser ? headerPillLabel(currentUser) : 'User';
   const avatarSrc = currentUser?.avatar;
@@ -132,7 +140,7 @@ export function Topbar() {
     <>
       <MobileSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
       <header className="relative z-50 flex h-20 shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 shadow-sm sm:px-8">
-        <div className="flex min-w-0 max-w-xl flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             onClick={() => setMobileOpen(true)}
             className="rounded-xl p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
@@ -140,6 +148,14 @@ export function Topbar() {
           >
             <Menu className="h-5 w-5 text-slate-700 dark:text-slate-200" />
           </button>
+          <div className="relative hidden w-full max-w-md md:block">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden />
+            <input
+              type="search"
+              placeholder="Search..."
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100/70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-700 dark:focus:ring-indigo-950/40"
+            />
+          </div>
         </div>
 
         <div className="ml-4 flex shrink-0 items-center gap-3 sm:gap-4">

@@ -47,6 +47,12 @@ export const API_PATHS = {
     addEmployees: '/api/teams/add-employees',
     moveMember: '/api/teams/move-member',
   },
+  integrations: {
+    list: '/api/integrations',
+    connect: (provider: string) => `/api/integrations/${encodeURIComponent(provider)}/connect`,
+    disconnect: (provider: string) => `/api/integrations/${encodeURIComponent(provider)}/disconnect`,
+    sync: (provider: string) => `/api/integrations/${encodeURIComponent(provider)}/sync`,
+  },
   /**
    * Task microservice paths (relative to `NEXT_PUBLIC_TASK_API_URL`).
    * Use with `taskApiClient` / `task-request-handler`.

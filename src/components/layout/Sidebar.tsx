@@ -12,18 +12,21 @@ import { cn } from '@/lib/utils';
 import { totalUnreadMessagesForViewer } from '@/lib/messaging';
 import { subscribeChatSocket } from '@/lib/chat-socket';
 import {
-  LayoutDashboard,
+  BarChart3,
   Calendar,
-  Clock,
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
   ClipboardList,
-  UsersRound,
+  LayoutDashboard,
   LogOut,
+  MessageSquare,
+  PlugZap,
+  ScrollText,
   ShieldCheck,
   UserCog,
-  BarChart3,
-  MessageSquare,
-  ScrollText,
+  UsersRound,
 } from 'lucide-react';
 
 const sidebarItems = [
@@ -32,6 +35,8 @@ const sidebarItems = [
   { name: 'Daily Updates', href: '/daily-updates', icon: ScrollText },
   { name: 'Team Data', href: '/team-data', icon: BarChart3 },
   { name: 'Project Manager', href: '/project-manager', icon: Calendar },
+  { name: 'App Integrations', href: '/app/integrations', icon: PlugZap },
+  { name: 'Desktop Work diary', href: '/desktop-work-diary', icon: Clock },
   { name: 'Timesheet', href: '/timesheet', icon: Clock },
   { name: 'Availability', href: '/availability', icon: CalendarClock },
   { name: 'My Requests', href: '/my-requests', icon: ClipboardList },
@@ -39,8 +44,6 @@ const sidebarItems = [
   { name: 'Team assign to TL', href: '/team-tl', icon: UserCog },
   { name: 'Admin Control', href: '/admin', icon: ShieldCheck },
 ];
-
-const bottomItems = [{ name: 'Logout', href: '/logout', icon: LogOut }];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -50,6 +53,7 @@ export function Sidebar() {
   const users = useStore((s) => s.users);
   const chatThreads = useStore((s) => s.chatThreads);
   const [socketRev, setSocketRev] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
   useEffect(() => subscribeChatSocket(() => setSocketRev((n) => n + 1)), []);
 
   const messagesUnreadTotal = useMemo(() => {
@@ -64,6 +68,8 @@ export function Sidebar() {
       return false;
     if (item.name === 'Team assign to TL' && currentUser?.role !== 'Admin' && currentUser?.role !== 'HR') return false;
     if (item.name === 'Team Data' && currentUser?.role !== 'Team Leader') return false;
+    if (item.name === 'Desktop Work diary' && currentUser?.role !== 'Employee' && currentUser?.role !== 'Team Leader')
+      return false;
     if (
       item.name === 'Daily Updates' &&
       currentUser?.role !== 'Employee' &&
@@ -76,53 +82,103 @@ export function Sidebar() {
     return true;
   });
 
+  const logout = () => {
+    void logoutFromApi();
+    clearSessionCookies();
+    setCurrentUser(null);
+    router.push('/auth/login');
+    router.refresh();
+  };
+
   return (
-    <aside className="flex h-full min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pt-6 pb-6 shadow-sm lg:min-h-dvh">
-      <div className="px-6 mb-8 flex justify-center items-center">
-        <div className="flex flex-col items-center select-none">
-          <div className="relative mx-auto h-16 w-[180px]">
-            <Image
-              src={BRAND_LOGO_URL}
-              alt="Global Digital Care"
-              fill
-              className="object-contain object-center dark:hidden"
-              sizes="180px"
-              priority
-            />
-            <Image
-              src={BRAND_LOGO_DARK_URL}
-              alt="Global Digital Care"
-              fill
-              className="hidden object-contain object-center dark:block"
-              sizes="180px"
-            />
-          </div>
+    <aside
+      className={cn(
+        'relative flex h-full min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm transition-[width] duration-300 dark:border-slate-700 dark:bg-slate-900 lg:min-h-dvh',
+        collapsed ? 'w-20' : 'w-64'
+      )}
+    >
+      <div className={cn('shrink-0 px-4 py-5', collapsed && 'px-3')}>
+        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-center')}>
+          {collapsed ? (
+            <div className="relative h-12 w-12 overflow-hidden">
+              <Image
+                src="/sidebar-handshake-icon.png"
+                alt="Global Digital Care"
+                fill
+                className="object-contain"
+                sizes="48px"
+                priority
+              />
+            </div>
+          ) : (
+            <div className="relative h-14 w-[170px]">
+              <Image
+                src={BRAND_LOGO_URL}
+                alt="Global Digital Care"
+                fill
+                className="object-contain object-center dark:hidden"
+                sizes="170px"
+                priority
+              />
+              <Image
+                src={BRAND_LOGO_DARK_URL}
+                alt="Global Digital Care"
+                fill
+                className="hidden object-contain object-center dark:block"
+                sizes="170px"
+              />
+            </div>
+          )}
         </div>
       </div>
-      
-      <nav className="flex-1 px-4 space-y-1">
+
+      <button
+        type="button"
+        onClick={() => setCollapsed((value) => !value)}
+        className="absolute -right-3 bottom-7 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400 text-slate-900 shadow-lg ring-2 ring-white transition hover:bg-emerald-300 dark:ring-slate-900"
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+      </button>
+
+      <nav
+        className={cn(
+          'min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4 [scrollbar-color:#94a3b8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400/70 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5',
+          collapsed && 'px-2'
+        )}
+      >
         {filteredSidebarItems.map((item) => {
           const isActive =
             item.href === '/admin'
               ? pathname === '/admin' || pathname.startsWith('/admin/')
-              : pathname === item.href;
+              : item.href === '/app/integrations'
+                ? pathname === item.href
+                : pathname === item.href;
           const Icon = item.icon;
           return (
             <Link
               key={item.name}
               href={item.href}
+              title={collapsed ? item.name : undefined}
               className={cn(
-                'flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-colors',
+                'group flex items-center rounded-xl text-sm font-semibold transition-colors',
+                collapsed ? 'justify-center px-0 py-3' : 'justify-between gap-2 border-l-4 px-4 py-3',
                 isActive
-                  ? 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-l-4 border-slate-900 dark:border-indigo-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50'
+                  ? 'border-[#0f172a] bg-[#f0f2ff] text-[#0f172a] dark:border-indigo-400 dark:bg-slate-800 dark:text-slate-50'
+                  : 'border-transparent text-[#64748b] hover:bg-[#f7f8ff] hover:text-[#0f172a] dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-50'
               )}
             >
-              <span className="flex min-w-0 items-center">
-                <Icon className={cn('mr-3 h-5 w-5 shrink-0', isActive ? 'text-slate-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500')} />
-                {item.name}
+              <span className={cn('flex min-w-0 items-center', collapsed && 'justify-center')}>
+                <Icon
+                  className={cn(
+                    'h-5 w-5 shrink-0',
+                    collapsed ? 'mr-0' : 'mr-3',
+                    isActive ? 'text-[#475569] dark:text-indigo-300' : 'text-[#94a3b8] dark:text-slate-500'
+                  )}
+                />
+                {!collapsed ? <span className="truncate">{item.name}</span> : null}
               </span>
-              {item.href === '/messages' && messagesUnreadTotal > 0 && (
+              {!collapsed && item.href === '/messages' && messagesUnreadTotal > 0 && (
                 <span
                   className="inline-flex min-h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold leading-none text-white shadow-sm"
                   aria-label={`${messagesUnreadTotal} unread messages`}
@@ -130,43 +186,27 @@ export function Sidebar() {
                   {messagesUnreadTotal > 99 ? '99+' : messagesUnreadTotal}
                 </span>
               )}
+              {collapsed && item.href === '/messages' && messagesUnreadTotal > 0 && (
+                <span className="absolute ml-6 mt-[-1.5rem] h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+              )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-4 space-y-1 mt-8">
-        {bottomItems.map((item) => {
-          const Icon = item.icon;
-          if (item.name === 'Logout') {
-            return (
-              <button
-                key={item.name}
-                onClick={() => {
-                  void logoutFromApi();
-                  clearSessionCookies();
-                  setCurrentUser(null);
-                  router.push('/auth/login');
-                  router.refresh();
-                }}
-                className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50 transition-colors"
-              >
-                <Icon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
-                {item.name}
-              </button>
-            );
-          }
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50 transition-colors"
-            >
-              <Icon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
-              {item.name}
-            </Link>
-          );
-        })}
+      <div className={cn('shrink-0 px-3 py-4', collapsed && 'px-2')}>
+        <button
+          type="button"
+          onClick={logout}
+          title={collapsed ? 'Logout' : undefined}
+          className={cn(
+            'flex w-full items-center rounded-xl text-sm font-semibold text-[#0f172a] transition-colors hover:bg-[#f0f2ff] dark:text-slate-100 dark:hover:bg-slate-800/80',
+            collapsed ? 'justify-center px-0 py-3' : 'px-4 py-3'
+          )}
+        >
+          <LogOut className={cn('h-5 w-5 shrink-0 text-[#94a3b8] dark:text-slate-500', collapsed ? 'mr-0' : 'mr-3')} />
+          {!collapsed ? 'Logout' : null}
+        </button>
       </div>
     </aside>
   );
