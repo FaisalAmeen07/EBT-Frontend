@@ -1,11 +1,14 @@
 'use client';
 
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MessageSquare,
   Send,
   Users,
   ChevronLeft,
+  ChevronDown,
   X,
   Search,
   Lock,
@@ -24,6 +27,9 @@ import {
   CheckCheck,
   Pin,
   Crown,
+  Info,
+  Copy,
+  Download,
 } from 'lucide-react';
 import {
   useStore,
@@ -47,9 +53,10 @@ import {
   chatThreadTitle,
   unreadCountForThread,
 } from '@/lib/messaging';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, isToday } from 'date-fns';
 import { MAX_UPLOAD_FILE_BYTES, MAX_UPLOAD_FILE_MB } from '@/lib/file-upload-limits';
 import { useSearchParams } from 'next/navigation';
+import { useGdcChatRoomSocket } from '@/hooks/useGdcChatRoomSocket';
 
 function lastActivityMs(thread: ChatThread): number {
   const last = thread.messages[thread.messages.length - 1];
@@ -80,10 +87,73 @@ function writePinnedThreadIds(userId: string, ids: string[]) {
   }
 }
 
+/** Rough size from base64 data URL (for file subtitle like WhatsApp). */
+function approxSizeFromDataUrl(dataUrl: string): string {
+  const idx = dataUrl.indexOf(',');
+  const base64 = idx >= 0 ? dataUrl.slice(idx + 1) : '';
+  if (!base64) return '';
+  let pad = 0;
+  if (base64.endsWith('==')) pad = 2;
+  else if (base64.endsWith('=')) pad = 1;
+  const bytes = (base64.length * 3) / 4 - pad;
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes < 1024) return `${Math.max(1, Math.round(bytes))} KB`;
+  return `${(bytes / 1024).toFixed(1)} MB`;
+}
+
+function fileExtensionBadge(fileName: string, mimeType: string): string {
+  const dot = fileName.lastIndexOf('.');
+  const ext = dot >= 0 ? fileName.slice(dot + 1).trim() : '';
+  if (ext && ext.length <= 8) return ext.toUpperCase();
+  const sub = mimeType.split('/')[1];
+  return sub ? sub.split('+')[0].toUpperCase().slice(0, 8) : 'FILE';
+}
+
+function mimeShortLabel(mimeType: string): string {
+  const sub = mimeType.split('/')[1];
+  return sub ? sub.split('+')[0].toUpperCase() : 'FILE';
+}
+
+function VoiceMenuDivider() {
+  return <div className="mx-1.5 my-0.5 h-px bg-gradient-to-r from-transparent via-violet-200/80 to-transparent dark:via-slate-600/80" role="separator" />;
+}
+
+function VoiceMenuItem({
+  icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] font-medium leading-tight tracking-tight transition-colors ${
+        danger
+          ? 'text-rose-600 hover:bg-rose-50/95 [&_.menu-icon]:text-rose-500'
+          : 'text-slate-700 dark:text-slate-200 hover:bg-violet-50/95 active:bg-violet-100/60 [&_.menu-icon]:text-violet-600'
+      }`}
+      onClick={onClick}
+    >
+      <span className="menu-icon flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:stroke-[1.9]">
+        {icon}
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 function messageSnippet(m: ChatMessage): string {
   if (m.deleted) return 'Message deleted';
   if (m.body.trim()) return m.body.length > 100 ? `${m.body.slice(0, 100)}…` : m.body;
-  if (m.attachment) return `📎 ${m.attachment.fileName}`;
+  if (m.attachment) {
+    return `📎 ${m.attachment.fileName}`;
+  }
   return '';
 }
 
@@ -132,31 +202,37 @@ function UserAvatar({
   users,
   size = 'md',
   variant = 'message',
+  shape = 'rounded',
+  presenceDot = true,
 }: {
   userId: string;
   users: User[];
   size?: 'sm' | 'md' | 'lg';
   /** list | message: availability dot (no role letters on bubbles) */
   variant?: 'message' | 'list';
+  shape?: 'rounded' | 'circle';
+  /** Hide green/yellow presence dot when a custom badge is shown instead */
+  presenceDot?: boolean;
 }) {
   const u = users.find((x) => String(x.id) === String(userId));
   const initial = u?.name?.charAt(0).toUpperCase() ?? '?';
   const src = u?.avatar;
   const dim = size === 'sm' ? 'h-9 w-9 text-xs' : size === 'lg' ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm';
   const dotDim = size === 'sm' ? 'h-2 w-2' : 'h-2.5 w-2.5';
+  const roundClass = shape === 'circle' ? 'rounded-full' : 'rounded-2xl';
   return (
     <div className="relative shrink-0">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- user-uploaded or data URL
-        <img src={src} alt="" className={`rounded-2xl object-cover ${dim}`} />
+        <img src={src} alt="" className={`${roundClass} object-cover ${dim}`} />
       ) : (
         <div
-          className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#7c3aed] font-bold text-white shadow-inner ring-2 ring-white ${dim}`}
+          className={`flex items-center justify-center ${roundClass} bg-gradient-to-br from-[#6366f1] to-[#7c3aed] font-bold text-white shadow-inner ring-2 ring-white ${dim}`}
         >
           {initial}
         </div>
       )}
-      {(variant === 'list' || variant === 'message') && u && (
+      {(variant === 'list' || variant === 'message') && u && presenceDot && (
         <span
           className={`absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-white ${dotDim} ${presenceDotClass(u)}`}
           title={presenceLabel(u)}
@@ -171,15 +247,19 @@ function ThreadListAvatar({
   thread,
   currentUserId,
   users,
+  compact = false,
 }: {
   thread: ChatThread;
   currentUserId: string;
   users: User[];
+  /** Narrow sidebar rows: smaller avatar */
+  compact?: boolean;
 }) {
+  const box = compact ? 'h-9 w-9' : 'h-11 w-11';
   if (thread.kind === 'dm') {
     const other = thread.memberIds.find((id) => String(id) !== String(currentUserId));
-    if (!other) return <div className="h-11 w-11 shrink-0 rounded-2xl bg-slate-200" />;
-    return <UserAvatar userId={other} users={users} size="md" variant="list" />;
+    if (!other) return <div className={`${box} shrink-0 rounded-xl bg-slate-200`} />;
+    return <UserAvatar userId={other} users={users} size={compact ? 'sm' : 'md'} variant="list" />;
   }
   if (thread.kind === 'group') {
     const fallbackAvatar =
@@ -189,15 +269,17 @@ function ThreadListAvatar({
     const src = thread.avatarUrl || fallbackAvatar;
     if (src) {
       return (
-        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl ring-2 ring-white shadow-inner">
+        <div className={`relative ${box} shrink-0 overflow-hidden rounded-xl ring-2 ring-white/90 shadow-inner`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- user or group avatar URL */}
           <img src={src} alt="" className="h-full w-full object-cover" />
         </div>
       );
     }
     return (
-      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 shadow-inner ring-2 ring-white">
-        <Hash className="h-5 w-5" strokeWidth={2} />
+      <div
+        className={`relative flex ${box} shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 shadow-inner ring-2 ring-white/90`}
+      >
+        <Hash className={compact ? 'h-4 w-4' : 'h-5 w-5'} strokeWidth={2} />
         <span className="absolute -bottom-0.5 -right-0.5 rounded-md border-2 border-white bg-indigo-600 px-0.5 text-[7px] font-bold text-white">
           G
         </span>
@@ -279,6 +361,14 @@ export default function MessagesPage() {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<ChatMessage | null>(null);
+  const [messageBubbleMenu, setMessageBubbleMenu] = useState<{
+    messageId: string;
+    top: number;
+    left: number;
+    message: ChatMessage;
+    mine: boolean;
+  } | null>(null);
+  const [messageBubbleInfo, setMessageBubbleInfo] = useState<ChatMessage | null>(null);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const [groupNameEdit, setGroupNameEdit] = useState('');
   const [groupModalAddIds, setGroupModalAddIds] = useState<string[]>([]);
@@ -292,11 +382,13 @@ export default function MessagesPage() {
   const [pinnedThreadIds, setPinnedThreadIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!currentUser?.id) {
-      setPinnedThreadIds([]);
-      return;
-    }
-    setPinnedThreadIds(readPinnedThreadIds(currentUser.id));
+    queueMicrotask(() => {
+      if (!currentUser?.id) {
+        setPinnedThreadIds([]);
+        return;
+      }
+      setPinnedThreadIds(readPinnedThreadIds(currentUser.id));
+    });
   }, [currentUser?.id]);
 
   const togglePinThread = useCallback(
@@ -322,10 +414,13 @@ export default function MessagesPage() {
         return next;
       });
     },
-    [currentUser?.id],
+    [currentUser],
   );
 
-  const userName = (id: string) => users.find((u) => String(u.id) === String(id))?.name ?? 'Unknown';
+  const userName = useCallback(
+    (id: string) => users.find((u) => String(u.id) === String(id))?.name ?? 'Unknown',
+    [users],
+  );
 
   const visibleThreads = useMemo(() => {
     if (!currentUser) return [];
@@ -350,7 +445,7 @@ export default function MessagesPage() {
       const preview = last ? messageSnippet(last).toLowerCase() : '';
       return title.includes(q) || preview.includes(q);
     });
-  }, [visibleThreads, threadSearchQ, currentUser?.id]);
+  }, [visibleThreads, threadSearchQ, currentUser?.id, userName]);
 
   const selected = useMemo(
     () => visibleThreads.find((t) => t.id === selectedId) ?? visibleThreads[0] ?? null,
@@ -365,17 +460,21 @@ export default function MessagesPage() {
       for (const m of t.messages) ids.add(String(m.authorId));
     }
     void hydrateChatParticipantUsers([...ids]);
-  }, [currentUser?.id, visibleThreads, hydrateChatParticipantUsers]);
+  }, [currentUser, visibleThreads, hydrateChatParticipantUsers]);
 
   useEffect(() => {
-    if (!selectedId && visibleThreads[0]) setSelectedId(visibleThreads[0].id);
+    queueMicrotask(() => {
+      if (!selectedId && visibleThreads[0]) setSelectedId(visibleThreads[0].id);
+    });
   }, [visibleThreads, selectedId]);
 
   useEffect(() => {
     if (!targetChatId) return;
     const exists = visibleThreads.some((t) => t.id === targetChatId);
     if (!exists) return;
-    setSelectedId((prev) => (prev === targetChatId ? prev : targetChatId));
+    queueMicrotask(() => {
+      setSelectedId((prev) => (prev === targetChatId ? prev : targetChatId));
+    });
   }, [targetChatId, visibleThreads]);
 
   useEffect(() => {
@@ -394,12 +493,12 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!currentUser) return;
     void syncChatThreads();
-  }, [currentUser?.id, syncChatThreads]);
+  }, [currentUser, syncChatThreads]);
 
   useEffect(() => {
     if (!selectedId || !currentUser) return;
     void syncChatMessages(selectedId);
-  }, [selectedId, currentUser?.id, syncChatMessages]);
+  }, [selectedId, currentUser, syncChatMessages]);
 
   useEffect(() => {
     if (!targetChatId || !targetMessageId) return;
@@ -423,6 +522,29 @@ export default function MessagesPage() {
   }, [lightbox]);
 
   useEffect(() => {
+    if (!messageBubbleMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMessageBubbleMenu(null);
+    };
+    const onScroll = () => setMessageBubbleMenu(null);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [messageBubbleMenu]);
+
+  useEffect(() => {
+    if (!messageBubbleInfo) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMessageBubbleInfo(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [messageBubbleInfo]);
+
+  useEffect(() => {
     if (!forwardingMessage) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setForwardingMessage(null);
@@ -433,8 +555,10 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (groupInfoOpen && selected?.kind === 'group') {
-      setGroupNameEdit(selected.name ?? '');
-      setGroupModalAddIds([]);
+      queueMicrotask(() => {
+        setGroupNameEdit(selected.name ?? '');
+        setGroupModalAddIds([]);
+      });
     }
   }, [groupInfoOpen, selected?.id, selected?.kind, selected?.name]);
 
@@ -448,13 +572,24 @@ export default function MessagesPage() {
   }, [groupInfoOpen]);
 
   useEffect(() => {
-    setReplyingTo(null);
-    setEditingId(null);
-    setDraft('');
-    setPendingAttachment(null);
+    queueMicrotask(() => {
+      setReplyingTo(null);
+      setEditingId(null);
+      setDraft('');
+      setPendingAttachment(null);
+      setMessageBubbleMenu(null);
+      setMessageBubbleInfo(null);
+    });
   }, [selectedId]);
 
   const canSend = currentUser && selected ? canSendInThread(selected, currentUser, users) : false;
+
+  /** Socket.IO: refetch messages when peers post (gdc-backend relay + chat-backend persistence). */
+  useGdcChatRoomSocket({
+    chatId: selectedId,
+    userId: currentUser?.id,
+    enabled: Boolean(currentUser?.id && selectedId),
+  });
 
   const handleSend = async () => {
     if (!selected || !canSend) return;
@@ -500,6 +635,29 @@ export default function MessagesPage() {
     if (editingId === m.id) cancelEdit();
   };
 
+  const openMessageBubbleMenu = useCallback((e: React.MouseEvent<HTMLButtonElement>, m: ChatMessage, isMine: boolean) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuW = 176;
+    const left = Math.min(window.innerWidth - menuW - 8, Math.max(8, rect.right - menuW));
+    const estH = 260;
+    let top = rect.bottom + 6;
+    if (top + estH > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - estH - 6);
+    }
+    setMessageBubbleMenu((prev) =>
+      prev?.messageId === m.id
+        ? null
+        : {
+            messageId: m.id,
+            top,
+            left,
+            message: m,
+            mine: isMine,
+          },
+    );
+  }, []);
+
   const handlePickFile = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -522,7 +680,10 @@ export default function MessagesPage() {
     reader.readAsDataURL(file);
   };
 
-  const dmTargets = currentUser ? dmTargetUserIds(currentUser, users) : [];
+  const dmTargets = useMemo(
+    () => (currentUser ? dmTargetUserIds(currentUser, users) : []),
+    [currentUser, users],
+  );
   const dmTargetsFiltered = useMemo(() => {
     const q = dmSearch.trim().toLowerCase();
     if (!q) return dmTargets;
@@ -689,7 +850,7 @@ export default function MessagesPage() {
 
   if (!currentUser) {
     return (
-      <div className="mx-auto max-w-lg py-20 text-center text-slate-600">
+      <div className="mx-auto max-w-lg py-20 text-center text-slate-600 dark:text-slate-300">
         <p>Sign in to use Messages.</p>
       </div>
     );
@@ -699,25 +860,27 @@ export default function MessagesPage() {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-amber-100 bg-amber-50/80 p-8 text-center">
         <Lock className="mx-auto h-10 w-10 text-amber-600" />
-        <p className="mt-4 font-semibold text-slate-800">Messages are unavailable</p>
-        <p className="mt-2 text-sm text-slate-600">Complete account approval to access messaging.</p>
+        <p className="mt-4 font-semibold text-slate-800 dark:text-slate-100">Messages are unavailable</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Complete account approval to access messaging.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-100">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-violet-50/40 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Full-width chat shell — list + conversation scroll inside only (long threads) */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-slate-200/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-800/70 dark:shadow-[inset_0_1px_0_rgba(0,0,0,0.25)]">
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           {/* Thread list — ONLY this column scrolls vertically */}
           <div
-            className={`flex min-h-0 min-w-0 w-full shrink-0 flex-col overflow-hidden border-r border-slate-200/70 bg-slate-100 md:w-[min(100%,400px)] lg:max-w-md ${
+            className={`flex min-h-0 min-w-0 w-full shrink-0 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-700/70 bg-gradient-to-b from-white via-slate-50/95 to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 shadow-[1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[1px_0_0_rgba(0,0,0,0.35)] backdrop-blur-xl md:w-64 md:max-w-[16rem] lg:w-72 lg:max-w-[18rem] ${
               selected ? 'hidden md:flex' : 'flex'
             }`}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-200/70 bg-slate-100 px-4 py-3.5">
-              <p className="text-[15px] font-semibold tracking-tight text-slate-900">Chat</p>
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90 px-3 py-2.5 backdrop-blur-md">
+              <div>
+                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Messages</p>
+              </div>
               <div className="flex items-center gap-0.5">
                 <button
                   type="button"
@@ -728,8 +891,10 @@ export default function MessagesPage() {
                       return next;
                     });
                   }}
-                  className={`rounded-xl p-2 transition ${
-                    threadSearchOpen ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                  className={`rounded-lg p-2 transition ${
+                    threadSearchOpen
+                      ? 'bg-violet-100 text-violet-700 shadow-inner ring-1 ring-violet-200/80'
+                      : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-violet-600'
                   }`}
                   aria-label="Search chats"
                   title="Search chats"
@@ -743,7 +908,7 @@ export default function MessagesPage() {
                     setDmSearch('');
                     setDmOpen(true);
                   }}
-                  className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-lg p-2 text-slate-400 dark:text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-violet-600"
                   aria-label="New message"
                 >
                   <SquarePen className="h-4 w-4" />
@@ -757,7 +922,7 @@ export default function MessagesPage() {
                       setGroupOpen(true);
                       setErrorHint(null);
                     }}
-                    className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    className="rounded-lg p-2 text-slate-400 dark:text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-violet-600"
                     aria-label="New group"
                   >
                     <Users className="h-4 w-4" />
@@ -766,18 +931,20 @@ export default function MessagesPage() {
               </div>
             </div>
             {threadSearchOpen && (
-              <div className="shrink-0 border-b border-slate-200/70 bg-slate-100 px-3 pb-3">
+              <div className="shrink-0 border-b border-slate-200 dark:border-slate-700/50 bg-white/60 dark:bg-slate-900/60 px-2.5 pb-2.5 pt-1.5 backdrop-blur-sm">
                 <input
                   value={threadSearchQ}
                   onChange={(e) => setThreadSearchQ(e.target.value)}
-                  placeholder="Search chats…"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                  placeholder="Search conversations…"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-50 shadow-sm placeholder:text-slate-400 outline-none ring-violet-500/0 transition focus:border-violet-300 focus:ring-2 focus:ring-violet-500/15"
                 />
               </div>
             )}
-            <div className="scrollbar-hide min-h-0 flex-1 basis-0 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-slate-100 px-2 pb-3 pt-1">
+            <div className="scrollbar-hide min-h-0 flex-1 basis-0 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 pb-3 pt-1.5">
               {visibleThreadsFiltered.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-500">No conversations yet.</p>
+                <p className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/90 bg-white/60 dark:bg-slate-900/60 px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400 backdrop-blur-sm">
+                  No conversations yet.
+                </p>
               ) : (
                 visibleThreadsFiltered.map((t) => {
                   const active = selected?.id === t.id;
@@ -789,8 +956,12 @@ export default function MessagesPage() {
                   return (
                     <div
                       key={t.id}
-                      className={`flex w-full gap-0.5 rounded-xl transition-colors ${
-                        active ? 'bg-slate-200' : hasUnread ? 'bg-white shadow-sm ring-1 ring-slate-200/90' : ''
+                      className={`flex w-full gap-0.5 rounded-xl transition-colors duration-150 ${
+                        active
+                          ? 'border-l-4 border-slate-900 bg-slate-50 dark:border-indigo-400 dark:bg-slate-800'
+                          : hasUnread
+                            ? 'border-l-4 border-transparent bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                            : 'border-l-4 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/80'
                       }`}
                     >
                       <button
@@ -799,40 +970,55 @@ export default function MessagesPage() {
                           setSelectedId(t.id);
                           setErrorHint(null);
                         }}
-                        className={`flex min-w-0 flex-1 gap-3 rounded-l-xl px-3 py-3 text-left transition-colors ${
+                        className={`flex min-w-0 flex-1 gap-2.5 rounded-l-xl px-2 py-2 text-left transition-colors ${
                           active
-                            ? 'text-slate-900'
+                            ? 'text-slate-900 dark:text-slate-50'
                             : hasUnread
-                              ? 'hover:bg-slate-50 text-slate-900'
-                              : 'text-slate-900 hover:bg-slate-200'
+                              ? 'text-slate-900 dark:text-slate-50'
+                              : 'text-slate-900 dark:text-slate-50'
                         }`}
                       >
-                      <ThreadListAvatar thread={t} currentUserId={currentUser.id} users={users} />
+                      <ThreadListAvatar
+                        thread={t}
+                        currentUserId={currentUser.id}
+                        users={users}
+                        compact
+                      />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-1.5">
                           <span
-                            className={`min-w-0 truncate ${
-                              hasUnread && !active ? 'font-bold text-slate-950' : 'font-semibold text-slate-900'
+                              className={`min-w-0 truncate text-[13px] leading-tight ${
+                              active
+                                ? 'font-semibold text-slate-900 dark:text-slate-50'
+                                : hasUnread
+                                  ? 'font-bold text-slate-950 dark:text-slate-50'
+                                  : 'font-semibold text-slate-900 dark:text-slate-50'
                             }`}
                           >
                             {chatThreadTitle(t, currentUser.id, userName)}
                           </span>
                           {last && (
                             <span
-                              className={`shrink-0 whitespace-nowrap text-[11px] tabular-nums ${
-                                hasUnread && !active
-                                  ? 'font-semibold text-slate-600'
-                                  : 'font-medium text-slate-400'
+                              className={`shrink-0 whitespace-nowrap text-[10px] tabular-nums ${
+                                active
+                                  ? 'font-medium text-slate-500 dark:text-slate-400'
+                                  : hasUnread && !active
+                                    ? 'font-semibold text-slate-600 dark:text-slate-300'
+                                    : 'font-medium text-slate-400 dark:text-slate-500'
                               }`}
                             >
                               {format(new Date(last.createdAt), 'h:mm a')}
                             </span>
                           )}
                         </div>
-                        <div className="mt-0.5 flex items-end justify-between gap-2">
+                        <div className="mt-0.5 flex items-end justify-between gap-1.5">
                           <p
-                            className={`line-clamp-2 min-w-0 flex-1 text-xs leading-snug ${
-                              hasUnread && !active ? 'font-medium text-slate-700' : 'text-slate-500'
+                            className={`line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug ${
+                              active
+                                ? 'text-slate-600 dark:text-slate-300'
+                                : hasUnread && !active
+                                  ? 'font-medium text-slate-700 dark:text-slate-200'
+                                  : 'text-slate-500 dark:text-slate-400'
                             }`}
                           >
                             {previewLine
@@ -843,7 +1029,7 @@ export default function MessagesPage() {
                           </p>
                           {hasUnread && (
                             <span
-                              className="inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold leading-none text-white shadow-sm"
+                              className="inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-purple-600 px-1.5 text-[11px] font-bold leading-none text-white shadow-none"
                               aria-label={`${unread} unread messages`}
                             >
                               {unread > 99 ? '99+' : unread}
@@ -859,8 +1045,8 @@ export default function MessagesPage() {
                           e.stopPropagation();
                           togglePinThread(t.id);
                         }}
-                        className={`shrink-0 self-stretch rounded-r-xl px-2 transition-colors hover:bg-slate-300/50 ${
-                          isPinned ? 'text-amber-600' : 'text-slate-400'
+                        className={`shrink-0 self-stretch rounded-r-xl px-1.5 transition-colors hover:bg-slate-100/80 dark:hover:bg-slate-800/80 ${
+                          isPinned ? 'text-amber-600' : 'text-slate-400 dark:text-slate-500 hover:text-violet-600 dark:hover:text-violet-400'
                         }`}
                         title={isPinned ? 'Unpin from top' : 'Pin to top'}
                         aria-label={isPinned ? 'Unpin chat' : 'Pin chat to top'}
@@ -879,22 +1065,24 @@ export default function MessagesPage() {
 
           {/* Conversation — ONLY message list scrolls; header + composer fixed in column */}
           <div
-            className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-100 ${!selected ? 'hidden md:flex' : 'flex'}`}
+            className={`relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50/35 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 ${!selected ? 'hidden md:flex' : 'flex'}`}
           >
             {selected ? (
               <>
-                <div className="flex shrink-0 items-center gap-2 border-b border-slate-200/70 bg-slate-100 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3.5">
+                <div className="relative z-10 flex shrink-0 items-center gap-2 border-b border-white/80 bg-white/75 px-3 py-3 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/75 dark:shadow-none sm:gap-3 sm:px-7 sm:py-4">
                   <button
                     type="button"
-                    className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 md:hidden"
+                    className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-200 md:hidden"
                     onClick={() => setSelectedId(null)}
                     aria-label="Back to list"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <ThreadListAvatar thread={selected} currentUserId={currentUser.id} users={users} />
+                  <div className="rounded-2xl p-0.5 shadow-none ring-2 ring-slate-200/90 transition-colors hover:bg-slate-50 dark:ring-slate-600 dark:hover:bg-slate-800/80">
+                    <ThreadListAvatar thread={selected} currentUserId={currentUser.id} users={users} />
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-slate-900">
+                    <p className="truncate text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-50">
                       {chatThreadTitle(selected, currentUser.id, userName)}
                     </p>
                     {selected.kind === 'dm' && (() => {
@@ -902,9 +1090,9 @@ export default function MessagesPage() {
                       const u = other ? users.find((x) => String(x.id) === String(other)) : undefined;
                       if (!u) return null;
                       return (
-                        <p className={`mt-0.5 truncate text-[11px] font-medium ${presenceTextClass(u)}`}>
+                        <p className={`mt-1 truncate text-[12px] font-medium ${presenceTextClass(u)}`}>
                           <span
-                            className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${presenceDotClass(u)}`}
+                            className={`mr-1.5 inline-block h-2 w-2 rounded-full align-middle shadow-sm ${presenceDotClass(u)}`}
                             aria-hidden
                           />
                           {presenceLabel(u)}
@@ -912,7 +1100,7 @@ export default function MessagesPage() {
                       );
                     })()}
                     {selected.kind === 'group' && (
-                      <p className="truncate text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-violet-400">
                         {selected.teamKey
                           ? `Team chat · ${selected.teamKey}`
                         : selected.scope === 'group'
@@ -923,10 +1111,10 @@ export default function MessagesPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
-                      className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      className="rounded-xl p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 hover:shadow-none dark:text-slate-500 dark:hover:bg-slate-800/80 dark:hover:text-slate-200"
                       aria-label="Search messages"
                       onClick={() => {
                         setMsgSearchQ('');
@@ -939,10 +1127,10 @@ export default function MessagesPage() {
                     </button>
                     <button
                       type="button"
-                      className={`rounded-xl p-2 transition hover:bg-slate-100 ${
+                      className={`rounded-xl p-2.5 transition hover:shadow-none ${
                         pinnedThreadIds.includes(selected.id)
-                          ? 'text-amber-600 hover:bg-amber-50'
-                          : 'text-slate-400 hover:text-slate-600'
+                          ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-800/80'
+                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800/80 dark:hover:text-slate-200'
                       }`}
                       aria-label={
                         pinnedThreadIds.includes(selected.id) ? 'Unpin chat from top' : 'Pin chat to top'
@@ -958,7 +1146,7 @@ export default function MessagesPage() {
                     {selected.kind === 'group' && (
                       <button
                         type="button"
-                        className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        className="rounded-xl p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 hover:shadow-none dark:text-slate-500 dark:hover:bg-slate-800/80 dark:hover:text-slate-200"
                         aria-label="Group details"
                         onClick={() => {
                           setErrorHint(null);
@@ -976,17 +1164,42 @@ export default function MessagesPage() {
                         setAddUserIds([]);
                         setAddOpen(true);
                       }}
-                      className="shrink-0 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 sm:px-3"
+                      className="shrink-0 rounded-xl border border-violet-200/90 bg-gradient-to-r from-violet-600 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-none transition hover:brightness-105 sm:px-3.5"
                     >
                       Add people
                     </button>
                   )}
                 </div>
 
-                <div className="scrollbar-hide min-h-0 flex-1 basis-0 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-slate-200/60 px-4 py-5 sm:px-8">
-                  <div className="mx-auto w-full min-w-0 max-w-3xl space-y-4">
-                    {selected.messages.map((m, idx) => {
+                <div className="scrollbar-hide relative min-h-0 flex-1 basis-0 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-slate-50 bg-[radial-gradient(circle_at_1px_1px,rgba(124,92,252,0.06)_1px,transparent_0)] bg-[length:22px_22px] px-4 py-6 dark:bg-slate-950/90 dark:bg-[radial-gradient(circle_at_1px_1px,rgba(124,92,252,0.04)_1px,transparent_0)] sm:px-8">
+                  <div className="mx-auto w-full min-w-0 max-w-3xl space-y-3">
+                    {selected.messages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center px-4 py-16 text-center sm:py-24">
+                        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 shadow-none ring-4 ring-white/80 dark:ring-slate-800/80">
+                          <MessageSquare className="h-11 w-11 text-white" strokeWidth={1.25} />
+                        </div>
+                        <p className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">Start the conversation</p>
+                        <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                          Send a message to start chatting with{' '}
+                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                            {chatThreadTitle(selected, currentUser.id, userName)}
+                          </span>
+                          .
+                        </p>
+                      </div>
+                    ) : (
+                      selected.messages.map((m, idx) => {
                       const mine = m.authorId === currentUser.id;
+                      const hasAttachment = Boolean(m.attachment && !m.deleted);
+                      const bodyText = m.body.trim();
+                      const outgoingFlush = mine && hasAttachment && !bodyText;
+                      const outgoingCaptionThenMedia = mine && hasAttachment && Boolean(bodyText);
+                      const overlayMetaOnImage =
+                        mine &&
+                        outgoingFlush &&
+                        m.attachment &&
+                        !m.deleted &&
+                        m.attachment.mimeType.startsWith('image/');
                       const prev = idx > 0 ? selected.messages[idx - 1] : null;
                       const showDay =
                         !prev || !isSameDay(new Date(prev.createdAt), new Date(m.createdAt));
@@ -999,82 +1212,53 @@ export default function MessagesPage() {
                           }}
                         >
                           {showDay && (
-                            <div className="my-4 flex justify-center">
-                              <span className="rounded-full bg-slate-200/80 px-4 py-1 text-[11px] font-semibold text-slate-500">
-                                {format(d, 'EEEE, MMM d · HH:mm')}
+                            <div className="my-5 flex justify-center">
+                              <span className="rounded-full border border-white/90 bg-white/95 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-violet-600 shadow-none backdrop-blur-md dark:border-slate-700/90 dark:bg-slate-900/95 dark:text-violet-400">
+                                {isToday(d) ? 'Today' : format(d, 'EEEE, MMM d')}
                               </span>
                             </div>
                           )}
                           <div
-                            className={`flex w-full min-w-0 items-end gap-2 ${mine ? 'flex-row-reverse justify-start' : 'flex-row justify-start'}`}
+                            className={`flex w-full min-w-0 items-end gap-2.5 ${mine ? 'flex-row-reverse justify-start' : 'flex-row justify-start'}`}
                           >
-                            {!mine && (
-                              <UserAvatar userId={m.authorId} users={users} size="sm" variant="message" />
-                            )}
-                            <div className="group/message relative min-w-0 max-w-[min(100%,26rem)] shrink-0 sm:max-w-md">
-                              {!m.deleted && (
-                                <div
-                                  className={`absolute -top-2 z-20 flex items-center gap-0.5 rounded-lg border border-slate-200/90 bg-white px-0.5 py-0.5 shadow-md opacity-0 transition-opacity group-hover/message:opacity-100 ${mine ? 'right-0' : 'left-0'}`}
-                                >
-                                  <button
-                                    type="button"
-                                    className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
-                                    title="Reply"
-                                    onClick={() => {
-                                      setReplyingTo(m);
-                                      setEditingId(null);
-                                    }}
-                                  >
-                                    <Reply className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
-                                    title="Forward"
-                                    onClick={() => {
-                                      setErrorHint(null);
-                                      setForwardingMessage(m);
-                                      setEditingId(null);
-                                      setReplyingTo(null);
-                                    }}
-                                  >
-                                    <Forward className="h-3.5 w-3.5" />
-                                  </button>
-                                  {mine && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
-                                        title="Edit"
-                                        onClick={() => startEditMessage(m)}
-                                      >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="rounded-md p-1.5 text-rose-600 hover:bg-rose-50"
-                                        title="Delete"
-                                        onClick={() => handleDeleteMessage(m)}
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              )}
+                            <div className="relative min-w-0 max-w-[min(100%,26rem)] shrink-0 sm:max-w-md">
                               <div
-                                className={`rounded-3xl px-4 py-3 text-sm shadow-sm ${
+                                className={`rounded-[1.35rem] text-[15px] leading-relaxed ${
                                   mine
-                                    ? 'rounded-br-lg bg-gradient-to-br from-[#6366f1] to-[#5b5bd6] text-white'
-                                    : 'rounded-bl-lg border border-slate-100 bg-white text-slate-800'
-                                }`}
+                                    ? `rounded-br-md bg-gradient-to-br from-[#6366f1] via-[#5b5bd6] to-[#7c3aed] text-white shadow-none ring-1 ring-white/15 ${
+                                        outgoingFlush
+                                          ? 'overflow-hidden p-0'
+                                          : outgoingCaptionThenMedia
+                                            ? 'overflow-hidden px-4 pb-0 pt-3'
+                                            : 'px-4 py-3'
+                                      }`
+                                    : 'rounded-bl-md border border-white/90 bg-white/95 dark:bg-slate-900/95 px-4 py-3 text-slate-800 dark:text-slate-100 shadow-sm backdrop-blur-sm ring-1 ring-slate-100 dark:border-slate-700/80 dark:shadow-none dark:ring-slate-800/90'
+                                } relative`}
                               >
+                                {!m.deleted && (
+                                  <button
+                                    type="button"
+                                    className={`absolute right-1.5 top-1.5 z-30 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                                      mine
+                                        ? 'text-indigo-50 hover:bg-black/20'
+                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                    }`}
+                                    aria-label="Message options"
+                                    aria-expanded={messageBubbleMenu?.messageId === m.id}
+                                    aria-haspopup="menu"
+                                    onClick={(e) => openMessageBubbleMenu(e, m, mine)}
+                                  >
+                                    <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+                                  </button>
+                                )}
                                 {m.replyToId && (() => {
                                   const parent = selected.messages.find((x) => x.id === m.replyToId);
                                   if (!parent) return null;
                                   return (
                                     <div
                                       className={`mb-2 rounded-md border-l-2 px-2 py-1.5 text-[11px] leading-snug ${
+                                        outgoingFlush ? 'mx-3 mt-3' : ''
+                                      } ${
                                         mine
                                           ? 'border-white/70 bg-black/20'
                                           : 'border-indigo-500 bg-slate-100'
@@ -1088,6 +1272,8 @@ export default function MessagesPage() {
                                 {m.forwardedFrom && !m.deleted && (
                                   <div
                                     className={`mb-2 rounded-lg border-l-2 px-2 py-1.5 text-[11px] leading-snug ${
+                                      mine && outgoingFlush ? 'mx-3 mt-3' : ''
+                                    } ${
                                       mine
                                         ? 'border-emerald-300/90 bg-black/15'
                                         : 'border-emerald-500 bg-emerald-50/90'
@@ -1100,9 +1286,9 @@ export default function MessagesPage() {
                                     >
                                       Forwarded
                                     </p>
-                                    <p className={`mt-0.5 ${mine ? 'text-indigo-100/95' : 'text-slate-700'}`}>
+                                    <p className={`mt-0.5 ${mine ? 'text-indigo-100/95' : 'text-slate-700 dark:text-slate-200'}`}>
                                       <span className="font-semibold">{m.forwardedFrom.sourceChatTitle}</span>
-                                      <span className={mine ? 'text-indigo-200/90' : 'text-slate-400'}>
+                                      <span className={mine ? 'text-indigo-200/90' : 'text-slate-400 dark:text-slate-500'}>
                                         {' '}
                                         ·{' '}
                                       </span>
@@ -1111,50 +1297,139 @@ export default function MessagesPage() {
                                   </div>
                                 )}
                                 {!mine && selected.kind === 'group' && (
-                                  <p className="mb-1 text-[10px] font-semibold tracking-wide text-slate-500">
+                                  <p className="mb-1 text-[10px] font-semibold tracking-wide text-slate-500 dark:text-slate-400">
                                     {userName(m.authorId)}
                                   </p>
                                 )}
                                 {m.deleted ? (
-                                  <p className={`text-sm italic ${mine ? 'text-indigo-100' : 'text-slate-400'}`}>
+                                  <p className={`text-sm italic ${mine ? 'text-indigo-100' : 'text-slate-400 dark:text-slate-500'}`}>
                                     This message was deleted
                                   </p>
                                 ) : (
                                   <>
                                     {m.body.trim() ? (
-                                      <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
+                                      <p
+                                        className={`whitespace-pre-wrap break-words leading-relaxed ${outgoingCaptionThenMedia ? 'pb-1' : ''}`}
+                                      >
+                                        {m.body}
+                                      </p>
                                     ) : null}
                                     {m.attachment && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setLightbox(m.attachment!)}
-                                        className={`mt-2 w-full overflow-hidden rounded-xl text-left transition hover:opacity-95 ${
-                                          mine ? 'ring-1 ring-white/40' : 'ring-1 ring-slate-200'
-                                        }`}
-                                      >
+                                      <>
                                         {m.attachment.mimeType.startsWith('image/') ? (
-                                          // eslint-disable-next-line @next/next/no-img-element -- data URL from chat
-                                          <img
-                                            src={m.attachment.dataUrl}
-                                            alt=""
-                                            className="max-h-48 w-full object-cover"
-                                          />
+                                          overlayMetaOnImage ? (
+                                            <div className="relative w-full overflow-hidden">
+                                              <button
+                                                type="button"
+                                                onClick={() => setLightbox(m.attachment!)}
+                                                className="block w-full overflow-hidden text-left transition hover:opacity-95"
+                                              >
+                                                {/* eslint-disable-next-line @next/next/no-img-element -- data URL from chat */}
+                                                <img
+                                                  src={m.attachment.dataUrl}
+                                                  alt=""
+                                                  className="block max-h-72 w-full object-cover sm:max-h-96"
+                                                />
+                                              </button>
+                                              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/65 via-black/35 to-transparent px-2 pb-1 pt-10">
+                                                <div className="flex flex-wrap items-center gap-x-1.5 text-[11px] font-medium leading-none text-white">
+                                                  <span>{format(d, 'HH:mm')}</span>
+                                                  {m.editedAt && !m.deleted && (
+                                                    <span className="text-white/75">(edited)</span>
+                                                  )}
+                                                </div>
+                                                {(() => {
+                                                  const readers = new Set(m.readByUserIds ?? []);
+                                                  const othersWhoRead = Array.from(readers).filter(
+                                                    (id) => id !== m.authorId,
+                                                  );
+                                                  const seen = othersWhoRead.length > 0;
+                                                  const Icon = seen ? CheckCheck : Check;
+                                                  return (
+                                                    <span
+                                                      className={`inline-flex shrink-0 items-center ${seen ? 'text-sky-300' : 'text-white'}`}
+                                                    >
+                                                      <Icon className="h-3.5 w-3.5" />
+                                                    </span>
+                                                  );
+                                                })()}
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => setLightbox(m.attachment!)}
+                                              className={
+                                                mine
+                                                  ? outgoingCaptionThenMedia
+                                                    ? '-mx-4 mt-2 block w-[calc(100%+2rem)] max-w-none overflow-hidden text-left transition hover:opacity-95'
+                                                    : outgoingFlush
+                                                      ? 'block w-full overflow-hidden text-left transition hover:opacity-95'
+                                                      : 'mt-2 block w-full overflow-hidden rounded-2xl text-left ring-1 ring-slate-200 transition hover:opacity-95 dark:ring-slate-700/80 dark:shadow-none'
+                                                  : 'mt-2 w-full overflow-hidden rounded-2xl text-left ring-1 ring-slate-200 transition hover:opacity-95 dark:ring-slate-700/80 dark:shadow-none'
+                                              }
+                                            >
+                                              {/* eslint-disable-next-line @next/next/no-img-element -- data URL from chat */}
+                                              <img
+                                                src={m.attachment.dataUrl}
+                                                alt=""
+                                                className="max-h-72 w-full object-cover sm:max-h-96"
+                                              />
+                                            </button>
+                                          )
                                         ) : (
-                                          <div
-                                            className={`flex items-center gap-2 px-3 py-2.5 text-xs ${
-                                              mine ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-800'
-                                            }`}
+                                          <button
+                                            type="button"
+                                            onClick={() => setLightbox(m.attachment!)}
+                                            className={
+                                              mine
+                                                ? outgoingCaptionThenMedia
+                                                  ? '-mx-4 mt-2 block w-[calc(100%+2rem)] overflow-hidden text-left transition hover:opacity-95'
+                                                  : outgoingFlush
+                                                    ? 'block w-full overflow-hidden text-left transition hover:opacity-95'
+                                                    : 'mt-2 block w-full overflow-hidden rounded-2xl text-left transition hover:opacity-95'
+                                                : 'mt-2 w-full overflow-hidden rounded-2xl text-left ring-1 ring-slate-200 dark:ring-slate-700 transition hover:opacity-95'
+                                            }
                                           >
-                                            <FileText className="h-4 w-4 shrink-0" />
-                                            <span className="min-w-0 truncate font-medium">{m.attachment.fileName}</span>
-                                          </div>
+                                            <div
+                                              className={`flex gap-3 px-4 pb-3 pt-4 text-left ${
+                                                mine ? 'text-white' : ''
+                                              }`}
+                                            >
+                                              <div
+                                                className={`flex h-[52px] w-[52px] shrink-0 flex-col items-center justify-center rounded-xl font-bold leading-none ${
+                                                  mine ? 'bg-white/25 dark:bg-white/10 text-[11px] text-white' : 'bg-slate-200 text-[11px] text-slate-700 dark:text-slate-200'
+                                                }`}
+                                              >
+                                                {fileExtensionBadge(m.attachment.fileName, m.attachment.mimeType)}
+                                              </div>
+                                              <div className="min-w-0 flex-1 pt-0.5">
+                                                <p
+                                                  className={`truncate text-[15px] font-semibold leading-snug ${
+                                                    mine ? 'text-white' : 'text-slate-900 dark:text-slate-50'
+                                                  }`}
+                                                >
+                                                  {m.attachment.fileName}
+                                                </p>
+                                                <p
+                                                  className={`mt-1 text-[12px] leading-snug ${mine ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}
+                                                >
+                                                  {mimeShortLabel(m.attachment.mimeType)} •{' '}
+                                                  {approxSizeFromDataUrl(m.attachment.dataUrl)}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </button>
                                         )}
-                                      </button>
+                                      </>
                                     )}
                                   </>
                                 )}
+                                {!overlayMetaOnImage && (
                                 <p
-                                  className={`mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] ${mine ? 'text-indigo-200' : 'text-slate-400'}`}
+                                  className={`mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] ${mine ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'} ${
+                                    mine && outgoingCaptionThenMedia ? 'px-4 pb-3 pt-1.5' : ''
+                                  } ${mine && outgoingFlush && !outgoingCaptionThenMedia ? 'px-3 pb-2.5 pt-1.5' : ''}`}
                                 >
                                   <span>{format(d, 'HH:mm')}</span>
                                   {m.editedAt && !m.deleted && (
@@ -1177,24 +1452,23 @@ export default function MessagesPage() {
                                     );
                                   })()}
                                 </p>
+                                )}
                               </div>
                             </div>
-                            {mine && (
-                              <UserAvatar userId={m.authorId} users={users} size="sm" variant="message" />
-                            )}
                           </div>
                         </div>
                       );
-                    })}
+                    })
+                    )}
                     <div ref={listEndRef} />
                   </div>
                 </div>
 
-                <div className="shrink-0 border-t border-slate-100/70 bg-slate-50 px-4 py-3 sm:px-8 sm:py-4">
+                <div className="shrink-0 border-t border-slate-200 dark:border-slate-700/40 bg-slate-50 bg-[radial-gradient(circle_at_1px_1px,rgba(124,92,252,0.06)_1px,transparent_0)] bg-[length:22px_22px] px-4 py-2.5 dark:bg-slate-950/95 dark:bg-[radial-gradient(circle_at_1px_1px,rgba(124,92,252,0.04)_1px,transparent_0)] sm:px-8 sm:py-3">
                   {errorHint && (
                     <p className="mb-2 text-xs font-medium text-rose-600">{errorHint}</p>
                   )}
-                  <div className="mx-auto w-full min-w-0 max-w-3xl">
+                  <div className="mx-auto w-full min-w-0 max-w-3xl space-y-3">
                     {selected.kind === 'group' &&
                       selected.adminsOnlyMessages &&
                       currentUser &&
@@ -1232,12 +1506,12 @@ export default function MessagesPage() {
                           <p className="font-semibold text-indigo-950">
                             Replying to {userName(replyingTo.authorId)}
                           </p>
-                          <p className="truncate text-slate-600">{messageSnippet(replyingTo)}</p>
+                          <p className="truncate text-slate-600 dark:text-slate-300">{messageSnippet(replyingTo)}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setReplyingTo(null)}
-                          className="shrink-0 rounded-lg p-1 text-slate-500 hover:bg-white/90"
+                          className="shrink-0 rounded-lg p-1 text-slate-500 dark:text-slate-400 hover:bg-white/90"
                           aria-label="Cancel reply"
                         >
                           <X className="h-4 w-4" />
@@ -1245,29 +1519,29 @@ export default function MessagesPage() {
                       </div>
                     )}
                     {pendingAttachment && !editingId && (
-                      <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs">
-                        <span className="min-w-0 truncate font-medium text-slate-700">
-                          📎 {pendingAttachment.fileName}
+                      <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-violet-100/90 bg-gradient-to-r from-violet-50/90 to-white px-3 py-2.5 text-xs shadow-sm">
+                        <span className="flex min-w-0 items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
+                          <span className="truncate">📎 {pendingAttachment.fileName}</span>
                         </span>
                         <button
                           type="button"
                           onClick={() => setPendingAttachment(null)}
-                          className="shrink-0 rounded-lg p-1 text-slate-500 hover:bg-slate-200"
+                          className="shrink-0 rounded-lg p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-200"
                           aria-label="Remove attachment"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                     )}
-                    <div className="flex items-end gap-1.5 sm:gap-2">
+                    <div className="flex items-center gap-1 rounded-[22px] border border-slate-200/80 bg-[#E4E1EC] px-3 py-1.5 shadow-sm dark:border-slate-700/90 dark:bg-slate-900 dark:shadow-none sm:gap-1.5 sm:rounded-[26px] sm:px-4 sm:py-2">
                       <button
                         type="button"
                         disabled={!canSend || !!editingId}
                         onClick={handlePickFile}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 disabled:opacity-40"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#4B4D7E] transition-colors hover:bg-[#4B4D7E]/[0.08] active:bg-[#4B4D7E]/[0.12] disabled:pointer-events-none disabled:opacity-35 dark:text-slate-400 dark:hover:bg-slate-800 sm:h-9 sm:w-9"
                         aria-label="Attach file"
                       >
-                        <Paperclip className="h-5 w-5" />
+                        <Paperclip className="h-[17px] w-[17px]" strokeWidth={1.75} />
                       </button>
                       <textarea
                         value={draft}
@@ -1290,10 +1564,10 @@ export default function MessagesPage() {
                               ? 'You cannot post here'
                               : editingId
                                 ? 'Edit your message…'
-                                : 'Write a message…'
+                                : 'Your message'
                         }
                         rows={1}
-                        className="min-h-[38px] max-h-28 min-w-0 flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm leading-snug text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                        className="min-h-[34px] max-h-32 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-1 text-[15px] font-normal leading-snug tracking-tight text-[#252847] placeholder:text-[#6B6E88] outline-none ring-0 selection:bg-violet-400/25 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
                       />
                       <button
                         type="button"
@@ -1305,20 +1579,30 @@ export default function MessagesPage() {
                             : !draft.trim() && !pendingAttachment)
                         }
                         onClick={handleSend}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#7c3aed] text-white shadow-md transition hover:brightness-105 disabled:opacity-40"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#4B4D7E] transition-colors hover:bg-[#4B4D7E]/[0.08] active:bg-[#4B4D7E]/[0.12] disabled:pointer-events-none disabled:opacity-35 dark:text-slate-400 dark:hover:bg-slate-800 sm:h-9 sm:w-9"
                         aria-label={editingId ? 'Save edit' : 'Send'}
                       >
-                        {editingId ? <Pencil className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                        {editingId ? (
+                          <Pencil className="h-[17px] w-[17px]" strokeWidth={1.75} aria-hidden />
+                        ) : (
+                          <Send className="h-[17px] w-[17px]" strokeWidth={1.75} aria-hidden />
+                        )}
                       </button>
                     </div>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-hidden bg-slate-100/60 p-10 text-center text-slate-500">
-                <MessageSquare className="h-14 w-14 text-slate-200" />
-                <p className="font-semibold text-slate-700">Select a conversation</p>
-                <p className="max-w-xs text-sm">Choose a chat from the list or start a new DM.</p>
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden bg-gradient-to-b from-slate-50/80 to-violet-50/30 p-10 text-center dark:from-slate-900 dark:to-slate-950">
+                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-indigo-50 shadow-inner ring-1 ring-white/80 dark:from-violet-950/50 dark:to-indigo-950/40 dark:ring-slate-700/80">
+                  <MessageSquare className="h-10 w-10 text-violet-400" strokeWidth={1.25} />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold tracking-tight text-slate-800 dark:text-slate-100">Select a conversation</p>
+                  <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                    Choose a chat from the list or start a new direct message.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1334,14 +1618,14 @@ export default function MessagesPage() {
           onClick={(e) => e.target === e.currentTarget && setGroupInfoOpen(false)}
         >
           <div
-            className="scrollbar-hide flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            className="scrollbar-hide flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
-              <h2 className="text-lg font-bold text-slate-900">Group details</h2>
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-5 py-4">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">Group details</h2>
               <button
                 type="button"
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => setGroupInfoOpen(false)}
                 aria-label="Close"
               >
@@ -1380,7 +1664,7 @@ export default function MessagesPage() {
                 {canEditSelectedGroup && selected.avatarUrl && (
                   <button
                     type="button"
-                    className="text-xs font-medium text-slate-500 hover:text-rose-600"
+                    className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-rose-600"
                     onClick={() => {
                       setErrorHint(null);
                       updateGroupChat(selected.id, { avatarUrl: null });
@@ -1390,7 +1674,7 @@ export default function MessagesPage() {
                   </button>
                 )}
               </div>
-              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-4 py-3">
                 <input
                   type="checkbox"
                   className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
@@ -1403,13 +1687,13 @@ export default function MessagesPage() {
                   }}
                 />
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                    <Lock className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    <Lock className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden />
                     Privacy lock
                   </span>
                 </span>
               </label>
-              <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+              <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-4 py-3">
                 <input
                   type="checkbox"
                   className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
@@ -1422,13 +1706,13 @@ export default function MessagesPage() {
                   }}
                 />
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                    <Crown className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    <Crown className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden />
                     Only admins can send messages
                   </span>
                 </span>
               </label>
-              <label className="mt-4 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <label className="mt-4 block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 Group name
               </label>
               <div className="mt-1 flex gap-2">
@@ -1436,7 +1720,7 @@ export default function MessagesPage() {
                   value={groupNameEdit}
                   onChange={(e) => setGroupNameEdit(e.target.value)}
                   disabled={!canEditSelectedGroup}
-                  className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
+                  className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm disabled:bg-slate-50"
                 />
                 {canEditSelectedGroup && (
                   <button
@@ -1450,14 +1734,14 @@ export default function MessagesPage() {
               </div>
               {canShowAddMembers && (
                 <>
-                  <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                     Add members
                   </p>
                   {eligibleToAddToSelected.length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-500">No one else can be added right now.</p>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">No one else can be added right now.</p>
                   ) : (
                     <>
-                      <div className="scrollbar-hide mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50 p-2">
+                      <div className="scrollbar-hide mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-2">
                         {eligibleToAddToSelected.map((u) => (
                           <label
                             key={u.id}
@@ -1468,8 +1752,8 @@ export default function MessagesPage() {
                               checked={groupModalAddIds.includes(u.id)}
                               onChange={() => toggleMember(u.id, groupModalAddIds, setGroupModalAddIds)}
                             />
-                            <span className="text-sm text-slate-800">
-                              {u.name} <span className="text-slate-500">({u.role})</span>
+                            <span className="text-sm text-slate-800 dark:text-slate-100">
+                              {u.name} <span className="text-slate-500 dark:text-slate-400">({u.role})</span>
                             </span>
                           </label>
                         ))}
@@ -1486,7 +1770,7 @@ export default function MessagesPage() {
                   )}
                 </>
               )}
-              <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 Members ({selected.memberIds.length})
               </p>
               <ul className="mt-2 space-y-2">
@@ -1507,11 +1791,11 @@ export default function MessagesPage() {
                     return (
                       <li
                         key={id}
-                        className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2"
+                        className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-3 py-2"
                       >
                         <UserAvatar userId={id} users={users} size="sm" variant="list" />
                         <div className="min-w-0 flex-1">
-                          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
                             <span className="min-w-0 truncate">{userName(id)}</span>
                             {isRowAdmin && (
                               <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-amber-100">
@@ -1520,7 +1804,7 @@ export default function MessagesPage() {
                               </span>
                             )}
                           </p>
-                          <p className="truncate text-xs text-slate-500">{u?.role ?? ''}</p>
+                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u?.role ?? ''}</p>
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5">
                           {canPromote && (
@@ -1542,7 +1826,7 @@ export default function MessagesPage() {
                           {canDemote && (
                             <button
                               type="button"
-                              className="rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                              className="rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                               title="Remove admin role"
                               onClick={() => {
                                 setErrorHint(null);
@@ -1557,7 +1841,7 @@ export default function MessagesPage() {
                           {canRemoveOther && (
                             <button
                               type="button"
-                              className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              className="rounded-lg p-2 text-slate-400 dark:text-slate-500 hover:bg-rose-50 hover:text-rose-600"
                               aria-label={`Remove ${userName(id)} from group`}
                               onClick={() => confirmRemoveOrLeaveMember(id)}
                             >
@@ -1601,15 +1885,15 @@ export default function MessagesPage() {
           onClick={() => setLightbox(null)}
         >
           <div
-            className="flex max-h-[92vh] max-w-[min(96vw,56rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="flex max-h-[92vh] max-w-[min(96vw,56rem)] flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-              <p className="min-w-0 truncate text-sm font-medium text-slate-800">{lightbox.fileName}</p>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-4 py-3">
+              <p className="min-w-0 truncate text-sm font-medium text-slate-800 dark:text-slate-100">{lightbox.fileName}</p>
               <button
                 type="button"
                 onClick={() => setLightbox(null)}
-                className="shrink-0 rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200"
+                className="shrink-0 rounded-full bg-slate-100 p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -1627,11 +1911,11 @@ export default function MessagesPage() {
                 <iframe
                   title={lightbox.fileName}
                   src={lightbox.dataUrl}
-                  className="mx-auto h-[min(80vh,720px)] w-full min-w-[min(90vw,48rem)] rounded-lg border border-slate-200"
+                  className="mx-auto h-[min(80vh,720px)] w-full min-w-[min(90vw,48rem)] rounded-lg border border-slate-200 dark:border-slate-700"
                 />
               ) : (
                 <div className="flex flex-col items-center gap-4 py-8">
-                  <FileText className="h-14 w-14 text-slate-400" />
+                  <FileText className="h-14 w-14 text-slate-400 dark:text-slate-500" />
                   <a
                     href={lightbox.dataUrl}
                     download={lightbox.fileName}
@@ -1656,7 +1940,7 @@ export default function MessagesPage() {
           onClick={(e) => e.target === e.currentTarget && setForwardingMessage(null)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {errorHint && (
@@ -1666,14 +1950,14 @@ export default function MessagesPage() {
             )}
             <div className="mb-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-slate-900">Forward to…</h2>
-                <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">Forward to…</h2>
+                <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
                   {messageSnippet(forwardingMessage)}
                 </p>
               </div>
               <button
                 type="button"
-                className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                className="shrink-0 rounded-xl p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => setForwardingMessage(null)}
                 aria-label="Close"
               >
@@ -1681,7 +1965,7 @@ export default function MessagesPage() {
               </button>
             </div>
             {forwardTargets.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 No other chat available where you can send messages. Open or create a DM or group first.
               </p>
             ) : (
@@ -1690,11 +1974,11 @@ export default function MessagesPage() {
                   <li key={t.id}>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50"
+                      className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80"
                       onClick={() => runForwardTo(t.id)}
                     >
                       <ThreadListAvatar thread={t} currentUserId={currentUser.id} users={users} />
-                      <span className="min-w-0 flex-1 truncate font-semibold text-slate-800">
+                      <span className="min-w-0 flex-1 truncate font-semibold text-slate-800 dark:text-slate-100">
                         {chatThreadTitle(t, currentUser.id, userName)}
                       </span>
                     </button>
@@ -1713,35 +1997,35 @@ export default function MessagesPage() {
           onClick={(e) => e.target === e.currentTarget && setDmOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">New direct message</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">New direct message</h2>
               <button
                 type="button"
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => setDmOpen(false)}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             {dmTargets.length === 0 ? (
-              <p className="text-sm text-slate-500">No allowed contacts for your role.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No allowed contacts for your role.</p>
             ) : (
               <>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                   Search
                 </label>
                 <input
                   value={dmSearch}
                   onChange={(e) => setDmSearch(e.target.value)}
                   placeholder="Type a name or role…"
-                  className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                  className="mt-1 w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
                 />
                 <ul className="scrollbar-hide mt-4 max-h-64 space-y-1 overflow-y-auto">
                   {dmTargetsFiltered.length === 0 ? (
-                    <li className="px-2 py-6 text-center text-sm text-slate-500">No matches.</li>
+                    <li className="px-2 py-6 text-center text-sm text-slate-500 dark:text-slate-400">No matches.</li>
                   ) : (
                     dmTargetsFiltered.map((id) => {
                   const u = users.find((x) => x.id === id);
@@ -1750,7 +2034,7 @@ export default function MessagesPage() {
                     <li key={id}>
                       <button
                         type="button"
-                        className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80"
                         onClick={async () => {
                           const r = await openOrCreateDm(id);
                           if (r.ok) {
@@ -1761,8 +2045,8 @@ export default function MessagesPage() {
                       >
                         <UserAvatar userId={id} users={users} size="sm" variant="list" />
                         <div className="min-w-0 flex-1">
-                          <span className="font-semibold text-slate-800">{u.name}</span>
-                          <span className="ml-2 text-xs text-slate-400">{u.role}</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-100">{u.name}</span>
+                          <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{u.role}</span>
                         </div>
                       </button>
                     </li>
@@ -1783,14 +2067,14 @@ export default function MessagesPage() {
           onClick={(e) => e.target === e.currentTarget && setGroupOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">New group</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">New group</h2>
               <button
                 type="button"
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => setGroupOpen(false)}
               >
                 <X className="h-5 w-5" />
@@ -1801,21 +2085,21 @@ export default function MessagesPage() {
                 {errorHint}
               </p>
             )}
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
               Name
             </label>
             <input
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-sm"
               placeholder="e.g. Project Alpha"
             />
-            <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Members</p>
-            <div className="scrollbar-hide mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-100 p-2">
+            <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Members</p>
+            <div className="scrollbar-hide mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800 p-2">
               {eligibleForNewGroup.map((u) => (
                 <label
                   key={u.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/80"
                 >
                   <input
                     type="checkbox"
@@ -1823,12 +2107,12 @@ export default function MessagesPage() {
                     onChange={() => toggleMember(u.id, groupMemberIds, setGroupMemberIds)}
                   />
                   <span className="text-sm">
-                    {u.name} <span className="text-slate-400">({u.role})</span>
+                    {u.name} <span className="text-slate-400 dark:text-slate-500">({u.role})</span>
                   </span>
                 </label>
               ))}
             </div>
-            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3">
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-3 py-3">
               <input
                 type="checkbox"
                 className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
@@ -1836,16 +2120,16 @@ export default function MessagesPage() {
                 onChange={(e) => setNewGroupPrivacyLocked(e.target.checked)}
               />
               <span className="min-w-0">
-                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  <Lock className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  <Lock className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden />
                   Start with privacy lock
                 </span>
-                <span className="mt-1 block text-xs text-slate-500">
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
                   Only admins can add people later. You can change this anytime in group details.
                 </span>
               </span>
             </label>
-            <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3">
+            <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-3 py-3">
               <input
                 type="checkbox"
                 className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600"
@@ -1853,11 +2137,11 @@ export default function MessagesPage() {
                 onChange={(e) => setNewGroupAdminsOnlyMessages(e.target.checked)}
               />
               <span className="min-w-0">
-                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  <Crown className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  <Crown className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden />
                   Only admins can send messages
                 </span>
-                <span className="mt-1 block text-xs text-slate-500">
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
                   Announcements-style group; you can turn this off later in group details.
                 </span>
               </span>
@@ -1899,21 +2183,21 @@ export default function MessagesPage() {
           onClick={(e) => e.target === e.currentTarget && setMsgSearchOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="w-full max-w-lg rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">Search in chat</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">Search in chat</h2>
               <button
                 type="button"
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => setMsgSearchOpen(false)}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Query</label>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Query</label>
             <div className="mt-1 flex gap-2">
               <input
                 value={msgSearchQ}
@@ -1922,7 +2206,7 @@ export default function MessagesPage() {
                   if (e.key === 'Enter') void runMessageSearch();
                 }}
                 placeholder="Search text…"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
               />
               <button
                 type="button"
@@ -1936,7 +2220,7 @@ export default function MessagesPage() {
 
             <div className="mt-4">
               {msgSearchResults.length === 0 ? (
-                <p className="text-sm text-slate-500">No results.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">No results.</p>
               ) : (
                 <ul className="scrollbar-hide max-h-80 space-y-1 overflow-y-auto">
                   {msgSearchResults.map((m) => {
@@ -1946,7 +2230,7 @@ export default function MessagesPage() {
                       <li key={m.id}>
                         <button
                           type="button"
-                          className="flex w-full flex-col gap-1 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50"
+                          className="flex w-full flex-col gap-1 rounded-2xl border border-transparent px-3 py-2.5 text-left hover:border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80"
                           onClick={() => {
                             const el = messageRefs.current[m.id];
                             if (el) {
@@ -1959,12 +2243,12 @@ export default function MessagesPage() {
                           }}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-slate-700">{label}</span>
-                            <span className="text-[11px] font-medium text-slate-400">
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{label}</span>
+                            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
                               {format(new Date(m.createdAt), 'MMM d, h:mm a')}
                             </span>
                           </div>
-                          <p className="line-clamp-2 text-sm text-slate-900">{messageSnippet(m) || '—'}</p>
+                          <p className="line-clamp-2 text-sm text-slate-900 dark:text-slate-50">{messageSnippet(m) || '—'}</p>
                         </button>
                       </li>
                     );
@@ -1983,15 +2267,15 @@ export default function MessagesPage() {
           onClick={(e) => e.target === e.currentTarget && setAddOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-slate-900">Add people</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">Add people</h2>
             <div className="scrollbar-hide mt-3 max-h-48 space-y-1 overflow-y-auto">
               {eligibleToAddToSelected.map((u) => (
                 <label
                   key={u.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/80"
                 >
                   <input
                     type="checkbox"
@@ -2018,6 +2302,195 @@ export default function MessagesPage() {
             >
               Add selected
             </button>
+          </div>
+        </div>
+      )}
+
+      {typeof document !== 'undefined' &&
+        messageBubbleMenu &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[195]"
+              aria-hidden
+              onClick={() => setMessageBubbleMenu(null)}
+            />
+            <div
+              role="menu"
+              aria-label="Message options"
+              className="fixed z-[196] w-44 overflow-hidden rounded-lg border border-violet-200/70 bg-white/95 dark:bg-slate-900/95 py-0.5 text-[12px] shadow-lg shadow-violet-500/10 ring-1 ring-violet-100/50 backdrop-blur-md"
+              style={{ top: messageBubbleMenu.top, left: messageBubbleMenu.left }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const m = messageBubbleMenu.message;
+                const mine = messageBubbleMenu.mine;
+                const att = m.attachment;
+                const close = () => setMessageBubbleMenu(null);
+                const notYet = () => {
+                  setErrorHint('This option is not available in CRM chat yet.');
+                  close();
+                };
+                const isImageAtt = Boolean(att && !m.deleted && att.mimeType.startsWith('image/'));
+                const isAudioAtt = Boolean(
+                  att && !m.deleted && att.mimeType.toLowerCase().startsWith('audio/'),
+                );
+                const showEdit = mine && !m.deleted && !isImageAtt && !isAudioAtt;
+                return (
+                  <>
+                    <VoiceMenuItem
+                      icon={<Info />}
+                      label="Message info"
+                      onClick={() => {
+                        setMessageBubbleInfo(m);
+                        close();
+                      }}
+                    />
+                    <VoiceMenuItem
+                      icon={<Reply />}
+                      label="Reply"
+                      onClick={() => {
+                        setReplyingTo(m);
+                        setEditingId(null);
+                        close();
+                      }}
+                    />
+                    <VoiceMenuItem
+                      icon={<Copy />}
+                      label="Copy"
+                      onClick={() => {
+                        void (async () => {
+                          try {
+                            const text = m.body.trim() || messageSnippet(m);
+                            await navigator.clipboard.writeText(text);
+                            setErrorHint(null);
+                          } catch {
+                            setErrorHint('Could not copy to clipboard.');
+                          }
+                          close();
+                        })();
+                      }}
+                    />
+                    <VoiceMenuItem
+                      icon={<Forward />}
+                      label="Forward"
+                      onClick={() => {
+                        setErrorHint(null);
+                        setForwardingMessage(m);
+                        setEditingId(null);
+                        setReplyingTo(null);
+                        close();
+                      }}
+                    />
+                    {showEdit && (
+                      <VoiceMenuItem
+                        icon={<Pencil />}
+                        label="Edit"
+                        onClick={() => {
+                          startEditMessage(m);
+                          close();
+                        }}
+                      />
+                    )}
+                    <VoiceMenuItem icon={<Pin />} label="Pin" onClick={notYet} />
+                    {att?.dataUrl && (
+                      <VoiceMenuItem
+                        icon={<Download />}
+                        label="Save as"
+                        onClick={() => {
+                          const a = document.createElement('a');
+                          a.href = att.dataUrl;
+                          a.download =
+                            att.fileName ||
+                            (att.mimeType.startsWith('image/')
+                              ? 'image.jpg'
+                              : att.mimeType.toLowerCase().startsWith('audio/')
+                                ? 'audio.webm'
+                                : 'attachment');
+                          a.click();
+                          close();
+                        }}
+                      />
+                    )}
+                    <VoiceMenuDivider />
+                    {mine && currentUser && m.authorId === currentUser.id && !m.deleted && (
+                      <VoiceMenuItem
+                        icon={<Trash2 />}
+                        label="Delete"
+                        danger
+                        onClick={() => {
+                          close();
+                          void handleDeleteMessage(m);
+                        }}
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </>,
+          document.body,
+        )}
+
+      {messageBubbleInfo && (
+        <div
+          className="fixed inset-0 z-[198] flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
+          role="dialog"
+          aria-modal
+          aria-label="Message info"
+          onClick={(e) => e.target === e.currentTarget && setMessageBubbleInfo(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">Message info</h2>
+              <button
+                type="button"
+                className="rounded-lg p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => setMessageBubbleInfo(null)}
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div>
+                <dt className="font-semibold text-slate-500 dark:text-slate-400">From</dt>
+                <dd className="text-slate-900 dark:text-slate-50">{userName(messageBubbleInfo.authorId)}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-slate-500 dark:text-slate-400">Sent</dt>
+                <dd className="text-slate-900 dark:text-slate-50">{format(new Date(messageBubbleInfo.createdAt), 'PPpp')}</dd>
+              </div>
+              {messageBubbleInfo.editedAt && (
+                <div>
+                  <dt className="font-semibold text-slate-500 dark:text-slate-400">Edited</dt>
+                  <dd className="text-slate-900 dark:text-slate-50">{format(new Date(messageBubbleInfo.editedAt), 'PPpp')}</dd>
+                </div>
+              )}
+              {messageBubbleInfo.attachment && (
+                <>
+                  <div>
+                    <dt className="font-semibold text-slate-500 dark:text-slate-400">Type</dt>
+                    <dd className="text-slate-900 dark:text-slate-50">
+                      {messageBubbleInfo.attachment.mimeType.toLowerCase().startsWith('audio/')
+                        ? 'Audio'
+                        : messageBubbleInfo.attachment.mimeType.startsWith('image/')
+                          ? 'Image'
+                          : 'Attachment'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-slate-500 dark:text-slate-400">Approx. size</dt>
+                    <dd className="text-slate-900 dark:text-slate-50">
+                      {approxSizeFromDataUrl(messageBubbleInfo.attachment.dataUrl) || '—'}
+                    </dd>
+                  </div>
+                </>
+              )}
+            </dl>
           </div>
         </div>
       )}

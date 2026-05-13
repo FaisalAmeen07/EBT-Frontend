@@ -53,14 +53,14 @@ function PolicyToggle({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         'flex h-8 w-[3.25rem] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2',
-        checked ? 'justify-end bg-emerald-500' : 'justify-start bg-slate-200'
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950',
+        checked ? 'justify-end bg-emerald-500' : 'justify-start bg-slate-200 dark:bg-slate-600'
       )}
     >
       <span
         className={cn(
           'pointer-events-none h-[1.625rem] w-[1.625rem] shrink-0 rounded-full transition-[background-color,box-shadow] duration-200',
-          checked ? 'bg-white shadow-md' : 'bg-slate-700 shadow-none'
+          checked ? 'bg-white dark:bg-slate-900 shadow-md' : 'bg-slate-700 shadow-none'
         )}
       />
     </button>
@@ -252,71 +252,71 @@ export function TimeControlPage() {
 
   return (
     <div className="mx-auto min-h-full max-w-6xl space-y-8 pb-12">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/50 to-amber-50/20 p-8 shadow-sm">
-        <h1 className="flex items-center gap-3 text-3xl font-light tracking-tight text-slate-800">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-200/50">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-gradient-to-br from-white via-slate-50/50 to-amber-50/20 p-8 shadow-sm dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 dark:shadow-black/25">
+        <h1 className="flex items-center gap-3 text-3xl font-light tracking-tight text-slate-800 dark:text-slate-100">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-200/50 dark:shadow-amber-950/40">
             <Timer className="h-7 w-7" />
           </span>
           Time control
         </h1>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/40 to-white p-6 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/40 to-white p-6 shadow-sm dark:border-indigo-800/70 dark:from-indigo-950/35 dark:to-slate-900 dark:shadow-black/20">
         <div className="flex flex-wrap items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md dark:shadow-black/40">
             <CalendarClock className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-slate-900">Company office shift by date (all staff)</h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Company office shift by date (all staff)</h2>
 
           </div>
         </div>
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Date</label>
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Date</label>
             <input
               type="date"
               value={companyDay}
               onChange={(e) => setCompanyDay(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-600"
             />
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
               Office start
             </label>
             <input
               type="time"
               value={companyStartTime}
               onChange={(e) => setCompanyStartTime(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-600"
             />
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
               Office end
             </label>
             <input
               type="time"
               value={companyEndTime}
               onChange={(e) => setCompanyEndTime(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-600"
             />
           </div>
           <button
             type="button"
             onClick={() => void saveShiftTiming()}
-            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 dark:hover:bg-indigo-500"
           >
             Save shift timing
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
         <div className="min-w-0 max-w-xl">
-          <h2 className="text-base font-semibold text-slate-900">Shift status</h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Shift status</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Uses backend `/api/shift-status` and controls whether clock-in is enabled.
           </p>
         </div>
@@ -325,15 +325,15 @@ export function TimeControlPage() {
           onCheckedChange={(next) => void toggleShiftStatus(next)}
           aria-label="Enable shifts"
         />
-        {loadingShift ? <span className="text-xs text-slate-500">Loading...</span> : null}
+        {loadingShift ? <span className="text-xs text-slate-500 dark:text-slate-400">Loading...</span> : null}
       </div>
 
       {/* Geo-Fencing */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 max-w-xl">
-            <h2 className="text-base font-semibold text-slate-900">Geo-Fencing</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Geo-Fencing</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               Restrict clock-ins to within a radius of the office anchor. Requires browser location permission when
               employees clock in.
             </p>
@@ -346,7 +346,7 @@ export function TimeControlPage() {
         </div>
 
         {geoFencingEnabled && (
-          <div className="mt-6 space-y-6 border-t border-slate-100 pt-6">
+          <div className="mt-6 space-y-6 border-t border-slate-100 dark:border-slate-800 pt-6">
             <fieldset className="space-y-3">
               <legend className="sr-only">Radius mode</legend>
               <label className="flex cursor-pointer items-start gap-3">
@@ -358,8 +358,8 @@ export function TimeControlPage() {
                   className="mt-1"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-800">Use radius as global</span>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                  <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">Use radius as global</span>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <input
                       type="number"
                       min={0}
@@ -368,7 +368,7 @@ export function TimeControlPage() {
                       value={globalDisplayValue}
                       placeholder={geoFencingRadiusUnit === 'miles' ? '0.05' : '50'}
                       onChange={(e) => onGlobalRadiusChange(e.target.value)}
-                      className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 disabled:opacity-50"
+                      className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-50"
                     />
                     <label className="sr-only" htmlFor="geo-global-radius-unit">
                       Radius unit
@@ -382,14 +382,14 @@ export function TimeControlPage() {
                           geoFencingRadiusUnit: e.target.value as GeoRadiusUnit,
                         })
                       }
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-50"
                     >
                       <option value="miles">Miles</option>
                       <option value="meters">Meters</option>
                     </select>
                   </div>
-                  <p className="mt-1.5 text-xs text-slate-500">{globalHelperLine}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{globalHelperLine}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
                     Stored in miles on the server (meters are converted automatically). Use 0 to disable distance check
                     while geo-fencing is on.
                   </p>
@@ -404,8 +404,8 @@ export function TimeControlPage() {
                   className="mt-1"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-800">Set custom radius per site</span>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">Set custom radius per site</span>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     Uses each user&apos;s work site; falls back to global radius (miles) if a site has no value.
                     Per-site values use the same unit as global.
                   </p>
@@ -420,7 +420,7 @@ export function TimeControlPage() {
                   const display = geoFencingRadiusUnit === 'miles' ? mi : milesToMeters(mi);
                   return (
                     <div key={site} className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{site}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium text-slate-700 dark:text-slate-200">{site}</span>
                       <input
                         type="number"
                         min={0}
@@ -428,26 +428,26 @@ export function TimeControlPage() {
                         value={display}
                         placeholder={geoFencingRadiusUnit === 'miles' ? '0.05' : '50'}
                         onChange={(e) => onSiteRadiusChange(site, e.target.value)}
-                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5"
+                        className="w-24 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-100"
                       />
-                      <span className="text-slate-500">{geoFencingRadiusUnit === 'miles' ? 'mi' : 'm'}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{geoFencingRadiusUnit === 'miles' ? 'mi' : 'm'}</span>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <MapPin className="h-4 w-4 text-blue-600" />
+            <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 p-4">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 Office anchor (latitude / longitude)
               </div>
-              <p className="mb-3 text-xs text-slate-500">
+              <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
                 Required when geo-fencing is on and radius &gt; 0. Distance is measured from this point to the
                 employee&apos;s device when they tap Clock In.
               </p>
               <div className="flex flex-wrap gap-3">
-                <label className="text-xs font-semibold text-slate-600">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                   Latitude
                   <input
                     type="number"
@@ -462,10 +462,10 @@ export function TimeControlPage() {
                         if (Number.isFinite(n)) patchAttendanceControlSettings({ geoFencingOfficeLat: n });
                       }
                     }}
-                    className="mt-1 block w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
+                    className="mt-1 block w-36 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-100"
                   />
                 </label>
-                <label className="text-xs font-semibold text-slate-600">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                   Longitude
                   <input
                     type="number"
@@ -480,7 +480,7 @@ export function TimeControlPage() {
                         if (Number.isFinite(n)) patchAttendanceControlSettings({ geoFencingOfficeLng: n });
                       }
                     }}
-                    className="mt-1 block w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
+                    className="mt-1 block w-36 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-100"
                   />
                 </label>
               </div>

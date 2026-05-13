@@ -485,21 +485,21 @@ export default function TeamAssignTLPage() {
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-b from-slate-100/90 via-slate-50 to-white">
+    <div className="min-h-full bg-gradient-to-b from-slate-100/90 via-slate-50 to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-[1200px] px-4 pb-12 pt-6 sm:px-6">
         <div className="mb-8 flex flex-wrap items-center gap-3">
-          <Menu className="h-7 w-7 shrink-0 text-slate-600 lg:hidden" aria-hidden />
+          <Menu className="h-7 w-7 shrink-0 text-slate-600 dark:text-slate-300 lg:hidden" aria-hidden />
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Team Assignment</h1>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-2xl">Team Assignment</h1>
           </div>
         </div>
-        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-md shadow-slate-200/40 ring-1 ring-slate-200/60 backdrop-blur-sm sm:p-5">
+        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 p-4 shadow-md shadow-slate-200/40 ring-1 ring-slate-200 dark:shadow-black/30 dark:ring-slate-700/60 backdrop-blur-sm sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-slate-600">
+            <label className="flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
               Team name
               <div className="relative">
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <select
                   value={teamNameFilter}
                   onChange={(e) => {
@@ -508,7 +508,7 @@ export default function TeamAssignTLPage() {
                     setMessage(null);
                     setAddToTeamIds(new Set());
                   }}
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-3 pr-9 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full appearance-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 py-2.5 pl-3 pr-9 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
                 >
                   <option value={TEAM_ALL}>All teams</option>
                   {teamNameOptions.map((t) => (
@@ -519,20 +519,20 @@ export default function TeamAssignTLPage() {
                 </select>
               </div>
             </label>
-            <label className="flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-slate-600">
+            <label className="flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <span className="flex flex-wrap items-center gap-2">
                 Assign to Team Leader
-                <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800">
+                <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-200">
                   TL
                 </span>
               </span>
               <div className="relative">
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <select
                   value={selectedLeaderId}
                   disabled={assigningLeader}
                   onChange={(e) => void handleLeaderSelect(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-3 pr-9 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+                  className="w-full appearance-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 py-2.5 pl-3 pr-9 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 disabled:opacity-60"
                 >
                   <option value="">
                     {teamNameFilter === TEAM_ALL
@@ -554,7 +554,7 @@ export default function TeamAssignTLPage() {
             type="button"
             onClick={openAssignModal}
             title="Create new team"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md transition hover:bg-blue-700 dark:hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
             aria-label="Create new team"
           >
             <Plus className="h-6 w-6" strokeWidth={2.5} />
@@ -567,7 +567,7 @@ export default function TeamAssignTLPage() {
         {selectedTeam ? (
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-blue-500/25">
+              <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-blue-500/25 dark:from-slate-800 dark:to-slate-800 dark:shadow-black/40">
                 <UserCog className="h-4 w-4 opacity-90" aria-hidden />
                 <span className="opacity-90">Team</span>
                 <strong className="font-semibold tracking-tight">{selectedTeam}</strong>
@@ -579,7 +579,7 @@ export default function TeamAssignTLPage() {
                   onClick={() => void handleDeleteFullTeam()}
                   title="Delete entire team (server)"
                   aria-label={`Delete team ${selectedTeam}`}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-50"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-700 shadow-sm transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/45 dark:text-rose-200 dark:hover:bg-rose-900/50 disabled:opacity-50"
                 >
                   {deletingTeam ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -593,22 +593,28 @@ export default function TeamAssignTLPage() {
               className={cn(
                 'inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm shadow-sm',
                 teamDepartmentSummary === '—'
-                  ? 'border-slate-200 bg-white text-slate-400'
-                  : 'border-emerald-200/80 bg-emerald-50/90 text-emerald-900'
+                  ? 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500'
+                  : 'border-emerald-200/80 bg-emerald-50/90 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100'
               )}
             >
-              <Building2 className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Department</span>
-              <span className="font-semibold text-slate-800">{teamDepartmentSummary}</span>
+              <Building2
+                className={cn(
+                  'h-4 w-4 shrink-0 opacity-80',
+                  teamDepartmentSummary !== '—' && 'text-emerald-600 dark:text-emerald-400'
+                )}
+                aria-hidden
+              />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Department</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">{teamDepartmentSummary}</span>
             </span>
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/50 ring-1 ring-slate-200/40">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 shadow-lg shadow-slate-200/50 ring-1 ring-slate-200 dark:shadow-black/40 dark:ring-slate-700/40">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-sm">
               <thead>
-                <tr className="bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 text-white">
+                <tr className="bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 text-white dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
                   <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wide">Sr#</th>
                   <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wide">Name</th>
                   <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wide">Email</th>
@@ -621,15 +627,15 @@ export default function TeamAssignTLPage() {
               <tbody>
                 {!selectedTeam ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-16 text-center text-slate-500">
-                      <Users className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                    <td colSpan={7} className="px-4 py-16 text-center text-slate-500 dark:text-slate-400">
+                      <Users className="mx-auto mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" />
                       Choose a <strong>Team name</strong> to view that roster, or <strong>All teams</strong> and pick a
                       team leader (Team Leader role is set in Admin).
                     </td>
                   </tr>
                 ) : pagedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
+                    <td colSpan={7} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
                       No members on this team yet. Create a roster with + or assign people in Admin.
                     </td>
                   </tr>
@@ -643,29 +649,31 @@ export default function TeamAssignTLPage() {
                       <tr
                         key={row.id}
                         className={cn(
-                          'border-b border-slate-100 transition-colors hover:bg-blue-50/50',
-                          globalIndex % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'
+                          'border-b border-slate-100 dark:border-slate-800 transition-colors hover:bg-blue-50/50 dark:hover:bg-slate-800/90',
+                          globalIndex % 2 === 0 ? 'bg-slate-50 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900'
                         )}
                       >
-                        <td className="px-4 py-3 text-slate-600">{globalIndex}</td>
-                        <td className="px-4 py-3 font-medium text-slate-900">{row.name}</td>
-                        <td className="px-4 py-3 text-slate-600">{row.email}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{row.team}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{globalIndex}</td>
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-50">{row.name}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{row.email}</td>
+                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{row.team}</td>
                         <td className="px-4 py-3">
                           {row.site !== '—' ? (
-                            <span className="inline-flex items-center gap-1.5 text-slate-700">
-                              <Building2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+                            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+                              <Building2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
                               <span className="font-medium">{row.site}</span>
                             </span>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-slate-400 dark:text-slate-500">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <span
                             className={cn(
                               'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                              isTl ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'
+                              isTl
+                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-100'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/55 dark:text-emerald-100'
                             )}
                           >
                             {row.role}
@@ -675,7 +683,7 @@ export default function TeamAssignTLPage() {
                           {isTl ? (
                             <div className="flex flex-wrap justify-end gap-1">
                               <select
-                                className="max-w-[120px] rounded border border-slate-200 bg-white px-1 py-1 text-[11px] disabled:opacity-50"
+                                className="max-w-[120px] rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-1 py-1 text-[11px] text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800 disabled:opacity-50"
                                 defaultValue=""
                                 disabled={
                                   detachingId !== null ||
@@ -725,7 +733,7 @@ export default function TeamAssignTLPage() {
                           ) : (
                             <div className="flex flex-wrap justify-end gap-1">
                               <select
-                                className="max-w-[120px] rounded border border-slate-200 bg-white px-1 py-1 text-[11px] disabled:opacity-50"
+                                className="max-w-[120px] rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-1 py-1 text-[11px] text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800 disabled:opacity-50"
                                 defaultValue=""
                                 disabled={
                                   detachingId !== null ||
@@ -784,7 +792,7 @@ export default function TeamAssignTLPage() {
                                 }}
                                 title="Remove from team"
                                 aria-label={`Remove ${row.name} from team`}
-                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:opacity-50"
                               >
                                 {detachingId === memberId ? (
                                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -818,16 +826,16 @@ export default function TeamAssignTLPage() {
         {selectedTeam &&
         teams.includes(selectedTeam) &&
         selectedLeader?.role === 'Team Leader' ? (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900">Add employees to “{selectedTeam}”</h3>
-            <div className="mt-3 flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/50 p-2">
+          <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-50">Add employees to “{selectedTeam}”</h3>
+            <div className="mt-3 flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-2">
               {employeesWithoutTeam.length === 0 ? (
-                <span className="text-xs text-slate-500">No unassigned employees.</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">No unassigned employees.</span>
               ) : (
                 employeesWithoutTeam.map((u) => (
                   <label
                     key={u.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-md border border-white bg-white px-2 py-1.5 text-xs shadow-sm"
+                    className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-slate-600 dark:hover:bg-slate-800"
                   >
                     <input
                       type="checkbox"
@@ -844,16 +852,16 @@ export default function TeamAssignTLPage() {
               type="button"
               disabled={addToTeamIds.size < 1 || addingEmployees}
               onClick={() => void handleAddEmployeesToTeam()}
-              className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 dark:hover:bg-emerald-500 disabled:opacity-50"
             >
               {addingEmployees ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               {addingEmployees ? 'Adding…' : 'Add selected'}
             </button>
           </div>
         ) : selectedTeam && selectedLeader && !teams.includes(selectedTeam) ? (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
             <p className="font-semibold">Team not registered yet</p>
-            <p className="mt-1 text-amber-900/90">
+            <p className="mt-1 text-amber-900/90 dark:text-amber-200/90">
               Use <strong>Create team roster</strong> (+) above to create “{selectedTeam}” first. You can assign a leader
               and add members only after the team exists in the system.
             </p>
@@ -866,15 +874,15 @@ export default function TeamAssignTLPage() {
             className={cn(
               'mt-6 rounded-xl border px-4 py-3 text-sm',
               message.type === 'ok'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                : 'border-rose-200 bg-rose-50 text-rose-900'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100'
+                : 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100'
             )}
           >
             <div className="flex gap-3">
               {message.type === 'ok' ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               ) : (
-                <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
+                <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
               )}
               <span>{message.text}</span>
             </div>
@@ -891,23 +899,23 @@ export default function TeamAssignTLPage() {
           }}
         >
           <div
-            className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200/90 bg-white shadow-2xl"
+            className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-roster-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600">New team</p>
-                <h2 id="modal-roster-title" className="text-lg font-bold text-slate-900">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-indigo-400">New team</p>
+                <h2 id="modal-roster-title" className="text-lg font-bold text-slate-900 dark:text-slate-50">
                   Create team roster
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -915,15 +923,15 @@ export default function TeamAssignTLPage() {
             </div>
 
             <form onSubmit={handleModalSubmit} className="space-y-5 px-6 py-6">
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Team name</span>
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Team name</span>
                 <input
                   required
                   list="modal-team-options"
                   value={modalTeamName}
                   onChange={(e) => setModalTeamName(e.target.value)}
                   placeholder="e.g. Product Squad"
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                  className="mt-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-600 placeholder:text-slate-400"
                 />
                 <datalist id="modal-team-options">
                   {teamNameOptions.map((t) => (
@@ -932,14 +940,14 @@ export default function TeamAssignTLPage() {
                 </datalist>
               </div>
 
-              <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-4">
-                <label className="mt-4 block text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800/80 dark:bg-indigo-950/35">
+                <label className="mt-4 block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   Choose leader
                   <select
                     required
                     value={leaderId}
                     onChange={(e) => setLeaderId(e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                    className="mt-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-600"
                   >
                     <option value="">Select…</option>
                     {teamLeadersWithoutTeam.map((u) => (
@@ -950,24 +958,24 @@ export default function TeamAssignTLPage() {
                   </select>
                 </label>
                 {leaderId ? (
-                  <p className="mt-2 text-xs font-medium text-indigo-900">
-                    <Shield className="mr-1 inline h-3.5 w-3.5 text-indigo-600" aria-hidden />
+                  <p className="mt-2 text-xs font-medium text-indigo-900 dark:text-indigo-100">
+                    <Shield className="mr-1 inline h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" aria-hidden />
                     {users.find((u) => u.id === leaderId)?.name} will be set as <strong>Team Leader</strong> when you
                     create this roster.
                   </p>
                 ) : null}
                 {teamLeadersWithoutTeam.length === 0 && (
-                  <p className="mt-2 text-xs text-amber-900">
+                  <p className="mt-2 text-xs text-amber-900 dark:text-amber-200/90">
                     No team leaders without a team yet—open <strong>Admin</strong> and use Promote / role → Team Leader.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Employees (min. 1)</span>
-                <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Employees (min. 1)</span>
+                <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                   {employeesWithoutTeam.length === 0 ? (
-                    <p className="p-3 text-center text-xs text-slate-500">
+                    <p className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
                       No employees without a team. Approve pending users as Employee in Admin, or remove someone from a
                       team first.
                     </p>
@@ -975,7 +983,7 @@ export default function TeamAssignTLPage() {
                     employeesWithoutTeam.map((u) => (
                       <label
                         key={u.id}
-                        className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-0 hover:bg-slate-50"
+                        className="flex cursor-pointer items-center gap-3 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/80"
                       >
                         <input
                           type="checkbox"
@@ -983,15 +991,15 @@ export default function TeamAssignTLPage() {
                           onChange={() => toggleEmployee(u.id)}
                           className="rounded border-slate-300 text-blue-600"
                         />
-                        <span className="text-sm">{u.name}</span>
+                        <span className="text-sm text-slate-800 dark:text-slate-100">{u.name}</span>
                       </label>
                     ))
                   )}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <label htmlFor="modal-dept-name" className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 p-4">
+                <label htmlFor="modal-dept-name" className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Department
                 </label>
                 <input
@@ -1002,7 +1010,7 @@ export default function TeamAssignTLPage() {
                   onChange={(e) => setDepartmentName(e.target.value)}
                   placeholder="e.g. MERN Stack, Frontend, SEO"
                   autoComplete="off"
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 placeholder:text-slate-400"
+                  className="mt-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none transition hover:border-slate-300 dark:hover:border-slate-600"
                 />
               </div>
 
@@ -1016,7 +1024,7 @@ export default function TeamAssignTLPage() {
                   !departmentName.trim() ||
                   selectedEmployees.size < 1
                 }
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 dark:hover:bg-blue-500 disabled:opacity-50"
               >
                 {savingTeam ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                 {savingTeam ? 'Saving…' : 'Create team'}

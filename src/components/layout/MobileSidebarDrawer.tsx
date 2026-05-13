@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { BRAND_LOGO_URL } from '@/lib/brand';
+import { BRAND_LOGO_DARK_URL, BRAND_LOGO_URL } from '@/lib/brand';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSessionCookies } from '@/views/auth/authSession';
 import { logoutFromApi } from '@/services/auth.service';
@@ -97,28 +97,35 @@ const navItems = [
        />
  
        <div
-         className={`absolute left-0 top-0 h-full w-[84%] max-w-[320px] border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ${
+         className={`absolute left-0 top-0 h-full w-[84%] max-w-[320px] border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ${
            open ? 'translate-x-0' : '-translate-x-full'
          }`}
          role="dialog"
          aria-modal="true"
        >
-         <div className="flex h-20 items-center justify-between border-b border-slate-200 px-5">
+         <div className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5">
            <div className="relative h-10 w-[140px] shrink-0">
              <Image
                src={BRAND_LOGO_URL}
                alt="Global Digital Care"
                fill
-               className="object-contain object-left"
+               className="object-contain object-left dark:hidden"
+               sizes="140px"
+             />
+             <Image
+               src={BRAND_LOGO_DARK_URL}
+               alt="Global Digital Care"
+               fill
+               className="hidden object-contain object-left dark:block"
                sizes="140px"
              />
            </div>
            <button
              onClick={onClose}
-             className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+             className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
              aria-label="Close menu"
            >
-             <X className="h-5 w-5 text-slate-600" />
+             <X className="h-5 w-5 text-slate-600 dark:text-slate-300" />
            </button>
          </div>
  
@@ -136,14 +143,14 @@ const navItems = [
                  onClick={onClose}
                  className={`flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
                    isActive
-                     ? 'bg-slate-50 text-slate-900'
-                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                     ? 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-l-4 border-slate-900 dark:border-indigo-400'
+                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50'
                  }`}
                >
                  <span className="flex min-w-0 items-center">
                    <Icon
                      className={`mr-3 h-5 w-5 shrink-0 ${
-                       isActive ? 'text-slate-700' : 'text-slate-400'
+                       isActive ? 'text-slate-700 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500'
                      }`}
                    />
                    {item.name}
@@ -176,9 +183,9 @@ const navItems = [
                      router.push('/auth/login');
                      router.refresh();
                    }}
-                   className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                   className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 transition-colors"
                  >
-                   <Icon className="mr-3 h-5 w-5 text-slate-400" />
+                   <Icon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
                    {item.name}
                  </button>
                );
@@ -188,9 +195,9 @@ const navItems = [
                  key={item.name}
                  href={item.href}
                  onClick={onClose}
-                 className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                 className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 transition-colors"
                >
-                 <Icon className="mr-3 h-5 w-5 text-slate-400" />
+                 <Icon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
                  {item.name}
                </Link>
              );

@@ -19,8 +19,8 @@ export function TaskWorkElapsed({ startedAtIso, className = '', label = 'Time on
   if (!startedAtIso) {
     return (
       <div className={className}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-        <p className="mt-1 font-mono text-lg font-black tabular-nums text-slate-400">—</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</p>
+        <p className="mt-1 font-mono text-lg font-black tabular-nums text-slate-400 dark:text-slate-500">—</p>
       </div>
     );
   }
@@ -30,7 +30,7 @@ export function TaskWorkElapsed({ startedAtIso, className = '', label = 'Time on
 
   return (
     <div className={className}>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</p>
       <p className="mt-1 font-mono text-2xl font-black tabular-nums tracking-tight text-blue-700">{text}</p>
     </div>
   );

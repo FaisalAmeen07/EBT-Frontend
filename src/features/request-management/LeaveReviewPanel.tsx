@@ -33,34 +33,34 @@ export function LeaveReviewPanel({
   return (
     <table className="w-full border-collapse text-left text-sm">
         <thead>
-          <tr className="border-b border-slate-200 bg-white">
-            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+          <tr className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
               Employee
             </th>
-            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
               Type & Reason
             </th>
-            <th className="px-4 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+            <th className="px-4 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
               Status
             </th>
-            <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+            <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={4} className="px-6 py-20 text-center text-sm font-medium text-slate-500">
+              <td colSpan={4} className="px-6 py-20 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
                 There are no requests available.
               </td>
             </tr>
           ) : (
             rows.map((leave) => (
-              <tr key={leave.id} className="transition-colors hover:bg-slate-50">
+              <tr key={leave.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80">
                 <td className="px-4 py-5 sm:px-6">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600">
+                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-600 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300">
                       {(leave.requesterAvatar || getUserAvatar(leave.userId)) ? (
                         // eslint-disable-next-line @next/next/no-img-element -- user-uploaded or CDN profile image
                         <img
@@ -73,8 +73,8 @@ export function LeaveReviewPanel({
                       )}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">{getUsername(leave.userId)}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      <p className="font-bold text-slate-900 dark:text-slate-50">{getUsername(leave.userId)}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                         {roleLabel(leave)}
                       </p>
                     </div>
@@ -92,13 +92,13 @@ export function LeaveReviewPanel({
                   >
                     {leave.type}
                   </span>
-                  <p className="line-clamp-2 max-w-[240px] text-sm text-slate-600">{leave.reason || '—'}</p>
+                  <p className="line-clamp-2 max-w-[240px] text-sm text-slate-600 dark:text-slate-300">{leave.reason || '—'}</p>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-800">
+                    <span className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-slate-800 dark:text-slate-100">
                       {format(new Date(leave.startDate), 'MMM d')}
                     </span>
-                    <ArrowRight className="h-3 w-3 text-slate-300" />
-                    <span className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-800">
+                    <ArrowRight className="h-3 w-3 text-slate-300 dark:text-slate-600" />
+                    <span className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-slate-800 dark:text-slate-100">
                       {format(new Date(leave.endDate), 'MMM d')}
                     </span>
                   </div>
@@ -126,7 +126,7 @@ export function LeaveReviewPanel({
                       <button
                         type="button"
                         onClick={() => onApprove(leave.id)}
-                        className="rounded-xl border border-emerald-100 bg-emerald-50 p-2.5 text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"
+                        className="rounded-xl border border-emerald-100 bg-emerald-50 p-2.5 text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-200 dark:hover:bg-emerald-900/50 active:scale-95"
                         title="Approve"
                       >
                         <Check className="h-4 w-4" />
@@ -134,14 +134,14 @@ export function LeaveReviewPanel({
                       <button
                         type="button"
                         onClick={() => onReject(leave.id)}
-                        className="rounded-xl border border-rose-100 bg-rose-50 p-2.5 text-rose-700 transition-all hover:bg-rose-100 active:scale-95"
+                        className="rounded-xl border border-rose-100 bg-rose-50 p-2.5 text-rose-700 transition-all hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900/45 active:scale-95"
                         title="Reject"
                       >
                         <X className="h-4 w-4" />
                       </button>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Handled</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Handled</span>
                   )}
                 </td>
               </tr>

@@ -73,38 +73,38 @@ export function ManualTimeRequestsPanel({
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl bg-white">
+      <div className="overflow-x-auto rounded-2xl bg-white dark:bg-slate-900">
         <table className="w-full min-w-[560px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-white">
-                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+            <tr className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
                   Date
                 </th>
-                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
                   Time
                 </th>
-                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
                   Status
                 </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-20 text-center text-sm font-medium text-slate-500">
+                <td colSpan={3} className="px-6 py-20 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
                   {manualEmptyMessage(manualStatusFilter, totalCount)}
                 </td>
               </tr>
             ) : (
               rows.map((req) => (
-                <tr key={req.id} className="transition-colors hover:bg-slate-50">
-                  <td className="px-4 py-5 font-medium text-slate-900 sm:px-6">
+                <tr key={req.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80">
+                  <td className="px-4 py-5 font-medium text-slate-900 dark:text-slate-50 sm:px-6">
                     {format(new Date(req.date), 'MMM d, yyyy')}
                   </td>
-                  <td className="px-4 py-5 text-sm text-slate-600 sm:px-6">
+                  <td className="px-4 py-5 text-sm text-slate-600 dark:text-slate-300 sm:px-6">
                     {req.clockInTime} – {req.clockOutTime}
                     {req.breakInTime && req.breakOutTime ? (
-                      <span className="block text-xs text-slate-400">
+                      <span className="block text-xs text-slate-400 dark:text-slate-500">
                         Break: {req.breakInTime}-{req.breakOutTime}
                       </span>
                     ) : null}
@@ -133,7 +133,7 @@ export function ManualTimeRequestsPanel({
         <form className="space-y-4" onSubmit={onSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Date</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Date</label>
               <input
                 type="date"
                 required
@@ -144,7 +144,7 @@ export function ManualTimeRequestsPanel({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Clock-in</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Clock-in</label>
               <input
                 type="time"
                 required
@@ -156,7 +156,7 @@ export function ManualTimeRequestsPanel({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Clock-out</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Clock-out</label>
               <input
                 type="time"
                 required
@@ -166,7 +166,7 @@ export function ManualTimeRequestsPanel({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Break-in (optional)</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Break-in (optional)</label>
               <input
                 type="time"
                 value={breakInTime}
@@ -176,7 +176,7 @@ export function ManualTimeRequestsPanel({
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Break-out (optional)</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Break-out (optional)</label>
             <input
               type="time"
               value={breakOutTime}
@@ -185,7 +185,7 @@ export function ManualTimeRequestsPanel({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Reason (optional)</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Reason (optional)</label>
             <textarea
               rows={3}
               value={manualReason}
@@ -197,7 +197,7 @@ export function ManualTimeRequestsPanel({
             type="submit"
             disabled={submitting}
             className={`inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white ${
-              submitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              submitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500'
             }`}
           >
             <Send className="h-4 w-4" />

@@ -111,15 +111,15 @@ export default function ForgotPasswordView() {
         <form onSubmit={handleEmailSubmit} className="space-y-4">
           <Link
             href="/auth/login"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to sign in
           </Link>
           <div>
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Email</label>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email</label>
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="email"
                 required
@@ -146,7 +146,7 @@ export default function ForgotPasswordView() {
           <button
             type="button"
             onClick={goBackToEmail}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800"
           >
             <ArrowLeft className="h-4 w-4" />
             Use a different email
@@ -154,11 +154,11 @@ export default function ForgotPasswordView() {
 
           <form onSubmit={handleOtpSubmit} className="space-y-4">
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 6-digit code
               </label>
               <div className="relative">
-                <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
                   inputMode="numeric"

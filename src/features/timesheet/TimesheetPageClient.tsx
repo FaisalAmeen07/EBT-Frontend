@@ -131,20 +131,20 @@ function EmployeeTimesheetView() {
 
   return (
     <div className="space-y-8">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/40 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-        <div className="relative border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 px-6 py-6 sm:px-8">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-gradient-to-b from-white to-slate-50/40 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:from-slate-900 dark:to-slate-950/80 dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)]">
+        <div className="relative border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 px-6 py-6 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 sm:px-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500" />
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <h1 className="flex flex-wrap items-center gap-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-[0_10px_30px_rgba(37,99,235,0.25)]">
+              <h1 className="flex flex-wrap items-center gap-4 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-none ring-1 ring-white/10 dark:ring-indigo-400/20">
                   <Clock className="h-6 w-6" aria-hidden />
                 </span>
                 <span>My attendance</span>
               </h1>
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-              <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50/90 p-1 shadow-inner">
+              <div className="inline-flex rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 p-1 shadow-inner">
                 {(
                   [
                     ['today', 'Today'],
@@ -159,21 +159,21 @@ function EmployeeTimesheetView() {
                     className={cn(
                       'rounded-xl px-3.5 py-2 text-xs font-bold transition sm:px-4',
                       attendanceWindow === key
-                        ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
-                        : 'text-slate-500 hover:text-slate-900'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700/80'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                     )}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-                <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 shadow-sm">
+                <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div className="pr-3">
-                  <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">{rangeLabelShort}</span>
-                  <span className="text-sm font-semibold tabular-nums text-slate-800">
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{rangeLabelShort}</span>
+                  <span className="text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
                     {attendanceWindow === 'today'
                       ? format(now, 'EEEE, MMM d, yyyy')
                       : `${format(rangeStart, 'MMM d')} – ${format(now, 'MMM d, yyyy')}`}
@@ -187,58 +187,58 @@ function EmployeeTimesheetView() {
 
       {/* Stats row */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)] sm:p-6">
           <div className="relative z-10">
-            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Total hours ({rangeLabelShort})
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold tracking-tight text-slate-900">{totalHoursInRange.toFixed(1)}</span>
-              <span className="text-slate-400 font-medium tracking-tight">hours</span>
+              <span className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">{totalHoursInRange.toFixed(1)}</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium tracking-tight">hours</span>
             </div>
           </div>
-          <TrendingUp className="absolute -bottom-5 -right-5 h-24 w-24 text-blue-50" />
+          <TrendingUp className="absolute -bottom-5 -right-5 h-24 w-24 text-blue-50 dark:text-blue-950/40" />
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)] sm:p-6">
           <div className="relative z-10">
-            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Overtime ({rangeLabelShort})
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold tracking-tight text-indigo-700">{totalOvertimeInRange.toFixed(1)}</span>
-              <span className="text-slate-400 font-medium tracking-tight">hours</span>
+              <span className="text-3xl font-extrabold tracking-tight text-indigo-700 dark:text-indigo-300">{totalOvertimeInRange.toFixed(1)}</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium tracking-tight">hours</span>
             </div>
           </div>
-          <ArrowRight className="absolute -bottom-5 -right-5 h-24 w-24 rotate-[-45deg] text-indigo-50" />
+          <ArrowRight className="absolute -bottom-5 -right-5 h-24 w-24 rotate-[-45deg] text-indigo-50 dark:text-indigo-950/40" />
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)] sm:p-6">
           <div className="relative z-10">
-            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="mb-3 block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Late marks ({rangeLabelShort})
             </span>
             <div className="flex items-baseline gap-2">
               <span className={`text-3xl font-extrabold tracking-tight ${totalLateMarks > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{totalLateMarks}</span>
-              <span className="text-slate-400 font-medium tracking-tight">instances</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium tracking-tight">instances</span>
             </div>
           </div>
-          <AlertCircle className="absolute -bottom-5 -right-5 h-24 w-24 text-rose-50" />
+          <AlertCircle className="absolute -bottom-5 -right-5 h-24 w-24 text-rose-50 dark:text-rose-950/40" />
         </div>
       </div>
 
       {/* Clock history — polished table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-        <div className="relative border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 px-5 py-5 sm:px-8 sm:py-6">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:bg-slate-900 dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)]">
+        <div className="relative border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 px-5 py-5 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 sm:px-8 sm:py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-none ring-1 ring-white/10 dark:ring-indigo-400/25">
                 <Timer className="h-6 w-6" strokeWidth={2} />
               </div>
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Clock history</h2>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  <span className="font-semibold text-slate-700">{rangeLabelShort}</span>
+                <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-xl">Clock history</h2>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">{rangeLabelShort}</span>
                   <span className="mx-2 text-slate-300">·</span>
                   {rangeTimesheets.length} record{rangeTimesheets.length !== 1 ? 's' : ''}
                 </p>
@@ -246,7 +246,7 @@ function EmployeeTimesheetView() {
             </div>
             <Link
               href="/my-requests?tab=manual"
-              className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-lg sm:self-center"
+              className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-none ring-1 ring-blue-500/20 transition hover:bg-blue-500 active:scale-[0.98] dark:ring-blue-400/15 dark:hover:bg-blue-500 sm:self-center"
             >
               <Plus className="h-4 w-4" />
               Request manual time
@@ -257,7 +257,7 @@ function EmployeeTimesheetView() {
         <div className="max-h-[70vh] overflow-auto">
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-slate-900 text-white">
+              <tr className="border-b border-slate-800/80 bg-slate-900 text-white dark:border-slate-800 dark:bg-slate-950">
                 <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider sm:px-8">
                   Date
                 </th>
@@ -276,12 +276,12 @@ function EmployeeTimesheetView() {
               {rangeTimesheets.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-16 text-center sm:px-8 sm:py-20">
-                    <div className="mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-8 py-10">
-                      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
+                    <div className="mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 px-8 py-10">
+                      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-100 dark:ring-slate-800">
                         <Clock className="h-7 w-7 text-slate-300" />
                       </div>
-                      <p className="text-base font-semibold text-slate-700">No shifts in this window</p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="text-base font-semibold text-slate-700 dark:text-slate-200">No shifts in this window</p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         No attendance logged for {rangeLabelShort.toLowerCase()}. Clock in from the dashboard or add a manual
                         entry.
                       </p>
@@ -294,53 +294,53 @@ function EmployeeTimesheetView() {
                   return (
                     <tr
                       key={entry.id}
-                      className={`border-b border-slate-100 transition-colors hover:bg-blue-50/40 ${
-                        idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                      className={`border-b border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/50 ${
+                        idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-900/70'
                       }`}
                     >
                       <td className="align-top px-5 py-5 sm:px-8">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-slate-100 text-center ring-1 ring-slate-200/80">
-                            <span className="text-[10px] font-bold uppercase leading-none text-slate-400">
+                          <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border border-slate-200/80 bg-slate-100 text-center dark:border-slate-700 dark:bg-slate-800/90">
+                            <span className="text-[10px] font-bold uppercase leading-none text-slate-500 dark:text-slate-400">
                               {format(new Date(entry.clockIn), 'MMM')}
                             </span>
-                            <span className="text-lg font-black leading-tight text-slate-800">
+                            <span className="text-lg font-black leading-tight text-slate-800 dark:text-slate-100">
                               {format(new Date(entry.clockIn), 'd')}
                             </span>
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">{format(new Date(entry.clockIn), 'EEEE')}</p>
-                            <p className="text-xs text-slate-500">{format(new Date(entry.clockIn), 'yyyy')}</p>
+                            <p className="font-semibold text-slate-900 dark:text-slate-50">{format(new Date(entry.clockIn), 'EEEE')}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{format(new Date(entry.clockIn), 'yyyy')}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-5 sm:px-8">
                         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-                          <div className="inline-flex flex-col items-center rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-2 ring-1 ring-emerald-100/50">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">In</span>
-                            <span className="font-mono text-base font-bold tabular-nums text-emerald-900">
+                          <div className="inline-flex flex-col items-center rounded-xl border border-emerald-300/70 bg-emerald-50/95 px-4 py-2 dark:border-emerald-800/70 dark:bg-emerald-950/55 dark:ring-1 dark:ring-emerald-900/40">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">In</span>
+                            <span className="font-mono text-base font-bold tabular-nums text-emerald-900 dark:text-emerald-100">
                               {format(new Date(entry.clockIn), 'HH:mm')}
                             </span>
                           </div>
-                          <div className="hidden h-px w-6 bg-slate-200 sm:block" aria-hidden />
-                          <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 sm:hidden" aria-hidden />
+                          <div className="hidden h-px w-6 bg-slate-200 dark:bg-slate-700 sm:block" aria-hidden />
+                          <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600 sm:hidden" aria-hidden />
                           <div
-                            className={`inline-flex flex-col items-center rounded-xl border px-4 py-2 ring-1 ${
+                            className={`inline-flex flex-col items-center rounded-xl border px-4 py-2 ${
                               openShift
-                                ? 'border-amber-200/90 bg-amber-50/90 ring-amber-100/80'
-                                : 'border-slate-200/90 bg-white ring-slate-100'
+                                ? 'border-amber-400/60 bg-amber-50/95 dark:border-amber-700/70 dark:bg-amber-950/45 dark:ring-1 dark:ring-amber-900/35'
+                                : 'border-slate-200 bg-white ring-1 ring-slate-100 dark:border-slate-700 dark:bg-slate-800/80 dark:ring-slate-700/60'
                             }`}
                           >
                             <span
                               className={`text-[9px] font-bold uppercase tracking-widest ${
-                                openShift ? 'text-amber-700' : 'text-slate-500'
+                                openShift ? 'text-amber-800 dark:text-amber-200' : 'text-slate-500 dark:text-slate-400'
                               }`}
                             >
                               {openShift ? 'Open' : 'Out'}
                             </span>
                             <span
                               className={`font-mono text-base font-bold tabular-nums ${
-                                entry.clockOut ? 'text-slate-900' : 'text-amber-800'
+                                entry.clockOut ? 'text-slate-900 dark:text-slate-50' : 'text-amber-900 dark:text-amber-100'
                               }`}
                             >
                               {entry.clockOut ? format(new Date(entry.clockOut), 'HH:mm') : '—'}
@@ -351,23 +351,23 @@ function EmployeeTimesheetView() {
                       <td className="px-5 py-5 sm:px-8">
                         <div className="flex flex-col items-center gap-2">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl font-bold tabular-nums tracking-tight text-slate-900">
+                            <span className="text-2xl font-bold tabular-nums tracking-tight text-slate-900 dark:text-slate-50">
                               {computedHoursForEntry(entry).toFixed(2)}
                             </span>
-                            <span className="text-xs font-semibold text-slate-400">hrs</span>
+                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">hrs</span>
                           </div>
                           <div className="flex flex-wrap justify-center gap-1.5">
                             {isEntryLate(entry) ? (
-                              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                              <span className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800 dark:border-rose-800/80 dark:bg-rose-950/50 dark:text-rose-200">
                                 Late
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-300">
                                 On time
                               </span>
                             )}
                             {computedOvertimeForEntry(entry) > 0 ? (
-                              <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                              <span className="inline-flex items-center rounded-full border border-indigo-300/70 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-bold text-indigo-800 dark:border-indigo-800/70 dark:bg-indigo-950/50 dark:text-indigo-200">
                                 OT {computedOvertimeForEntry(entry).toFixed(1)}h
                               </span>
                             ) : null}
@@ -375,8 +375,8 @@ function EmployeeTimesheetView() {
                         </div>
                       </td>
                       <td className="px-5 py-5 text-right align-middle sm:px-8">
-                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-mono text-xs font-medium text-slate-700">
-                          <Hash className="h-3.5 w-3.5 text-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 font-mono text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-200">
+                          <Hash className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                           {currentUser ? employeeDisplayId(currentUser) : '—'}
                         </span>
                       </td>
@@ -430,7 +430,7 @@ export function TimesheetPageClient() {
 
   if (!currentUser || currentUser.role === 'Pending User') {
     return (
-      <div className="mx-auto max-w-6xl py-16 text-center text-sm text-slate-500">Loading…</div>
+      <div className="mx-auto max-w-6xl py-16 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</div>
     );
   }
 
@@ -452,11 +452,11 @@ export function TimesheetPageClient() {
   }
 
   return (
-    <div className="min-h-full bg-[#f6f8fb] pb-14">
+    <div className="min-h-full bg-[#f6f8fb] pb-14 dark:bg-slate-950">
       <div className="mx-auto max-w-6xl px-4">
         {/* Route-level tabs (under global navbar) */}
         <div className="pt-6">
-          <div className="border-b border-slate-200">
+          <div className="border-b border-slate-200 dark:border-slate-800">
             <nav className="flex flex-wrap gap-8" aria-label="Attendance sections">
               {tabs.map(({ id, label }) => (
                 <Link
@@ -468,8 +468,8 @@ export function TimesheetPageClient() {
                   className={cn(
                     '-mb-px border-b-[3px] pb-3 text-sm font-semibold transition-colors',
                     activeTab === id
-                      ? 'border-indigo-600 text-slate-900'
-                      : 'border-transparent text-slate-500 hover:text-slate-900'
+                      ? 'border-indigo-600 text-slate-900 dark:text-slate-50'
+                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                   )}
                 >
                   {label}

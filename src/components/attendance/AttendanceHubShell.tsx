@@ -20,9 +20,9 @@ export function AttendanceHubShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-[min(70vh,720px)] rounded-2xl border border-slate-200/90 bg-[#eef2f7] p-4 shadow-sm sm:p-6">
+    <div className="min-h-[min(70vh,720px)] rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-[#eef2f7] p-4 shadow-sm sm:p-6">
       <nav
-        className="flex flex-wrap gap-6 border-b border-slate-200/90 sm:gap-10"
+        className="flex flex-wrap gap-6 border-b border-slate-200 dark:border-slate-700/90 sm:gap-10"
         aria-label="Attendance sections"
       >
         {tabs.map(({ id, label }) => (
@@ -34,7 +34,7 @@ export function AttendanceHubShell({
               '-mb-px border-b-2 pb-3 text-sm font-semibold transition-colors',
               activeTab === id
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700'
             )}
           >
             {label}

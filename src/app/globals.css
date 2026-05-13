@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* Match app shell (Tailwind slate-50) so scroll/overscroll never flashes pure white */
   --background: #F2F4FC;
@@ -18,11 +20,9 @@
   --color-slate-200: #D9DEEF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.dark {
+  --background: #020617;
+  --foreground: #e2e8f0;
 }
 
 html {
@@ -46,6 +46,33 @@ body::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
+}
+
+/* Keep native form popups readable when the app is in dark mode. */
+html.dark select,
+html.dark input[type="date"],
+html.dark input[type="time"],
+html.dark input[type="datetime-local"],
+html.dark input[type="month"] {
+  color-scheme: dark;
+}
+
+html.dark select option,
+html.dark select optgroup {
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+html.dark select option:checked {
+  background-color: #1d4ed8;
+  color: #ffffff;
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html.dark input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 /* Hide scrollbars but keep scroll (Firefox + Chromium + legacy Edge) */

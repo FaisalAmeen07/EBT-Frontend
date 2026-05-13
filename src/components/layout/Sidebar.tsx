@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { BRAND_LOGO_URL } from '@/lib/brand';
+import { BRAND_LOGO_DARK_URL, BRAND_LOGO_URL } from '@/lib/brand';
 import { usePathname, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { clearSessionCookies } from '@/views/auth/authSession';
@@ -77,7 +77,7 @@ export function Sidebar() {
   });
 
   return (
-    <aside className="flex h-full min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white pt-6 pb-6 shadow-sm lg:min-h-dvh">
+    <aside className="flex h-full min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pt-6 pb-6 shadow-sm lg:min-h-dvh">
       <div className="px-6 mb-8 flex justify-center items-center">
         <div className="flex flex-col items-center select-none">
           <div className="relative mx-auto h-16 w-[180px]">
@@ -85,9 +85,16 @@ export function Sidebar() {
               src={BRAND_LOGO_URL}
               alt="Global Digital Care"
               fill
-              className="object-contain object-center"
+              className="object-contain object-center dark:hidden"
               sizes="180px"
               priority
+            />
+            <Image
+              src={BRAND_LOGO_DARK_URL}
+              alt="Global Digital Care"
+              fill
+              className="hidden object-contain object-center dark:block"
+              sizes="180px"
             />
           </div>
         </div>
@@ -107,12 +114,12 @@ export function Sidebar() {
               className={cn(
                 'flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-slate-50 text-slate-900 border-l-4 border-slate-300'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-l-4 border-slate-900 dark:border-indigo-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50'
               )}
             >
               <span className="flex min-w-0 items-center">
-                <Icon className={cn('mr-3 h-5 w-5 shrink-0', isActive ? 'text-slate-600' : 'text-slate-400')} />
+                <Icon className={cn('mr-3 h-5 w-5 shrink-0', isActive ? 'text-slate-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500')} />
                 {item.name}
               </span>
               {item.href === '/messages' && messagesUnreadTotal > 0 && (
@@ -142,9 +149,9 @@ export function Sidebar() {
                   router.push('/auth/login');
                   router.refresh();
                 }}
-                className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50 transition-colors"
               >
-                <Icon className="mr-3 h-5 w-5 text-slate-400" />
+                <Icon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
                 {item.name}
               </button>
             );
@@ -153,9 +160,9 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+              className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-50 transition-colors"
             >
-              <Icon className="mr-3 h-5 w-5 text-slate-400" />
+              <Icon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
               {item.name}
             </Link>
           );

@@ -255,7 +255,7 @@ export async function fetchClockHistoryApi(): Promise<unknown[]> {
 }
 
 export async function fetchAttendanceSummaryApi(params?: {
-  role?: 'ALL' | 'employee' | 'HR' | 'team_leader';
+  role?: 'ALL' | 'employee' | 'hr' | 'HR' | 'team_leader';
   attendance?: 'ALL' | 'PRESENT' | 'ABSENT' | 'LEAVE';
 }): Promise<AttendanceSummaryData> {
   const { data } = await attendanceApiClient.get<{ success?: boolean; data?: AttendanceSummaryData }>(

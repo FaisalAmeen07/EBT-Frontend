@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MobileSidebarDrawer } from '@/components/layout/MobileSidebarDrawer';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { fetchMyNotificationsApi } from '@/services/notification.service';
 
 function getInitials(text: string): string {
@@ -130,26 +131,27 @@ export function Topbar() {
   return (
     <>
       <MobileSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <header className="relative z-50 flex h-20 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm sm:px-8">
-        <div className="flex max-w-xl flex-1 items-center gap-3">
+      <header className="relative z-50 flex h-20 shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 shadow-sm sm:px-8">
+        <div className="flex min-w-0 max-w-xl flex-1 items-center gap-3">
           <button
             onClick={() => setMobileOpen(true)}
-            className="rounded-xl p-2 transition-colors hover:bg-slate-100 lg:hidden"
+            className="rounded-xl p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
             aria-label="Open menu"
           >
-            <Menu className="h-5 w-5 text-slate-700" />
+            <Menu className="h-5 w-5 text-slate-700 dark:text-slate-200" />
           </button>
         </div>
 
         <div className="ml-4 flex shrink-0 items-center gap-3 sm:gap-4">
+          <ThemeToggle />
           <div className="relative" ref={notifWrapRef}>
             <button
               type="button"
               onClick={() => setNotifOpen((o) => !o)}
-              className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50"
+              className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80"
               aria-label="Notifications"
             >
-              <Bell className="h-5 w-5 text-slate-700" />
+              <Bell className="h-5 w-5 text-slate-700 dark:text-slate-200" />
               {unreadCount > 0 ? (
                 <span className="absolute right-1.5 top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -157,15 +159,15 @@ export function Topbar() {
               ) : null}
             </button>
             {notifOpen ? (
-              <div className="absolute right-0 top-full z-50 mt-2 w-[min(92vw,24rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                  <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
+              <div className="absolute right-0 top-full z-50 mt-2 w-[min(92vw,24rem)] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-4 py-3">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-50">Notifications</h3>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                     <button
                       type="button"
                       onClick={() => markAllNotificationsRead()}
                       disabled={notifications.length === 0}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <CheckCheck className="h-3.5 w-3.5" />
                       Mark all read
@@ -174,7 +176,7 @@ export function Topbar() {
                       type="button"
                       onClick={() => clearNotifications()}
                       disabled={notifications.length === 0}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-200 dark:hover:border-rose-900/60 disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Clear all notifications"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -184,13 +186,13 @@ export function Topbar() {
                 </div>
                 <div className="max-h-[22rem] overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <p className="px-4 py-8 text-center text-sm text-slate-500">No notifications yet.</p>
+                    <p className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">No notifications yet.</p>
                   ) : (
                     notifications.map((n) => (
                       <div
                         key={n.id}
-                        className={`flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 ${
-                          n.read ? 'bg-white' : 'bg-sky-50/40'
+                        className={`flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-4 py-3 ${
+                          n.read ? 'bg-white dark:bg-slate-900' : 'bg-sky-50/40 dark:bg-sky-950/30'
                         }`}
                       >
                         <button
@@ -198,16 +200,16 @@ export function Topbar() {
                           onClick={() => openNotification(n.id, n.targetPath)}
                           className="min-w-0 flex-1 text-left"
                         >
-                          <p className="truncate text-sm font-semibold text-slate-900">{n.title}</p>
-                          <p className="mt-0.5 text-xs text-slate-600">{n.description}</p>
-                          <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{n.title}</p>
+                          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{n.description}</p>
+                          <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                             {relativeTimeLabel(n.createdAt)}
                           </p>
                         </button>
                         <button
                           type="button"
                           onClick={() => removeNotification(n.id)}
-                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                          className="rounded-md p-1 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600"
                           aria-label="Remove notification"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -225,12 +227,12 @@ export function Topbar() {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex max-w-[260px] items-center gap-3 rounded-2xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-4 shadow-sm transition-colors hover:bg-slate-50"
+              className="flex max-w-[260px] items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1.5 pl-1.5 pr-4 shadow-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Account menu"
             >
-              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-500 ring-2 ring-white">
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-700">
                 {avatarSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element -- user-uploaded or data URL
                   <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
@@ -238,23 +240,23 @@ export function Topbar() {
                   <span className="text-sm font-bold text-white">{getInitials(pillLabel)}</span>
                 )}
               </span>
-              <span className="hidden min-w-0 max-w-[180px] truncate text-left text-sm font-semibold text-slate-900 sm:block">
+              <span className="hidden min-w-0 max-w-[180px] truncate text-left text-sm font-semibold text-slate-900 dark:text-slate-50 sm:block">
                 {pillLabel}
               </span>
             </button>
 
             {menuOpen ? (
               <div
-                className="absolute left-0 top-full z-50 mt-2 w-max min-w-full rounded-2xl border border-slate-200 bg-white py-1 shadow-lg"
+                className="absolute left-0 top-full z-50 mt-2 w-max min-w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 shadow-lg"
                 role="menu"
               >
                 <Link
                   href="/profile"
                   role="menuitem"
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-50 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <UserIcon className="h-5 w-5 shrink-0 text-slate-600" strokeWidth={1.75} />
+                  <UserIcon className="h-5 w-5 shrink-0 text-slate-600 dark:text-slate-300" strokeWidth={1.75} />
                   View Profile
                 </Link>
               </div>

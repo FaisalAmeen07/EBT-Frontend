@@ -59,15 +59,15 @@ export default function ResetPasswordView() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Link
           href="/auth/login"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to sign in
         </Link>
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">New password</label>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">New password</label>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               type={showPw ? 'text' : 'password'}
               required
@@ -79,7 +79,7 @@ export default function ResetPasswordView() {
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
             >
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -87,7 +87,7 @@ export default function ResetPasswordView() {
           {(() => {
             const s = passwordStrength(password);
             const item = (ok: boolean, label: string) => (
-              <span className={ok ? 'text-emerald-700' : 'text-slate-400'}>{label}</span>
+              <span className={ok ? 'text-emerald-700' : 'text-slate-400 dark:text-slate-500'}>{label}</span>
             );
             return (
               <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-[11px] font-semibold">
@@ -104,9 +104,9 @@ export default function ResetPasswordView() {
           ) : null}
         </div>
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Confirm password</label>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Confirm password</label>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               type={showPw2 ? 'text' : 'password'}
               required
@@ -118,7 +118,7 @@ export default function ResetPasswordView() {
             <button
               type="button"
               onClick={() => setShowPw2(!showPw2)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
             >
               {showPw2 ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

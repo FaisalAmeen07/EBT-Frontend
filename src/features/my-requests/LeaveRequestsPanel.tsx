@@ -63,36 +63,36 @@ export function LeaveRequestsPanel({
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl bg-white">
+      <div className="overflow-x-auto rounded-2xl bg-white dark:bg-slate-900">
         <table className="w-full min-w-[560px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-white">
-                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+            <tr className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
                   Type
                 </th>
-                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
                   Dates
                 </th>
-                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:px-6">
+                <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-6">
                   Status
                 </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-20 text-center text-sm font-medium text-slate-500">
+                <td colSpan={3} className="px-6 py-20 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
                   {leaveEmptyMessage(LeavetatusFilter, totalCount)}
                 </td>
               </tr>
             ) : (
               rows.map((leave) => (
-                <tr key={leave.id} className="transition-colors hover:bg-slate-50">
+                <tr key={leave.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80">
                   <td className="px-4 py-5 sm:px-6">
-                    <span className="font-semibold text-slate-900">{leave.type}</span>
-                    <p className="mt-1 line-clamp-2 max-w-xs text-xs text-slate-500">{leave.reason || '—'}</p>
+                    <span className="font-semibold text-slate-900 dark:text-slate-50">{leave.type}</span>
+                    <p className="mt-1 line-clamp-2 max-w-xs text-xs text-slate-500 dark:text-slate-400">{leave.reason || '—'}</p>
                   </td>
-                  <td className="px-4 py-5 text-sm text-slate-600 sm:px-6">
+                  <td className="px-4 py-5 text-sm text-slate-600 dark:text-slate-300 sm:px-6">
                     {format(new Date(leave.startDate), 'MMM d, yyyy')} – {format(new Date(leave.endDate), 'MMM d, yyyy')}
                   </td>
                   <td className="px-4 py-5 sm:px-6">
@@ -108,7 +108,7 @@ export function LeaveRequestsPanel({
       <RequestModal open={formOpen} onClose={onCloseModal} title="Apply for leave" titleId="leave-modal-title">
         <form className="space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Leave type</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Leave type</label>
             <select
               value={leaveType}
               onChange={(e) => setLeaveType(e.target.value as LeaveType)}
@@ -121,7 +121,7 @@ export function LeaveRequestsPanel({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Start date</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Start date</label>
               <input
                 type="date"
                 required
@@ -131,7 +131,7 @@ export function LeaveRequestsPanel({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">End date</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">End date</label>
               <input
                 type="date"
                 required
@@ -142,7 +142,7 @@ export function LeaveRequestsPanel({
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Reason (optional)</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Reason (optional)</label>
             <textarea
               rows={3}
               value={reason}
@@ -157,7 +157,7 @@ export function LeaveRequestsPanel({
             className={`inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-sm ${
               submitting
                 ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500'
             }`}
           >
             <Send className="h-4 w-4" />

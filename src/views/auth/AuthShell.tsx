@@ -32,13 +32,13 @@ export default function AuthShell({
 
   return (
     <div
-      className={`fixed inset-0 z-50 h-[100dvh] overflow-hidden bg-[#F2F4FC] px-3 sm:px-5 ${compact ? 'py-2.5 sm:py-4' : 'py-3 sm:py-5'}`}
+      className={`fixed inset-0 z-50 h-[100dvh] overflow-hidden bg-[#F2F4FC] px-3 dark:bg-slate-950 sm:px-5 ${compact ? 'py-2.5 sm:py-4' : 'py-3 sm:py-5'}`}
     >
       <div
         className="mx-auto flex h-full w-full flex-col items-center justify-center"
       >
         <div className={`mx-auto w-full ${maxW}`}>
-          <div className="max-h-full overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)]">
+          <div className="max-h-full overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 shadow-[0_24px_70px_rgba(15,23,42,0.14)]">
             <div className="relative grid min-h-[min(90vh,42rem)] grid-cols-1 md:grid-cols-[minmax(280px,38%)_1fr]">
               <aside className="relative hidden overflow-hidden bg-gradient-to-b from-[#0b4da6] via-[#1260c8] to-[#35a4ff] px-10 py-10 text-white md:flex md:items-center md:justify-center">
                 <div className="flex w-full max-w-[320px] flex-col items-center text-center">
@@ -70,12 +70,12 @@ export default function AuthShell({
               <div className="pointer-events-none absolute inset-y-0 left-[calc(38%-8px)] z-10 hidden w-16 -translate-x-1/2 items-center justify-center md:flex">
                 <div className="flex h-full flex-col justify-around">
                   {Array.from({ length: 10 }).map((_, i) => (
-                    <span key={i} className="h-16 w-16 rounded-full bg-white shadow-none" />
+                    <span key={i} className="h-16 w-16 rounded-full bg-white dark:bg-slate-900 shadow-none" />
                   ))}
                 </div>
               </div>
 
-              <section className={`flex min-h-0 flex-col justify-center bg-white ${transitionClass}`}>
+              <section className={`flex min-h-0 flex-col justify-center bg-white dark:bg-slate-900 ${transitionClass}`}>
                 <div className={`px-6 text-center sm:px-10 ${compact ? 'pb-3 pt-5 sm:pb-4 sm:pt-6' : 'pb-5 pt-8 sm:pb-6 sm:pt-10'}`}>
                   <div className="mx-auto flex w-full max-w-xl flex-col items-center">
                     <div className="relative mb-2 h-14 w-14 md:hidden">
@@ -100,7 +100,7 @@ export default function AuthShell({
                         draggable={false}
                       />
                     </div>
-                    <h1 className={`font-semibold text-slate-900 ${compact ? 'mt-1 text-[1.9rem] sm:text-[2rem]' : 'mt-1 text-2xl sm:mt-2 sm:text-[2.15rem]'}`}>
+                    <h1 className={`font-semibold text-slate-900 dark:text-slate-50 ${compact ? 'mt-1 text-[1.9rem] sm:text-[2rem]' : 'mt-1 text-2xl sm:mt-2 sm:text-[2.15rem]'}`}>
                       {title}
                     </h1>
                   </div>

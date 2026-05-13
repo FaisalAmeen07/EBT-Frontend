@@ -8,8 +8,8 @@ export const metadata = {
 
 function AuthFallback() {
   return (
-    <div className="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-[#F2F4FC]">
-      <div className="text-slate-600 text-sm font-medium">Loading…</div>
+    <div className="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-[#F2F4FC] dark:bg-slate-950">
+      <div className="text-slate-600 dark:text-slate-300 text-sm font-medium">Loading…</div>
     </div>
   );
 }

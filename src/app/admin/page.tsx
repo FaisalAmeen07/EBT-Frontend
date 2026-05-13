@@ -31,15 +31,15 @@ const cards = [
 export default function AdminHomePage() {
   return (
     <div className="mx-auto min-h-full max-w-5xl space-y-8 px-4 pb-12 pt-6 sm:px-0">
-      <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/90 to-indigo-50/35 p-8 shadow-md shadow-slate-200/40 sm:rounded-[2.5rem]">
+      <div className="overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-700/80 bg-gradient-to-br from-white via-slate-50/90 to-indigo-50/35 p-8 shadow-md shadow-slate-200/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 dark:shadow-black/30 sm:rounded-[2.5rem]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 ring-4 ring-slate-900/5">
             <ShieldCheck className="h-7 w-7" strokeWidth={1.5} aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Administration</p>
-            <h1 className="mt-1 text-3xl font-light tracking-tight text-slate-900">Admin Control</h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Administration</p>
+            <h1 className="mt-1 text-3xl font-light tracking-tight text-slate-900 dark:text-slate-50">Admin Control</h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               Manage users, time and attendance policies, and registration departments from one place.
             </p>
           </div>
@@ -53,16 +53,16 @@ export default function AdminHomePage() {
             <Link
               key={c.href}
               href={c.href}
-              className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-100/80 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
+              className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-800/80 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:hover:border-slate-600 dark:hover:bg-slate-800/40 dark:hover:shadow-black/30"
             >
               <div
-                className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition group-hover:scale-105 ${c.accent}`}
+                className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition group-hover:scale-105 dark:shadow-black/40 ${c.accent}`}
               >
                 <Icon className="h-6 w-6" aria-hidden />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900">{c.title}</h2>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500">{c.description}</p>
-              <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-blue-600 transition group-hover:gap-2">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{c.title}</h2>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{c.description}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-blue-600 transition group-hover:gap-2 dark:text-blue-400">
                 Open
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </span>

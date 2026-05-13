@@ -1,5 +1,5 @@
 const AUTH_INPUT_BASE =
-  'w-full border-0 border-b-2 border-sky-200 bg-transparent text-slate-800 placeholder:text-slate-300 outline-none focus:border-sky-500 transition-colors';
+  'w-full border-0 border-b-2 border-sky-200 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-300 outline-none focus:border-sky-500 transition-colors';
 
 /**
  * No `px-*` in base — it fights with `pl-*` for icon spacing. Left icon sits at left-3 (12px);
@@ -17,4 +17,4 @@ export const AUTH_PRIMARY_BUTTON_CLASS =
   'inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-b from-blue-600 to-blue-700 px-6 py-2 text-sm font-semibold text-white shadow-[0_8px_16px_rgba(37,99,235,0.35)] hover:from-blue-700 hover:to-blue-800 disabled:opacity-60 disabled:cursor-not-allowed';
 
 export const AUTH_SECONDARY_BUTTON_CLASS =
-  'inline-flex items-center justify-center w-full gap-2 rounded-full border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed';
+  'inline-flex items-center justify-center w-full gap-2 rounded-full border border-slate-300 bg-white dark:bg-slate-900 px-6 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:opacity-60 disabled:cursor-not-allowed';

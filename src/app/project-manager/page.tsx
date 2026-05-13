@@ -519,14 +519,21 @@ export default function TasksPage() {
   ];
 
   const statusBadge = (status: string) => {
-    if (status === 'Pending') return 'bg-amber-50 text-amber-700 border-amber-100';
-    if (status === 'Working') return 'bg-blue-50 text-blue-700 border-blue-100';
-    if (status === 'In Progress') return 'bg-blue-50 text-blue-700 border-blue-100';
-    if (status === 'Submitted') return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-    if (status === 'Review') return 'bg-violet-50 text-violet-700 border-violet-100';
-    if (status === 'Approved') return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-    if (status === 'Rejected') return 'bg-rose-50 text-rose-700 border-rose-100';
-    return 'bg-slate-50 text-slate-700 border-slate-100';
+    if (status === 'Pending')
+      return 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/55 dark:text-amber-100 dark:border-amber-800';
+    if (status === 'Working')
+      return 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/50 dark:text-blue-100 dark:border-blue-800';
+    if (status === 'In Progress')
+      return 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/50 dark:text-blue-100 dark:border-blue-800';
+    if (status === 'Submitted')
+      return 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-100 dark:border-indigo-800';
+    if (status === 'Review')
+      return 'bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-950/50 dark:text-violet-100 dark:border-violet-800';
+    if (status === 'Approved')
+      return 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-100 dark:border-emerald-800';
+    if (status === 'Rejected')
+      return 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/50 dark:text-rose-100 dark:border-rose-800';
+    return 'bg-slate-50 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 border-slate-100 dark:border-slate-800';
   };
 
   const reviewerCanActOnTask = (task: Task | null) => {
@@ -609,18 +616,18 @@ export default function TasksPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-light text-slate-800 tracking-tight flex items-center gap-3">
+        <h1 className="text-3xl font-light text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-3">
           <CheckCircle2 className="w-8 h-8 text-blue-500" />
           Project Manager
         </h1>
       </div>
 
-      <div className="mb-5 rounded-xl border border-slate-200/90 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-slate-900/[0.02]">
+      <div className="mb-5 rounded-xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-slate-900/[0.02]">
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-[minmax(140px,180px)_minmax(220px,1fr)_minmax(180px,1fr)_auto] xl:items-end xl:gap-3">
           <div className="space-y-1">
             <label
               htmlFor="task-status-filter"
-              className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"
+              className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
             >
               Status
             </label>
@@ -628,7 +635,7 @@ export default function TasksPage() {
               id="task-status-filter"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as StatusFilter)}
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/40 px-2.5 text-xs font-semibold text-slate-900 shadow-none outline-none transition hover:border-slate-300 hover:bg-white focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+              className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-2.5 text-xs font-semibold text-slate-900 dark:text-slate-50 shadow-none outline-none transition hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800 focus:border-blue-400 focus:bg-white dark:focus:border-blue-500 dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/15 dark:focus:ring-blue-500/25"
             >
               {filterOptions.map(o => (
                 <option key={o.value} value={o.value}>
@@ -639,30 +646,30 @@ export default function TasksPage() {
           </div>
 
           <div className="space-y-1">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Deadline</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Deadline</span>
             <div className="relative" ref={pmDatePopoverRef}>
               <button
                 type="button"
                 onClick={() => setPmDateOpen((v) => !v)}
-                className="inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/40 px-2.5 text-left text-xs font-semibold text-slate-900 shadow-none transition hover:border-slate-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                className="inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-2.5 text-left text-xs font-semibold text-slate-900 dark:text-slate-50 shadow-none transition hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-500/25"
                 aria-expanded={pmDateOpen}
               >
                 <span
-                  className={`min-w-0 flex-1 truncate ${pmFrom || pmTo ? 'text-slate-900' : 'text-slate-500'}`}
+                  className={`min-w-0 flex-1 truncate ${pmFrom || pmTo ? 'text-slate-900 dark:text-slate-50' : 'text-slate-500 dark:text-slate-400'}`}
                 >
                   {deadlineLabel}
                 </span>
-                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" aria-hidden />
               </button>
 
               {pmDateOpen ? (
-                <div className="absolute left-0 top-[calc(100%+0.35rem)] z-30 w-[min(100vw-2rem,20.5rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/60 ring-1 ring-slate-900/5">
+                <div className="absolute left-0 top-[calc(100%+0.35rem)] z-30 w-[min(100vw-2rem,20.5rem)] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-lg shadow-slate-200/60 ring-1 ring-slate-900/5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Deadline range</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Deadline range</p>
                     <button
                       type="button"
                       onClick={() => setPmDateOpen(false)}
-                      className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                      className="rounded-md p-1 text-slate-400 dark:text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600"
                       aria-label="Close date filter"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden />
@@ -671,35 +678,35 @@ export default function TasksPage() {
 
                   <div className="mt-2.5 grid grid-cols-2 gap-2">
                     <label className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">From</span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">From</span>
                       <input
                         type="date"
                         value={pmFrom}
                         max={pmTo || undefined}
                         onChange={(e) => setPmFrom(e.target.value)}
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
+                        className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">To</span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">To</span>
                       <input
                         type="date"
                         value={pmTo}
                         min={pmFrom || undefined}
                         onChange={(e) => setPmTo(e.target.value)}
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
+                        className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
                       />
                     </label>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
+                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-2.5">
                     <button
                       type="button"
                       onClick={() => {
                         setPmFrom('');
                         setPmTo('');
                       }}
-                      className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                      className="h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800/80"
                     >
                       Clear
                     </button>
@@ -717,10 +724,10 @@ export default function TasksPage() {
           </div>
 
           <div className="space-y-1 sm:col-span-2 xl:col-span-1">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Search</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Search</span>
             <div className="relative">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                 aria-hidden
               />
               <input
@@ -728,13 +735,13 @@ export default function TasksPage() {
                 value={pmSearch}
                 onChange={(e) => setPmSearch(e.target.value)}
                 placeholder="Project name…"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/40 py-0 pl-8 pr-8 text-xs font-semibold text-slate-900 shadow-none outline-none transition placeholder:font-medium placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 py-0 pl-8 pr-8 text-xs font-semibold text-slate-900 dark:text-slate-50 shadow-none outline-none transition placeholder:font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800 focus:border-blue-400 focus:bg-white dark:focus:border-blue-500 dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/15 dark:focus:ring-blue-500/25"
               />
               {pmSearch.trim() ? (
                 <button
                   type="button"
                   onClick={() => setPmSearch('')}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 dark:text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600"
                   aria-label="Clear search"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden />
@@ -761,11 +768,11 @@ export default function TasksPage() {
       </div>
 
       {pmListLoading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white py-14 text-center text-slate-500">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-14 text-center text-slate-500 dark:text-slate-400">
           Loading tasks…
         </div>
       ) : pmListTasks.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-16 text-center text-slate-500">
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 py-16 text-center text-slate-500 dark:text-slate-400">
           No tasks match this filter.
         </div>
       ) : (
@@ -786,17 +793,17 @@ export default function TasksPage() {
                 onClick={() => setSelectedTaskId(task.id)}
                 className="group w-full text-left"
               >
-                <div className="flex h-full w-full overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md shadow-slate-200/60 transition hover:shadow-lg">
-                  <div className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center bg-slate-100/90 px-2 py-4">
-                    <span className="text-2xl font-semibold leading-none text-sky-600">
+                <div className="flex h-full w-full overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md shadow-slate-200/60 transition hover:shadow-lg">
+                  <div className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center bg-slate-100/90 px-2 py-4 dark:bg-slate-800/95">
+                    <span className="text-2xl font-semibold leading-none text-sky-600 dark:text-sky-400">
                       {format(dl, 'd')}
                     </span>
-                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-sky-600">
+                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400">
                       {format(dl, 'MMM')}
                     </span>
                   </div>
                   <div className="min-w-0 flex-1 space-y-2 p-4">
-                    <p className="min-w-0 font-bold leading-snug text-slate-900 group-hover:text-blue-600">
+                    <p className="min-w-0 font-bold leading-snug text-slate-900 dark:text-slate-50 group-hover:text-blue-600">
                       {task.title}
                     </p>
                     <span
@@ -806,30 +813,30 @@ export default function TasksPage() {
                     >
                       {listLabel}
                     </span>
-                    <p className="text-xs font-medium text-slate-500">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       {taskRefLabel(task.id)}
                       {currentUser?.role !== 'Employee' ? (
                         isTeamLeaderCreatedTask(task, users) && assignee?.name?.trim() ? (
-                          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-100">
                             {shortName(assignee.name)}
                           </span>
                         ) : assignee?.team?.trim() ? (
-                          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-100">
                             {assignee.team.trim()}
                           </span>
                         ) : null
                       ) : null}
                     </p>
-                    <p className="flex items-center gap-2 text-xs text-slate-600">
+                    <p className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                       <Building2 className="h-4 w-4 shrink-0 text-orange-500" aria-hidden />
                       <span className="truncate">{deptOrTeam}</span>
                     </p>
-                    <p className="flex items-center gap-2 text-xs text-slate-600">
+                    <p className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                       <Briefcase className="h-4 w-4 shrink-0 text-orange-500" aria-hidden />
                       <span className="truncate">{assignee?.role ?? 'Assignee'}</span>
                     </p>
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" aria-hidden />
                       Due {format(dl, 'EEE, MMM d')}
                     </p>
                   </div>
@@ -840,7 +847,7 @@ export default function TasksPage() {
                   <button
                     type="button"
                     aria-label="Edit pending task"
-                    className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-600"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5 text-slate-500 dark:text-slate-400 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-600 dark:hover:border-sky-700 dark:hover:bg-sky-950/50 dark:hover:text-sky-300"
                     onClick={e => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -852,7 +859,7 @@ export default function TasksPage() {
                   <button
                     type="button"
                     aria-label="Delete pending task"
-                    className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5 text-slate-500 dark:text-slate-400 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
                     onClick={e => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -883,16 +890,16 @@ export default function TasksPage() {
           })}
         </div>
         {pmListPagination.totalPages > 1 ? (
-          <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 <span>Rows per page:</span>
                 <select
                   value={pmPageSize}
                   onChange={(e) =>
                     setPmPageSize(Number(e.target.value) as (typeof PROJECT_MANAGER_PAGE_SIZE_OPTIONS)[number])
                   }
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100 shadow-sm outline-none transition hover:border-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800/80 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-900/40"
                 >
                   {PROJECT_MANAGER_PAGE_SIZE_OPTIONS.map((n) => (
                     <option key={n} value={n}>
@@ -901,15 +908,15 @@ export default function TasksPage() {
                   ))}
                 </select>
               </div>
-              <p className="text-sm text-slate-600">
-                <span className="font-bold tabular-nums text-slate-900">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-bold tabular-nums text-slate-900 dark:text-slate-50">
                   {pmListPagination.total === 0 ? 0 : (pmListPagination.page - 1) * pmListPagination.pageSize + 1}
                 </span>
                 –
-                <span className="font-bold tabular-nums text-slate-900">
+                <span className="font-bold tabular-nums text-slate-900 dark:text-slate-50">
                   {Math.min(pmListPagination.page * pmListPagination.pageSize, pmListPagination.total)}
                 </span>{' '}
-                of <span className="font-bold tabular-nums text-slate-900">{pmListPagination.total}</span>
+                of <span className="font-bold tabular-nums text-slate-900 dark:text-slate-50">{pmListPagination.total}</span>
               </p>
             </div>
             <div className="flex items-center justify-center gap-2">
@@ -917,19 +924,19 @@ export default function TasksPage() {
                 type="button"
                 disabled={pmPage <= 1}
                 onClick={() => setPmPage(p => Math.max(1, p - 1))}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden />
                 Previous
               </button>
-              <span className="px-2 text-sm font-semibold text-slate-500 tabular-nums">
+              <span className="px-2 text-sm font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
                 Page {pmPage} / {pmListPagination.totalPages}
               </span>
               <button
                 type="button"
                 disabled={pmPage >= pmListPagination.totalPages}
                 onClick={() => setPmPage(p => Math.min(pmListPagination.totalPages, p + 1))}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
                 <ChevronRight className="h-4 w-4" aria-hidden />
@@ -950,7 +957,7 @@ export default function TasksPage() {
           }}
         >
           <div
-            className="flex max-h-[min(92dvh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200/90 bg-white shadow-[0_25px_50px_-12px_rgba(15,23,42,0.35)] sm:rounded-2xl"
+            className="flex max-h-[min(92dvh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 shadow-[0_25px_50px_-12px_rgba(15,23,42,0.35)] sm:rounded-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="task-form-modal-title"
@@ -960,7 +967,7 @@ export default function TasksPage() {
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_100%_0%,rgba(59,130,246,0.15),transparent)]" />
               <div className="relative flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-inner ring-1 ring-white/20">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 dark:bg-white/5 text-white shadow-inner ring-1 ring-white/20">
                     {editTaskId ? (
                       <Pencil className="h-5 w-5" strokeWidth={2} aria-hidden />
                     ) : (
@@ -979,7 +986,7 @@ export default function TasksPage() {
                 <button
                   type="button"
                   onClick={closeTaskFormModal}
-                  className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-2 text-slate-200 transition hover:bg-white/10 hover:text-white"
+                  className="shrink-0 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 p-2 text-slate-200 transition hover:bg-white/10 hover:text-white"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
@@ -989,13 +996,13 @@ export default function TasksPage() {
 
             <form
               onSubmit={handleTaskFormSubmit}
-              className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-gradient-to-b from-slate-50/80 to-white"
+              className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-gradient-to-b from-slate-50/80 to-white dark:from-slate-900 dark:to-slate-950"
             >
               <div className="space-y-5 px-5 py-6 sm:px-6">
                 <div>
                   <label
                     htmlFor="task-title-input"
-                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400"
                   >
                     <ListTodo className="h-3.5 w-3.5 text-blue-500" aria-hidden />
                     Task title
@@ -1005,7 +1012,7 @@ export default function TasksPage() {
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-50 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
                     placeholder="e.g. Update documentation"
                     required
                     autoComplete="off"
@@ -1015,7 +1022,7 @@ export default function TasksPage() {
                 <div>
                   <label
                     htmlFor="task-assignee-select"
-                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400"
                   >
                     <UserRound className="h-3.5 w-3.5 text-blue-500" aria-hidden />
                     Assign to
@@ -1025,7 +1032,7 @@ export default function TasksPage() {
                       id="task-assignee-select"
                       value={assignedTo}
                       onChange={(e) => setAssignedTo(e.target.value)}
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
+                      className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-3 pl-4 pr-10 text-sm font-medium text-slate-900 dark:text-slate-50 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
                       required
                     >
                       <option value="">
@@ -1046,7 +1053,7 @@ export default function TasksPage() {
                         );
                       })}
                     </select>
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -1057,7 +1064,7 @@ export default function TasksPage() {
                 <div>
                   <label
                     htmlFor="task-deadline-input"
-                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400"
                   >
                     <CalendarDays className="h-3.5 w-3.5 text-blue-500" aria-hidden />
                     Deadline
@@ -1068,7 +1075,7 @@ export default function TasksPage() {
                       type="date"
                       value={deadline}
                       onChange={(e) => setDeadline(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-4 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 [color-scheme:light]"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-3 pl-4 pr-4 text-sm font-medium text-slate-900 dark:text-slate-50 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 [color-scheme:light]"
                       required
                     />
                   </div>
@@ -1078,11 +1085,11 @@ export default function TasksPage() {
                   <div>
                     <label
                       htmlFor="task-attachment-input"
-                      className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                      className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400"
                     >
                       <Paperclip className="h-3.5 w-3.5 text-blue-500" aria-hidden />
                       Attachment{' '}
-                      <span className="font-normal normal-case text-slate-400">
+                      <span className="font-normal normal-case text-slate-400 dark:text-slate-500">
                         (required · max {MAX_UPLOAD_FILE_MB} MB)
                       </span>
                     </label>
@@ -1091,7 +1098,7 @@ export default function TasksPage() {
                       id="task-attachment-input"
                       type="file"
                       onChange={handleCreateAttachmentChange}
-                      className="block w-full cursor-pointer rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-blue-700 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
+                      className="block w-full cursor-pointer rounded-xl border border-dashed border-slate-300 bg-white dark:bg-slate-900 px-3 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm outline-none transition file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-blue-700 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
                     />
                     {createAttachmentFile && (
                       <p className="mt-2 text-xs font-medium text-emerald-700">
@@ -1107,23 +1114,23 @@ export default function TasksPage() {
                 <div>
                   <label
                     htmlFor="task-description-input"
-                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                    className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400"
                   >
                     <AlignLeft className="h-3.5 w-3.5 text-blue-500" aria-hidden />
-                    Description <span className="font-normal normal-case text-slate-400">(optional)</span>
+                    Description <span className="font-normal normal-case text-slate-400 dark:text-slate-500">(optional)</span>
                   </label>
                   <textarea
                     id="task-description-input"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
-                    className="min-h-[7rem] w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
+                    className="min-h-[7rem] w-full resize-y rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm leading-relaxed text-slate-900 dark:text-slate-50 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15"
                     placeholder="Optional — acceptance criteria, links, or notes."
                   />
                 </div>
               </div>
 
-              <div className="mt-auto border-t border-slate-100 bg-white/90 px-5 py-4 sm:px-6">
+              <div className="mt-auto border-t border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-5 py-4 sm:px-6">
                 <button
                   type="submit"
                   disabled={editTaskId ? !editFormReady : !createFormReady || isCreatingTask}
@@ -1148,19 +1155,19 @@ export default function TasksPage() {
           }}
         >
           <div
-            className="my-auto flex min-h-0 w-full max-w-2xl max-h-[min(92dvh,56rem)] flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200/80 bg-white shadow-2xl sm:rounded-[2rem] sm:border-0"
+            className="my-auto flex min-h-0 w-full max-w-2xl max-h-[min(92dvh,56rem)] flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-2xl sm:rounded-[2rem] sm:border-0"
             role="dialog"
             aria-modal="true"
             aria-labelledby="task-detail-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:px-6 sm:py-5 md:px-8">
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-4 py-4 sm:px-6 sm:py-5 md:px-8">
               <div className="min-w-0 flex-1">
-                <h2 id="task-detail-title" className="text-lg font-bold text-slate-800 sm:text-xl flex items-center gap-2">
+                <h2 id="task-detail-title" className="text-lg font-bold text-slate-800 dark:text-slate-100 sm:text-xl flex items-center gap-2">
                   <ClipboardList className="h-5 w-5 shrink-0 text-blue-500" />
                   Task Details
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Assignee: {users.find(u => u.id === selectedTask.assignedTo)?.name || 'Unassigned'} (
                   {users.find(u => u.id === selectedTask.assignedTo)?.role ?? '—'})
                 </p>
@@ -1173,7 +1180,7 @@ export default function TasksPage() {
                       openEditTask(selectedTask);
                       setSelectedTaskId(null);
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white dark:border-sky-800 dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-sky-700 dark:text-sky-300 transition hover:bg-sky-50 dark:hover:bg-sky-950/50"
                   >
                     <Pencil className="h-4 w-4" aria-hidden />
                     Edit
@@ -1201,7 +1208,7 @@ export default function TasksPage() {
                         },
                       });
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white dark:border-rose-800 dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-300 transition hover:bg-rose-50 dark:hover:bg-rose-950/40"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden />
                     Delete
@@ -1212,10 +1219,10 @@ export default function TasksPage() {
                   onClick={() => {
                     setSelectedTaskId(null);
                   }}
-                  className="shrink-0 rounded-full border border-transparent p-2 transition-colors hover:border-slate-100 hover:bg-white"
+                  className="shrink-0 rounded-full border border-transparent p-2 transition-colors hover:border-slate-100 hover:bg-white dark:hover:border-slate-700 dark:hover:bg-slate-800"
                   title="Close"
                 >
-                  <X className="h-5 w-5 text-slate-400" />
+                  <X className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                 </button>
               </div>
             </div>
@@ -1225,17 +1232,17 @@ export default function TasksPage() {
               <div className="space-y-3">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-xl font-bold leading-snug text-slate-900 sm:text-2xl">{selectedTask.title}</h3>
+                    <h3 className="text-xl font-bold leading-snug text-slate-900 dark:text-slate-50 sm:text-2xl">{selectedTask.title}</h3>
                     {selectedTask.description ? (
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base whitespace-pre-wrap break-words">
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base whitespace-pre-wrap break-words">
                         {selectedTask.description}
                       </p>
                     ) : (
-                      <p className="mt-2 text-sm italic text-slate-400">No description</p>
+                      <p className="mt-2 text-sm italic text-slate-400 dark:text-slate-500">No description</p>
                     )}
                     {selectedTask.attachment && (
-                      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Attachment</p>
+                      <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 px-4 py-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Attachment</p>
                         <a
                           href={selectedTask.attachment.dataUrl}
                           download={selectedTask.attachment.fileName}
@@ -1243,7 +1250,7 @@ export default function TasksPage() {
                         >
                           <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
                           {selectedTask.attachment.fileName}
-                          <span className="text-xs font-normal text-slate-500">
+                          <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
                             ({formatFileSize(selectedTask.attachment.fileSize)})
                           </span>
                         </a>
@@ -1263,11 +1270,11 @@ export default function TasksPage() {
                         : selectedTask.status}
                     </span>
                     {outsideAvailabilityHint && (
-                      <span className="text-[10px] font-bold px-3 py-1 rounded-full border bg-rose-50 text-rose-700 border-rose-100 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold px-3 py-1 rounded-full border bg-rose-50 text-rose-700 border-rose-100 uppercase tracking-widest dark:bg-rose-950/50 dark:text-rose-100 dark:border-rose-800">
                         Outside availability
                       </span>
                     )}
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-2">
                       <Calendar className="h-4 w-4 shrink-0" />
                       Due {format(new Date(selectedTask.deadline), 'MMM d')}
                     </span>
@@ -1275,16 +1282,16 @@ export default function TasksPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span className="text-xs text-slate-500 break-all">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 break-all">
                     {taskRefLabel(selectedTask.id)}
                     {currentUser?.role !== 'Employee' ? (
                       isTeamLeaderCreatedTask(selectedTask, users) &&
                       users.find((u) => u.id === selectedTask.assignedTo)?.name?.trim() ? (
-                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-100">
                           {shortName(users.find((u) => u.id === selectedTask.assignedTo)!.name!)}
                         </span>
                       ) : users.find((u) => u.id === selectedTask.assignedTo)?.team?.trim() ? (
-                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-100">
                           {users.find((u) => u.id === selectedTask.assignedTo)!.team!.trim()}
                         </span>
                       ) : null
@@ -1297,7 +1304,7 @@ export default function TasksPage() {
                     <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600/80">
                       Submission note
                     </p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words">
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words">
                       {selectedTaskSubmitNote}
                     </p>
                   </div>
@@ -1317,7 +1324,7 @@ export default function TasksPage() {
                           label="Team member — time on task"
                         />
                       </div>
-                      <p className="max-w-sm text-xs leading-relaxed text-slate-600">
+                      <p className="max-w-sm text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                         Live timer from when they pressed Start Work. Employees do not see this card — only Team Leaders do.
                       </p>
                     </div>
@@ -1337,7 +1344,7 @@ export default function TasksPage() {
                         id="forward-tl"
                         value={forwardTlId}
                         onChange={(e) => setForwardTlId(e.target.value)}
-                        className="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                        className="w-full rounded-xl border border-indigo-200 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-50 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
                       >
                         <option value="">Select Team Lead</option>
                         {teamLeaderOptions.map((u) => (
@@ -1375,12 +1382,12 @@ export default function TasksPage() {
               )}
 
               {showWorkflowPanel && (
-              <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 sm:p-5 space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-900/80 border border-slate-100 dark:border-slate-800 rounded-[1.5rem] p-4 sm:p-5 space-y-4">
                 {(currentUser?.role === 'Employee' || currentUser?.role === 'Team Leader') &&
                   selectedTask.assignedTo === currentUser.id &&
                   (selectedTask.status === 'In Progress' || selectedTask.status === 'Review') && (
                     <div className="space-y-2">
-                      <label htmlFor="task-submit-note" className="block text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                      <label htmlFor="task-submit-note" className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                         Submission note <span className="text-rose-600">(required)</span>
                       </label>
                       <textarea
@@ -1389,12 +1396,12 @@ export default function TasksPage() {
                         onChange={e => setSubmitNote(e.target.value)}
                         rows={3}
                         placeholder="Describe what you completed, links, or handoff details for your Team Leader…"
-                        className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                        className="w-full resize-y rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
                       />
                     </div>
                   )}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <h4 className="text-sm font-bold text-slate-800">Workflow Actions</h4>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">Workflow Actions</h4>
                   <div className="flex flex-wrap gap-2">
                     {(currentUser?.role === 'Employee' || currentUser?.role === 'Team Leader') &&
                       selectedTask.assignedTo === currentUser.id &&
@@ -1505,24 +1512,24 @@ export default function TasksPage() {
           }}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="schedule-confirm-title"
             aria-describedby="schedule-confirm-desc"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="schedule-confirm-title" className="text-lg font-bold text-slate-900">
+            <h2 id="schedule-confirm-title" className="text-lg font-bold text-slate-900 dark:text-slate-50">
               {confirmAction.title}
             </h2>
-            <p id="schedule-confirm-desc" className="mt-2 text-sm text-slate-600">
+            <p id="schedule-confirm-desc" className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               {confirmAction.message}
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmAction(null)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800/80"
               >
                 Cancel
               </button>

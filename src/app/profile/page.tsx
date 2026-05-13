@@ -10,7 +10,7 @@ import { toast } from '@/lib/toast';
 import { isAxiosError } from 'axios';
 
 const inputClass =
-  'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
+  'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-800 dark:text-slate-100 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
 
 function apiErrorMessage(e: unknown): string {
   if (
@@ -87,7 +87,7 @@ export default function ProfilePage() {
 
   if (!currentUser) {
     return (
-      <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-slate-600 dark:text-slate-300">
         No profile data. Please sign in.
       </div>
     );
@@ -161,7 +161,7 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-4xl pb-12">
       <h1 className="mb-6 text-2xl font-light tracking-tight text-sky-600">Profile</h1>
 
-      <div className="mb-8 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-slate-700">
+      <div className="mb-8 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" aria-hidden />
         <p>
           Details load from your account on the server. Save changes to update via the API. Unique ID is
@@ -177,7 +177,7 @@ export default function ProfilePage() {
         <form onSubmit={(e) => void handleSave(e)} className="space-y-8">
           <div className="flex flex-col items-center">
             <div className="relative">
-              <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-white bg-slate-200 shadow-md ring-1 ring-slate-200">
+              <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-white bg-slate-200 shadow-md ring-1 ring-slate-200 dark:ring-slate-700">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={displayAvatar} alt="" className="h-full w-full object-cover" />
               </div>
@@ -204,7 +204,7 @@ export default function ProfilePage() {
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Name</label>
               <input
                 className={inputClass}
                 value={name}
@@ -214,7 +214,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">CNIC</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">CNIC</label>
               <input
                 className={inputClass}
                 value={cnic}
@@ -224,7 +224,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Department</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Department</label>
               <select
                 className={inputClass}
                 value={department}
@@ -240,10 +240,10 @@ export default function ProfilePage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Email</label>
               <input
                 type="email"
-                className={`${inputClass} cursor-pointer bg-slate-50 text-slate-700`}
+                className={`${inputClass} cursor-pointer bg-slate-50 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200`}
                 value={email}
                 required
                 disabled
@@ -251,7 +251,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone Number</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Phone Number</label>
               <input
                 className={inputClass}
                 value={phone}
@@ -261,11 +261,11 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unique ID</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Unique ID</label>
               <input className={`${inputClass} cursor-not-allowed bg-slate-100/90`} readOnly value={uniqueId} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Addresses</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Addresses</label>
               <textarea
                 rows={3}
                 className={`${inputClass} resize-y`}
@@ -277,7 +277,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex justify-end border-t border-slate-100 pt-6">
+          <div className="flex justify-end border-t border-slate-100 dark:border-slate-800 pt-6">
             <button
               type="submit"
               disabled={saving}

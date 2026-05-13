@@ -70,68 +70,68 @@ export function DepartmentsControlPage() {
 
   return (
     <div className="mx-auto min-h-full max-w-4xl space-y-6 px-4 pb-12 pt-6 sm:px-0">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-800 sm:p-8">
         <div className="flex items-start gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200/50">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200/50 dark:shadow-emerald-950/40">
             <Building2 className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Admin</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Departments control</h1>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Admin</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">Departments control</h1>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               Manage the departments shown in the Register form dropdown.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6">
-        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Add department</label>
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 p-5 shadow-sm sm:p-6">
+        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Add department</label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="e.g. Graphic Design"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none ring-blue-100 transition focus:border-blue-500 focus:ring-2"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 outline-none ring-blue-100 transition hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
           />
           <button
             type="button"
             onClick={onAdd}
             disabled={!normalized || exists || saving}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {saving ? 'Saving...' : 'Add'}
           </button>
         </div>
-        {exists ? <p className="mt-2 text-xs font-medium text-amber-700">Department already exists.</p> : null}
-        {error ? <p className="mt-2 text-xs font-medium text-rose-700">{error}</p> : null}
+        {exists ? <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-200">Department already exists.</p> : null}
+        {error ? <p className="mt-2 text-xs font-medium text-rose-700 dark:text-rose-300">{error}</p> : null}
       </div>
 
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 p-5 shadow-sm sm:p-6">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Current departments</h2>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Current departments</h2>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-200">
             {departments.length} total
           </span>
         </div>
         {loading ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="h-7 w-7 animate-spin text-slate-500" aria-label="Loading departments" />
+            <Loader2 className="h-7 w-7 animate-spin text-slate-500 dark:text-slate-400" aria-label="Loading departments" />
           </div>
         ) : (
         <div className="space-y-2">
           {departments.map((d) => (
             <div
               key={d}
-              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3"
+              className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/70 px-4 py-3 transition hover:bg-slate-100 dark:hover:bg-slate-800/90"
             >
-              <span className="text-sm font-medium text-slate-800">{d}</span>
+              <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{d}</span>
               <button
                 type="button"
                 onClick={() => void onRemove(d)}
                 disabled={departments.length <= 1 || saving}
-                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900/45 disabled:cursor-not-allowed disabled:opacity-50"
                 title={departments.length <= 1 ? 'At least one department is required' : 'Remove department'}
               >
                 <Trash2 className="h-3.5 w-3.5" />

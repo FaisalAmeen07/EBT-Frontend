@@ -25,10 +25,10 @@ type BoardStatusFilter = 'all' | 'Available' | 'Unavailable' | 'Leave';
 type AttendanceLogPreset = 'today' | '7d' | '30d' | 'custom';
 
 function displayStatusLabel(status?: string): string {
-  if (!status) return 'Not Set';
+  if (!status || status === 'Not Set') return 'No record';
   if (status === 'Available') return 'Present';
   if (status === 'Unavailable') return 'Absent';
-  if (status === 'Not Set') return 'N/A';
+  if (status === 'Leave') return 'Leave';
   return status;
 }
 
@@ -135,7 +135,7 @@ function AdminAvailabilityBoard() {
           ? 'employee'
           : roleFilter === 'Team Leader'
             ? 'team_leader'
-            : 'HR';
+            : 'hr';
     const attendanceParam =
       statusFilter === 'all'
         ? 'ALL'
@@ -149,7 +149,7 @@ function AdminAvailabilityBoard() {
       setLoading(true);
       try {
         const summary = await fetchAttendanceSummaryApi({
-          role: roleParam as 'ALL' | 'employee' | 'HR' | 'team_leader',
+          role: roleParam as 'ALL' | 'employee' | 'hr' | 'team_leader',
           attendance: attendanceParam as 'ALL' | 'PRESENT' | 'ABSENT' | 'LEAVE',
         });
         if (!cancelled) setSummaryUsers(summary.users);
@@ -203,41 +203,52 @@ function AdminAvailabilityBoard() {
         return {
           dot: 'bg-emerald-500',
           ring: 'ring-emerald-500/25',
-          border: 'border-emerald-200',
-          cardBg: 'bg-gradient-to-br from-white to-emerald-50/40',
+          border: 'border-emerald-200 dark:border-emerald-800/80',
+          cardBg:
+            'bg-gradient-to-br from-white to-emerald-50/40 dark:from-slate-900 dark:to-emerald-950/35 dark:border-emerald-900/30',
           stripe: 'bg-emerald-500',
-          badge: 'bg-emerald-100 text-emerald-800 border-emerald-200/80',
-          iconWrap: 'bg-emerald-100 text-emerald-600',
+          badge:
+            'bg-emerald-100 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-100 dark:border-emerald-800',
+          iconWrap:
+            'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800',
         };
       case 'Unavailable':
         return {
           dot: 'bg-amber-400',
           ring: 'ring-amber-400/30',
-          border: 'border-amber-200',
-          cardBg: 'bg-gradient-to-br from-white to-amber-50/50',
+          border: 'border-amber-200 dark:border-amber-800/80',
+          cardBg:
+            'bg-gradient-to-br from-white to-amber-50/50 dark:from-slate-900 dark:to-amber-950/30 dark:border-amber-900/30',
           stripe: 'bg-amber-400',
-          badge: 'bg-amber-100 text-amber-900 border-amber-200/80',
-          iconWrap: 'bg-amber-100 text-amber-700',
+          badge:
+            'bg-amber-100 text-amber-900 border-amber-200/80 dark:bg-amber-950/55 dark:text-amber-100 dark:border-amber-800',
+          iconWrap:
+            'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800',
         };
       case 'Leave':
         return {
           dot: 'bg-rose-500',
           ring: 'ring-rose-500/25',
-          border: 'border-rose-200',
-          cardBg: 'bg-gradient-to-br from-white to-rose-50/40',
+          border: 'border-rose-200 dark:border-rose-800/80',
+          cardBg:
+            'bg-gradient-to-br from-white to-rose-50/40 dark:from-slate-900 dark:to-rose-950/30 dark:border-rose-900/30',
           stripe: 'bg-rose-500',
-          badge: 'bg-rose-100 text-rose-800 border-rose-200/80',
-          iconWrap: 'bg-rose-100 text-rose-600',
+          badge:
+            'bg-rose-100 text-rose-800 border-rose-200/80 dark:bg-rose-950/50 dark:text-rose-100 dark:border-rose-800',
+          iconWrap:
+            'bg-rose-100 text-rose-600 dark:bg-rose-950/55 dark:text-rose-200 dark:border-rose-800',
         };
       default:
         return {
-          dot: 'bg-slate-300',
-          ring: 'ring-slate-300/25',
-          border: 'border-slate-200',
-          cardBg: 'bg-white',
-          stripe: 'bg-slate-300',
-          badge: 'bg-slate-100 text-slate-700 border-slate-200',
-          iconWrap: 'bg-slate-100 text-slate-500',
+          dot: 'bg-slate-300 dark:bg-slate-500',
+          ring: 'ring-slate-300/25 dark:ring-slate-500/25',
+          border: 'border-slate-200 dark:border-slate-600',
+          cardBg: 'bg-white dark:bg-slate-900',
+          stripe: 'bg-slate-300 dark:bg-slate-500',
+          badge:
+            'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600',
+          iconWrap:
+            'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600',
         };
     }
   };
@@ -254,9 +265,9 @@ function AdminAvailabilityBoard() {
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Team Status Board</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">Team Status Board</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-slate-500">
+        <div className="flex flex-wrap items-center gap-2 text-slate-500 dark:text-slate-400">
           <Filter className="w-4 h-4 shrink-0" aria-hidden />
           <span className="text-xs font-bold uppercase tracking-widest">Filters</span>
         </div>
@@ -264,15 +275,15 @@ function AdminAvailabilityBoard() {
 
       <div className="flex flex-col gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Role</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Role</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setRoleFilter('all')}
               className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
                 roleFilter === 'all'
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-slate-900 text-white shadow-md dark:bg-indigo-600 dark:text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               All
@@ -284,8 +295,8 @@ function AdminAvailabilityBoard() {
                 onClick={() => setRoleFilter(r)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
                   roleFilter === r
-                    ? 'bg-slate-900 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-slate-900 text-white shadow-md dark:bg-indigo-600 dark:text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700'
                 }`}
               >
                 {r === 'Team Leader' ? 'TL' : r}
@@ -294,15 +305,15 @@ function AdminAvailabilityBoard() {
           </div>
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Status</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Status</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
               className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
                 statusFilter === 'all'
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-slate-900 text-white shadow-md dark:bg-indigo-600 dark:text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               All
@@ -326,10 +337,10 @@ function AdminAvailabilityBoard() {
                         ? 'bg-amber-500 text-white border-amber-500 shadow-md'
                         : 'bg-rose-600 text-white border-rose-600 shadow-md'
                     : s === 'Available'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/45 dark:text-emerald-100 dark:border-emerald-800 dark:hover:bg-emerald-900/40'
                       : s === 'Unavailable'
-                        ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
-                        : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                        ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/35'
+                        : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-100 dark:border-rose-800 dark:hover:bg-rose-900/35'
                 }`}
               >
                 {label}
@@ -340,9 +351,9 @@ function AdminAvailabilityBoard() {
       </div>
 
       {loading ? (
-        <p className="text-center text-slate-500 py-12 text-sm">Loading team status…</p>
+        <p className="text-center text-slate-500 dark:text-slate-400 py-12 text-sm">Loading team status…</p>
       ) : boardRows.length === 0 ? (
-        <p className="text-center text-slate-500 py-12 text-sm">No people match these filters.</p>
+        <p className="text-center text-slate-500 dark:text-slate-400 py-12 text-sm">No people match these filters.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {boardRows.map((user) => {
@@ -354,23 +365,23 @@ function AdminAvailabilityBoard() {
             return (
               <div
                 key={user.id}
-                className={`relative rounded-2xl p-6 border shadow-sm hover:shadow-lg transition-all overflow-hidden ${accent.cardBg} ${accent.border}`}
+                className={`relative rounded-2xl p-6 border shadow-sm transition-all overflow-hidden hover:shadow-lg dark:hover:brightness-[1.03] ${accent.cardBg} ${accent.border}`}
               >
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${accent.stripe}`} aria-hidden />
                 <div className="flex items-start gap-4 pl-1">
                   <div className="relative shrink-0">
                     <div
-                      className={`h-14 w-14 rounded-2xl flex items-center justify-center font-bold text-lg border-2 border-white shadow-sm ${accent.iconWrap}`}
+                      className={`h-14 w-14 rounded-2xl flex items-center justify-center font-bold text-lg border-2 shadow-sm ${accent.iconWrap} border-white dark:border-slate-800`}
                     >
                       {user.name.charAt(0)}
                     </div>
                     <div
-                      className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-[3px] border-white ring-2 ${accent.dot} ${accent.ring}`}
+                      className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-[3px] ring-2 ${accent.dot} ${accent.ring} border-white dark:border-slate-900`}
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-slate-900 text-base leading-snug truncate">{user.name}</h3>
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mt-0.5">
+                    <h3 className="font-bold text-slate-900 dark:text-slate-50 text-base leading-snug truncate">{user.name}</h3>
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mt-0.5">
                       {user.team}
                       <span className="text-slate-300 mx-1.5">·</span>
                       {user.role === 'Team Leader' ? 'TL' : user.role}
@@ -379,25 +390,25 @@ function AdminAvailabilityBoard() {
                 </div>
 
                 <div className="mt-5 space-y-2.5 pl-1">
-                  <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 backdrop-blur-sm px-3.5 py-3 border border-slate-100/80">
+                  <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm px-3.5 py-3 border border-slate-100 dark:border-slate-800/80">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon className="w-4 h-4 shrink-0 text-slate-500" />
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">Status</span>
+                      <Icon className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest truncate">Status</span>
                     </div>
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shrink-0 ${accent.badge}`}>
                       {displayStatusLabel(effectiveStatus)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 backdrop-blur-sm px-3.5 py-3 border border-slate-100/80">
+                  <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm px-3.5 py-3 border border-slate-100 dark:border-slate-800/80">
                     <div className="flex items-center gap-2.5">
-                      <Activity className="w-4 h-4 shrink-0 text-slate-500" />
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Activity</span>
+                      <Activity className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Activity</span>
                     </div>
                     <span
                       className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
                         isClockedIn
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200/80'
-                          : 'bg-slate-100 text-slate-500 border-slate-200'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/55 dark:text-emerald-100 dark:border-emerald-800'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-600'
                       }`}
                     >
                       {isClockedIn ? 'Working' : 'Away'}
@@ -625,28 +636,28 @@ function EmployeeAvailabilityView() {
 
   if (!currentUser) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-slate-500 text-sm">Sign in to manage availability.</div>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-slate-500 dark:text-slate-400 text-sm">Sign in to manage availability.</div>
     );
   }
 
   return (
-    <div className="min-h-full bg-slate-50 pb-14">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-900/80 pb-14">
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 pt-6 sm:px-6">
         <header className="flex items-start justify-between gap-6">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">My availability</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">My availability</h1>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex">
-            <CalendarClock className="h-5 w-5 text-indigo-600" />
-            <span className="text-sm font-semibold text-slate-800">
+          <div className="hidden shrink-0 items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm sm:flex">
+            <CalendarClock className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-8">
-        <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-emerald-500 shrink-0" />
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-8">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-1 flex items-center gap-2">
+          <Activity className="w-5 h-5 shrink-0 text-emerald-500 dark:text-emerald-400" />
           Current status
         </h2>
 
@@ -660,16 +671,16 @@ function EmployeeAvailabilityView() {
             ).map(({ value: s, label }) => {
             const active =
               s === 'Available'
-                ? 'ring-2 ring-emerald-500/40 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white shadow-md shadow-emerald-100/50'
+                ? 'ring-2 ring-emerald-500/40 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white shadow-md shadow-emerald-100/50 text-emerald-900 dark:border-emerald-600 dark:ring-emerald-400/50 dark:from-emerald-950 dark:to-slate-950 dark:shadow-emerald-950/40 dark:text-emerald-100'
                 : s === 'Unavailable'
-                  ? 'ring-2 ring-amber-400/50 border-amber-300 bg-gradient-to-br from-amber-50 to-white shadow-md shadow-amber-100/50'
-                  : 'ring-2 ring-rose-500/35 border-rose-300 bg-gradient-to-br from-rose-50 to-white shadow-md shadow-rose-100/50';
+                  ? 'ring-2 ring-amber-400/50 border-amber-300 bg-gradient-to-br from-amber-50 to-white shadow-md shadow-amber-100/50 text-amber-900 dark:border-amber-600 dark:ring-amber-400/50 dark:from-amber-950 dark:to-slate-950 dark:shadow-amber-950/40 dark:text-amber-100'
+                  : 'ring-2 ring-rose-500/35 border-rose-300 bg-gradient-to-br from-rose-50 to-white shadow-md shadow-rose-100/50 text-rose-900 dark:border-rose-600 dark:ring-rose-400/50 dark:from-rose-950 dark:to-slate-950 dark:shadow-rose-950/40 dark:text-rose-100';
             const idle =
               s === 'Available'
-                ? 'border-slate-200 bg-slate-50/80 text-slate-600 hover:bg-emerald-50/60 hover:border-emerald-200'
+                ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 text-slate-600 dark:text-slate-300 hover:bg-emerald-50/60 hover:border-emerald-200 dark:hover:bg-emerald-950/35 dark:hover:border-emerald-800'
                 : s === 'Unavailable'
-                  ? 'border-slate-200 bg-slate-50/80 text-slate-600 hover:bg-amber-50/60 hover:border-amber-200'
-                  : 'border-slate-200 bg-slate-50/80 text-slate-600 hover:bg-rose-50/60 hover:border-rose-200';
+                  ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 text-slate-600 dark:text-slate-300 hover:bg-amber-50/60 hover:border-amber-200 dark:hover:bg-amber-950/35 dark:hover:border-amber-800'
+                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 text-slate-600 dark:text-slate-300 hover:bg-rose-50/60 hover:border-rose-200 dark:hover:bg-rose-950/35 dark:hover:border-rose-800';
             return (
               <button
                 key={s}
@@ -679,7 +690,7 @@ function EmployeeAvailabilityView() {
                   updateUser(currentUser.id, { status: s as 'Available' | 'Unavailable' | 'Leave' });
                 }}
                 className={`flex flex-col items-center justify-center rounded-2xl border-2 px-4 py-5 transition-all ${
-                  status === s ? `${active} text-slate-900` : idle
+                  status === s ? active : idle
                 }`}
               >
                 <span className="text-xs font-black uppercase tracking-widest">{label}</span>
@@ -689,12 +700,12 @@ function EmployeeAvailabilityView() {
         </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-        <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+        <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <CalendarClock className="w-5 h-5 text-indigo-500 shrink-0" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                <CalendarClock className="w-5 h-5 shrink-0 text-indigo-500 dark:text-indigo-400" />
                 Attendance log
               </h2>
             </div>
@@ -704,8 +715,8 @@ function EmployeeAvailabilityView() {
                 onClick={() => applyPresetRange('today')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-colors ${
                   logPreset === 'today'
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80'
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm dark:shadow-indigo-950/50'
+                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80 dark:bg-slate-800 dark:border-slate-600 dark:text-indigo-300 dark:hover:bg-slate-700 dark:hover:border-slate-500'
                 }`}
               >
                 Today
@@ -715,8 +726,8 @@ function EmployeeAvailabilityView() {
                 onClick={() => applyPresetRange('7d')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-colors ${
                   logPreset === '7d'
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80'
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm dark:shadow-indigo-950/50'
+                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80 dark:bg-slate-800 dark:border-slate-600 dark:text-indigo-300 dark:hover:bg-slate-700 dark:hover:border-slate-500'
                 }`}
               >
                 7 days
@@ -726,8 +737,8 @@ function EmployeeAvailabilityView() {
                 onClick={() => applyPresetRange('30d')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-colors ${
                   logPreset === '30d'
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80'
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm dark:shadow-indigo-950/50'
+                    : 'bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100/80 dark:bg-slate-800 dark:border-slate-600 dark:text-indigo-300 dark:hover:bg-slate-700 dark:hover:border-slate-500'
                 }`}
               >
                 1 month
@@ -736,25 +747,25 @@ function EmployeeAvailabilityView() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-yellow-300 bg-white px-4 py-3 shadow-sm">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-yellow-800">Absent</div>
-              <div className="text-xl font-bold text-yellow-950 tabular-nums">{logSummary.absentDays}</div>
-              <div className="text-[9px] text-yellow-700/90 mt-1 leading-snug">No check-in</div>
+            <div className="rounded-xl border border-yellow-300 dark:border-yellow-700/80 bg-white dark:bg-slate-900/95 px-4 py-3 shadow-sm dark:shadow-black/20">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-yellow-800 dark:text-yellow-300">Absent</div>
+              <div className="text-xl font-bold text-yellow-950 dark:text-yellow-100 tabular-nums">{logSummary.absentDays}</div>
+              <div className="text-[9px] text-yellow-800 dark:text-yellow-200/95 mt-1 leading-snug">No check-in</div>
             </div>
-            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 px-4 py-3 shadow-sm">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Present</div>
-              <div className="text-xl font-bold text-emerald-800 tabular-nums">{logSummary.presentDays}</div>
-              <div className="text-[9px] text-emerald-600/90 mt-1 leading-snug">Has attendance</div>
+            <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-800/90 bg-emerald-50/40 dark:bg-emerald-950/45 px-4 py-3 shadow-sm dark:shadow-black/20">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">Present</div>
+              <div className="text-xl font-bold text-emerald-800 dark:text-emerald-100 tabular-nums">{logSummary.presentDays}</div>
+              <div className="text-[9px] text-emerald-800 dark:text-emerald-200/95 mt-1 leading-snug">Has attendance</div>
             </div>
-            <div className="rounded-xl border border-rose-200/80 bg-rose-50/40 px-4 py-3 shadow-sm">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-rose-700">Leave</div>
-              <div className="text-xl font-bold text-rose-800 tabular-nums">{logSummary.LeaveDays}</div>
-              <div className="text-[9px] text-rose-600/90 mt-1 leading-snug">Approved Leave leave</div>
+            <div className="rounded-xl border border-rose-200/80 dark:border-rose-800/90 bg-rose-50/40 dark:bg-rose-950/45 px-4 py-3 shadow-sm dark:shadow-black/20">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-rose-700 dark:text-rose-300">Leave</div>
+              <div className="text-xl font-bold text-rose-800 dark:text-rose-100 tabular-nums">{logSummary.LeaveDays}</div>
+              <div className="text-[9px] text-rose-800 dark:text-rose-200/95 mt-1 leading-snug">Approved leave</div>
             </div>
-            <div className="rounded-xl border border-indigo-100 bg-white px-4 py-3 shadow-sm col-span-2 lg:col-span-1">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Total hours</div>
-              <div className="text-xl font-bold text-indigo-700 tabular-nums">{logSummary.totalHours.toFixed(2)}</div>
-              <div className="text-[9px] text-indigo-500/90 mt-1 leading-snug">In selected range</div>
+            <div className="rounded-xl border border-indigo-100 dark:border-indigo-800/80 bg-white dark:bg-slate-900/95 px-4 py-3 shadow-sm col-span-2 lg:col-span-1 dark:shadow-black/20">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Total hours</div>
+              <div className="text-xl font-bold text-indigo-700 dark:text-indigo-200 tabular-nums">{logSummary.totalHours.toFixed(2)}</div>
+              <div className="text-[9px] text-indigo-600 dark:text-indigo-300/95 mt-1 leading-snug">In selected range</div>
             </div>
           </div>
         </div>
@@ -780,12 +791,12 @@ function EmployeeAvailabilityView() {
 
             const badge =
               statusLabel === 'Leave'
-                ? 'bg-rose-100 text-rose-900 border-rose-200'
+                ? 'bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950/60 dark:text-rose-100 dark:border-rose-800'
                 : statusLabel === 'Present'
-                  ? 'bg-emerald-100 text-emerald-900 border-emerald-200'
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-100 dark:border-emerald-800'
                   : statusLabel === 'On break' || statusLabel === 'Active'
-                    ? 'bg-amber-100 text-amber-900 border-amber-200'
-                    : 'bg-white text-yellow-800 border-yellow-400';
+                    ? 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-950/55 dark:text-amber-100 dark:border-amber-800'
+                    : 'bg-white dark:bg-slate-800 text-yellow-800 dark:text-yellow-200 border-yellow-400 dark:border-yellow-700';
 
             const breaksCount = entry?.breaks?.length || 0;
             const totalHours =
@@ -807,18 +818,18 @@ function EmployeeAvailabilityView() {
             return (
               <div
                 key={`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`}
-                className={`group rounded-2xl border border-slate-100 bg-slate-50/40 hover:bg-white hover:shadow-md transition-all overflow-hidden border-l-4 ${rowAccent}`}
+                className={`group rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-white hover:shadow-md dark:hover:bg-slate-800/70 dark:hover:shadow-black/25 transition-all overflow-hidden border-l-4 ${rowAccent}`}
               >
                 <div className="p-4 flex flex-col lg:flex-row lg:items-stretch gap-4">
                   <div className="flex items-center gap-4 lg:w-44 shrink-0">
-                    <div className="flex h-14 w-14 flex-col items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm">
-                      <span className="text-[10px] font-bold uppercase text-slate-400 leading-none">
+                    <div className="flex h-14 w-14 flex-col items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 leading-none">
                         {date.toLocaleDateString([], { weekday: 'short' })}
                       </span>
-                      <span className="text-lg font-black text-slate-900 tabular-nums leading-tight mt-0.5">
+                      <span className="text-lg font-black text-slate-900 dark:text-slate-50 tabular-nums leading-tight mt-0.5">
                         {date.getDate()}
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-500">{date.toLocaleDateString([], { month: 'short' })}</span>
+                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{date.toLocaleDateString([], { month: 'short' })}</span>
                     </div>
                     <div className="min-w-0">
                       <span
@@ -827,27 +838,27 @@ function EmployeeAvailabilityView() {
                         {statusLabel}
                       </span>
                       {isToday && (
-                        <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Today</span>
+                        <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Today</span>
                       )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 min-w-0">
-                    <div className="rounded-xl bg-white border border-slate-100 px-3 py-2.5">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">In</div>
-                      <div className="font-bold text-slate-900 tabular-nums">{fmtTime(entry?.clockIn)}</div>
+                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-3 py-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">In</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">{fmtTime(entry?.clockIn)}</div>
                     </div>
-                    <div className="rounded-xl bg-white border border-slate-100 px-3 py-2.5">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Out</div>
-                      <div className="font-bold text-slate-900 tabular-nums">{fmtTime(entry?.clockOut)}</div>
+                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-3 py-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Out</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">{fmtTime(entry?.clockOut)}</div>
                     </div>
-                    <div className="rounded-xl bg-white border border-slate-100 px-3 py-2.5">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Breaks</div>
-                      <div className="font-bold text-slate-900 tabular-nums">{breaksCount}</div>
+                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-3 py-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Breaks</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">{breaksCount}</div>
                     </div>
-                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2.5">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Hours</div>
-                      <div className="font-bold text-indigo-950 tabular-nums">{totalHours}</div>
+                    <div className="rounded-xl border border-indigo-100 dark:border-indigo-800/80 bg-indigo-50/50 dark:bg-indigo-950/40 px-3 py-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Hours</div>
+                      <div className="font-bold text-indigo-950 dark:text-indigo-100 tabular-nums">{totalHours}</div>
                     </div>
                   </div>
                 </div>

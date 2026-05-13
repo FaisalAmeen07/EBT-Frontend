@@ -94,6 +94,17 @@ export default function Dashboard() {
   return <UserDashboard />;
 }
 
+const STAT_ICON_DARK: Record<string, string> = {
+  'bg-blue-50': 'dark:bg-blue-950/55',
+  'bg-emerald-50': 'dark:bg-emerald-950/55',
+  'bg-amber-50': 'dark:bg-amber-950/55',
+  'bg-indigo-50': 'dark:bg-indigo-950/55',
+  'bg-rose-50': 'dark:bg-rose-950/55',
+  'bg-purple-50': 'dark:bg-purple-950/55',
+  'bg-violet-50': 'dark:bg-violet-950/55',
+  'bg-cyan-50': 'dark:bg-cyan-950/55',
+};
+
 // ─── SHARED COMPONENTS ─────────────────────────────────────────────
 function StatCard({
   icon: Icon,
@@ -112,18 +123,18 @@ function StatCard({
   className?: string;
   href?: string;
 }) {
-  const cardClassName = `group relative overflow-hidden min-h-[8rem] rounded-xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] ${href ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2' : ''} ${className}`;
+  const cardClassName = `group relative overflow-hidden min-h-[8rem] rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-950 px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] dark:hover:border-slate-600 ${href ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2' : ''} ${className}`;
   const cardBody = (
     <>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-slate-200/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-slate-200/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100 dark:via-slate-600/80" />
       <div className="mb-3 flex items-center justify-between">
-        <div className={`${bg} ${color} flex h-10 w-10 items-center justify-center rounded-lg`}>
+        <div className={cn(`${bg} ${color} flex h-10 w-10 items-center justify-center rounded-lg`, STAT_ICON_DARK[bg])}>
           <Icon className="h-5 w-5" />
         </div>
-        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-slate-200" />
+        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-slate-200 dark:bg-slate-600" />
       </div>
-      <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className="text-[1.65rem] leading-none font-black tracking-tight text-slate-900 tabular-nums">{value}</p>
+      <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="text-[1.65rem] leading-none font-black tracking-tight text-slate-900 dark:text-slate-50 tabular-nums">{value}</p>
     </>
   );
 
@@ -312,24 +323,24 @@ function TimerWidget() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-50 tracking-tight">
           Hello, <span className="font-black">{currentUser?.name.split(' ')[0]}</span>
         </h1>
-        <p className="mt-1 text-xs text-slate-400 font-bold uppercase tracking-widest">
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
           {format(now, 'eee MMMM d yyyy')} • {format(now, 'HH:mm')}
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-7">
           <div className="flex items-start gap-4">
             <div className={`w-1.5 self-stretch rounded-full ${lineColorClass}`} />
             <div className="min-w-0">
               {teamHeadline ? (
                 <>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Your team</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Your team</p>
                   <p className="mt-1 text-base font-bold leading-snug text-blue-600">{teamHeadline}</p>
-                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                     Regular shift
                   </p>
                 </>
@@ -338,18 +349,18 @@ function TimerWidget() {
               )}
 
               <div className="mt-4 grid gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-500">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400">
                     <UserCheck className="h-4 w-4" />
                   </span>
                   {roleLabel}
                 </div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-500">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400">
                     <Timer className="h-3.5 w-3.5" />
                   </span>
-                  <p className="text-sm font-bold tabular-nums text-slate-900">{shiftStartLabel}</p>
-                  <p className="text-sm font-bold tabular-nums text-slate-900">{shiftEndLabel}</p>
+                  <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-slate-50">{shiftStartLabel}</p>
+                  <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-slate-50">{shiftEndLabel}</p>
                 </div>
               </div>
 
@@ -423,16 +434,15 @@ function TimerWidget() {
                     setClockBusy(false);
                   }
                 }}
-                className={`group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full text-white shadow-lg ring-8 ring-blue-600/10 focus:outline-none ${
+                className={`group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full text-white shadow-none ring-0 focus:outline-none ${
                   leaveBlocked
-                    ? 'cursor-not-allowed bg-slate-400 shadow-none'
-                    : 'bg-blue-600 shadow-blue-100 transition-all hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none disabled:hover:bg-slate-400'
+                    ? 'cursor-not-allowed bg-slate-400'
+                    : 'bg-blue-600 transition-all hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400'
                 }`}
                 title={leaveBlocked ? 'You are currently on leave today.' : clockInDisabled ? 'Clock-in disabled' : 'Clock in'}
               >
-                <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40 group-disabled:opacity-0" />
                 <div className="relative z-10 flex flex-col items-center">
-                  <Play className="h-8 w-8 ml-0.5 drop-shadow" fill="currentColor" />
+                  <Play className="h-8 w-8 ml-0.5" fill="currentColor" />
                   <span className="mt-1 text-[10px] font-black uppercase tracking-widest">
                     {clockBusy ? '…' : 'Clock In'}
                   </span>
@@ -453,12 +463,11 @@ function TimerWidget() {
                       }
                     }}
                     disabled={clockBusy}
-                    className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-100 transition-all hover:bg-rose-500 active:scale-95 focus:outline-none ring-8 ring-rose-500/10"
+                    className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-rose-600 text-white shadow-none ring-0 transition-all hover:bg-rose-500 active:scale-95 focus:outline-none"
                     title="Break out"
                   >
-                    <div className="absolute inset-0 rounded-full bg-rose-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40" />
                     <div className="relative z-10 flex flex-col items-center">
-                      <Coffee className="h-7 w-7 drop-shadow" fill="currentColor" />
+                      <Coffee className="h-7 w-7" fill="currentColor" />
                       <span className="mt-1 text-[10px] font-black uppercase tracking-widest">Break Out</span>
                     </div>
                   </button>
@@ -475,12 +484,11 @@ function TimerWidget() {
                       }
                     }}
                     disabled={clockBusy}
-                    className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-100 transition-all hover:bg-blue-500 active:scale-95 focus:outline-none ring-8 ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none disabled:hover:bg-slate-400"
+                    className="group relative flex h-24 w-24 md:h-28 md:w-28 items-center justify-center rounded-full bg-blue-600 text-white shadow-none ring-0 transition-all hover:bg-blue-500 active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400"
                     title="Clock out"
                   >
-                    <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 blur-2xl transition-opacity group-hover:opacity-40" />
                     <div className="relative z-10 flex flex-col items-center">
-                      <Square className="h-7 w-7 drop-shadow" fill="currentColor" />
+                      <Square className="h-7 w-7" fill="currentColor" />
                       <span className="mt-1 text-[10px] font-black uppercase tracking-widest">
                         {clockBusy ? '…' : 'Clock Out'}
                       </span>
@@ -540,24 +548,24 @@ function WeeklyChart() {
   }, [timesheets, currentUser, rangeStart, rangeEnd]);
 
   return (
-    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-blue-500" />
             Performance
           </h2>
-          <p className="text-xs text-slate-400 font-medium mt-1">
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1">
             Total: {totalHours.toFixed(1)} hours ({range === '7d' ? 'Weekly' : range === '30d' ? '30 Days' : '90 Days'})
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex items-center rounded-2xl border border-slate-100 bg-slate-50 p-1">
+          <div className="inline-flex items-center rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 p-1">
             <button
               type="button"
               onClick={() => setRange('7d')}
               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
-                range === '7d' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                range === '7d' ? 'bg-white dark:bg-slate-900 text-blue-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
               }`}
             >
               Weekly
@@ -566,7 +574,7 @@ function WeeklyChart() {
               type="button"
               onClick={() => setRange('30d')}
               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
-                range === '30d' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                range === '30d' ? 'bg-white dark:bg-slate-900 text-blue-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
               }`}
             >
               30 Days
@@ -575,7 +583,7 @@ function WeeklyChart() {
               type="button"
               onClick={() => setRange('90d')}
               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
-                range === '90d' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                range === '90d' ? 'bg-white dark:bg-slate-900 text-blue-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
               }`}
             >
               90 Days
@@ -602,7 +610,7 @@ function WeeklyChart() {
             </div>
             {range === '7d' ? (
               <span
-                className={`text-[10px] font-bold uppercase tracking-widest ${isSameDay(stat.day, now) ? 'text-blue-600' : 'text-slate-400'}`}
+                className={`text-[10px] font-bold uppercase tracking-widest ${isSameDay(stat.day, now) ? 'text-blue-600' : 'text-slate-400 dark:text-slate-500'}`}
               >
                 {stat.label}
               </span>
@@ -621,14 +629,14 @@ function TaskList({ tasks }: { tasks: Task[] }) {
     if (status === 'Submitted') return 'bg-indigo-50 text-indigo-700 border-indigo-100';
     if (status === 'Review') return 'bg-violet-50 text-violet-700 border-violet-100';
     if (status === 'Approved') return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-    return 'bg-slate-50 text-slate-700 border-slate-100';
+    return 'bg-slate-50 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 border-slate-100 dark:border-slate-800';
   };
 
   return (
     <div className="space-y-4">
       {tasks.length === 0 ? (
-        <div className="bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl p-12 text-center">
-          <p className="text-slate-400 font-medium">All caught up! No active tasks.</p>
+        <div className="bg-slate-50 dark:bg-slate-900/80 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl p-12 text-center">
+          <p className="text-slate-400 dark:text-slate-500 font-medium">All caught up! No active tasks.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -636,13 +644,13 @@ function TaskList({ tasks }: { tasks: Task[] }) {
             <Link
               key={task.id}
               href={`/project-manager?taskId=${encodeURIComponent(task.id)}`}
-              className="block bg-white rounded-3xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-all group border-l-4 border-l-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+              className="block bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 hover:shadow-md transition-all group border-l-4 border-l-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
             >
               <div className="flex justify-between items-start mb-4">
-                <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-blue-600 transition-colors">{task.title}</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base leading-tight group-hover:text-blue-600 transition-colors">{task.title}</h3>
               </div>
               <div className="flex items-center justify-between mt-auto">
-                <div className="flex items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                <div className="flex items-center text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
                   <Clock size={14} className="mr-1" />
                   Due {format(new Date(task.deadline), 'MMM d')}
                 </div>
@@ -880,35 +888,35 @@ function AdminDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 pb-12">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:rounded-3xl sm:p-8">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/90 bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-800 sm:rounded-3xl sm:p-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 ring-4 ring-slate-900/5">
               <LayoutDashboard className="h-7 w-7" strokeWidth={1.75} aria-hidden />
             </span>
             <div className="min-w-0 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Admin workspace</p>
-              <h1 className="text-3xl font-light tracking-tight text-slate-900">System overview</h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Admin workspace</p>
+              <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-slate-50">System overview</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {format(now, 'EEEE, MMMM d, yyyy')}
                 <span className="mx-2 text-slate-300">·</span>
-                <span className="tabular-nums font-semibold text-slate-600">{format(now, 'h:mm a')}</span>
+                <span className="tabular-nums font-semibold text-slate-600 dark:text-slate-300">{format(now, 'h:mm a')}</span>
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 xl:justify-end">
             <Link
               href="/timesheet"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800"
             >
-              <Clock className="h-4 w-4 text-slate-400" aria-hidden />
+              <Clock className="h-4 w-4 text-slate-400 dark:text-slate-500" aria-hidden />
               Timesheet
             </Link>
             <Link
               href="/request-management"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition hover:border-slate-300 hover:bg-white dark:hover:border-slate-600 dark:hover:bg-slate-800"
             >
-              <Calendar className="h-4 w-4 text-slate-400" aria-hidden />
+              <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" aria-hidden />
               Requests
             </Link>
             <Link
@@ -923,13 +931,13 @@ function AdminDashboard() {
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Today at a glance</h2>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Today at a glance</h2>
+        <span className="rounded-full border border-slate-200/80 bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:shadow-none">
           Total workforce {workforceCount}
         </span>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 shadow-inner shadow-slate-100/70 sm:p-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 p-3 shadow-inner shadow-slate-100/70 dark:bg-slate-950 dark:shadow-inner dark:shadow-black/40 sm:p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard
             icon={Users}
@@ -948,24 +956,24 @@ function AdminDashboard() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Operations</h2>
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Operations</h2>
         <div className="grid gap-6 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border border-sky-100/80 bg-gradient-to-br from-sky-50/40 via-white to-white p-6 shadow-sm ring-1 ring-sky-100/50">
+        <div className="overflow-hidden rounded-xl border border-sky-100/80 bg-gradient-to-br from-sky-50/40 via-white to-white p-6 shadow-sm ring-1 ring-sky-100/50 dark:border-slate-700 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:ring-slate-700/80">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-50">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-600 text-white shadow-md shadow-sky-200/50">
                   <Calendar className="h-4 w-4" aria-hidden />
                 </span>
                 Today&apos;s attendance
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Rolled up from company rules · {attendanceScopeUsers.length} staff in scope
               </p>
             </div>
             <Link
               href="/timesheet"
-              className="inline-flex shrink-0 items-center gap-1 self-start rounded-lg bg-sky-600/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-sky-800 transition hover:bg-sky-600/15"
+              className="inline-flex shrink-0 items-center gap-1 self-start rounded-lg bg-sky-600/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-sky-800 transition hover:bg-sky-600/15 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/70"
             >
               View timesheet
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
@@ -974,10 +982,10 @@ function AdminDashboard() {
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {(
               [
-                { key: 'on_time' as const, label: 'Present', className: 'border-emerald-100 bg-emerald-50/60 text-emerald-900' },
-                { key: 'late' as const, label: 'Late', className: 'border-amber-100 bg-amber-50/60 text-amber-900' },
-                { key: 'absent' as const, label: 'Absent', className: 'border-rose-100 bg-rose-50/60 text-rose-900' },
-                { key: 'leave' as const, label: 'Leave', className: 'border-indigo-100 bg-indigo-50/80 text-indigo-900' },
+                { key: 'on_time' as const, label: 'Present', className: 'border-emerald-100 bg-emerald-50/60 text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-100' },
+                { key: 'late' as const, label: 'Late', className: 'border-amber-100 bg-amber-50/60 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/50 dark:text-amber-100' },
+                { key: 'absent' as const, label: 'Absent', className: 'border-rose-100 bg-rose-50/60 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-100' },
+                { key: 'leave' as const, label: 'Leave', className: 'border-indigo-100 bg-indigo-50/80 text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-100' },
               ] as const
             ).map(({ key, label, className }) => (
               <div
@@ -993,46 +1001,46 @@ function AdminDashboard() {
             ))}
           </div>
         </div>
-        <div className="overflow-hidden rounded-xl border border-violet-100/80 bg-gradient-to-br from-violet-50/40 via-white to-white p-6 shadow-sm ring-1 ring-violet-100/50">
+        <div className="overflow-hidden rounded-xl border border-violet-100/80 bg-gradient-to-br from-violet-50/40 via-white to-white p-6 shadow-sm ring-1 ring-violet-100/50 dark:border-slate-700 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:ring-slate-700/80">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-50">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-200/50">
                   <AlertCircle className="h-4 w-4" aria-hidden />
                 </span>
                 Pending workload
               </h2>
-              <p className="mt-1 text-xs text-slate-500">Requests and approvals that need admin action.</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Requests and approvals that need admin action.</p>
             </div>
-            <span className="inline-flex self-start rounded-full bg-violet-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-violet-800">
+            <span className="inline-flex self-start rounded-full border border-violet-200/80 bg-violet-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-violet-800 dark:border-violet-800/60 dark:bg-violet-950/80 dark:text-violet-200">
               Total {pendingOperationsCount}
             </span>
           </div>
           <div className="mt-5 space-y-2.5">
-            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/90 px-4 py-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Pending Leave</span>
-              <span className="text-lg font-black tabular-nums text-amber-600">{pendingLeave}</span>
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 dark:border-slate-700 bg-white/90 px-4 py-3 dark:bg-slate-950">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Pending Leave</span>
+              <span className="text-lg font-black tabular-nums text-amber-600 dark:text-amber-400">{pendingLeave}</span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/90 px-4 py-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Pending Tasks</span>
-              <span className="text-lg font-black tabular-nums text-indigo-600">{pendingTasksCount}</span>
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 dark:border-slate-700 bg-white/90 px-4 py-3 dark:bg-slate-950">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Pending Tasks</span>
+              <span className="text-lg font-black tabular-nums text-indigo-600 dark:text-indigo-400">{pendingTasksCount}</span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/90 px-4 py-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Pending Approval</span>
-              <span className="text-lg font-black tabular-nums text-purple-600">{pendingUsers}</span>
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 dark:border-slate-700 bg-white/90 px-4 py-3 dark:bg-slate-950">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Pending Approval</span>
+              <span className="text-lg font-black tabular-nums text-purple-600 dark:text-purple-400">{pendingUsers}</span>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/request-management"
-              className="inline-flex items-center gap-1 rounded-lg bg-violet-600/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-800 transition hover:bg-violet-600/15"
+              className="inline-flex items-center gap-1 rounded-lg bg-violet-600/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-800 transition hover:bg-violet-600/15 dark:bg-violet-950/50 dark:text-violet-200 dark:hover:bg-violet-900/60"
             >
               Open requests
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
             <Link
               href="/admin/employees-management"
-              className="inline-flex items-center gap-1 rounded-lg bg-slate-900/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:bg-slate-900/10"
+              className="inline-flex items-center gap-1 rounded-lg border border-transparent bg-slate-900/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:bg-slate-900/10 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Open approvals
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
@@ -1043,22 +1051,22 @@ function AdminDashboard() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Policy configuration</h2>
-        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/80">
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Policy configuration</h2>
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-800/80">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1 space-y-4">
             <div>
-              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-50">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-200/50">
                   <Timer className="h-4 w-4" aria-hidden />
                 </span>
                 Time policies
               </h2>
-              <p className="mt-1 text-xs text-slate-500">What staff see when they clock in. Edit in Time control.</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">What staff see when they clock in. Edit in Time control.</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-1 md:grid-cols-3">
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white/80 px-4 py-3 shadow-sm">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Shifts</span>
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 py-3 shadow-sm">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Shifts</span>
                 <span
                   className={cn(
                     'rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
@@ -1070,16 +1078,16 @@ function AdminDashboard() {
                   {shiftEnabledDisplay ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
-              <div className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-white/80 px-4 py-3 shadow-sm sm:col-span-1 md:col-span-1">
+              <div className="flex flex-col gap-1 rounded-xl border border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 py-3 shadow-sm sm:col-span-1 md:col-span-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                     <MapPin className="h-3.5 w-3.5" aria-hidden />
                     Geo
                   </span>
                   <span
                     className={cn(
                       'rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
-                      geoFencingEnabled ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-600'
+                      geoFencingEnabled ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-600 dark:text-slate-300'
                     )}
                   >
                     {geoFencingEnabled ? 'On' : 'Off'}
@@ -1091,16 +1099,16 @@ function AdminDashboard() {
                   </p>
                 ) : null}
               </div>
-              <div className="rounded-xl border border-slate-100 bg-white/80 px-4 py-3 shadow-sm">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Office shift</span>
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 py-3 shadow-sm">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Office shift</span>
                 <div className="mt-1 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Start</p>
-                    <p className="text-lg font-bold tabular-nums text-slate-900">{shiftStartDisplay}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Start</p>
+                    <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-50">{shiftStartDisplay}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">End</p>
-                    <p className="text-lg font-bold tabular-nums text-slate-900">{shiftEndDisplay}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">End</p>
+                    <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-50">{shiftEndDisplay}</p>
                   </div>
                 </div>
                 {apiShiftStart || apiShiftEnd ? (
@@ -1108,7 +1116,7 @@ function AdminDashboard() {
                 ) : hasOverrideToday ? (
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-indigo-700">Company override today</p>
                 ) : (
-                  <p className="mt-1 text-[10px] text-slate-400">Default or scheduled</p>
+                  <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Default or scheduled</p>
                 )}
               </div>
             </div>
@@ -1165,7 +1173,7 @@ function HRDashboard() {
           <WeeklyChart />
 
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <Target className="w-5 h-5 text-indigo-500" />
               Team Task Progress
             </h2>
@@ -1174,8 +1182,8 @@ function HRDashboard() {
         </div>
 
         {/* Team Status */}
-        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm h-fit">
-          <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm h-fit">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-500" />
             {myTeam} Team
           </h2>
@@ -1183,21 +1191,21 @@ function HRDashboard() {
             {teamMembers.map(member => {
               const isActive = timesheets.some(t => t.userId === member.id && !t.clockOut);
               return (
-                <div key={member.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                <div key={member.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-sm">{member.name.charAt(0)}</div>
+                      <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 text-sm">{member.name.charAt(0)}</div>
                       <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-800">{member.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{member.role}</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{member.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{member.role}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     member.status === 'Available' ? 'text-emerald-600 bg-emerald-50' :
                     member.status === 'Leave' ? 'text-rose-600 bg-rose-50' :
-                    'text-slate-400 bg-slate-50'
+                    'text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/80'
                   }`}>{availabilityStatusLabel(member.status)}</span>
                 </div>
               );
@@ -1248,7 +1256,7 @@ function TeamLeaderDashboard() {
       <TimerWidget />
 
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <LayoutDashboard className="w-5 h-5 text-indigo-500" />
           My Dashboard
         </h2>
@@ -1267,7 +1275,7 @@ function TeamLeaderDashboard() {
 
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <Target className="w-5 h-5 text-indigo-500" />
                 Team Assignments
               </h2>
@@ -1281,14 +1289,14 @@ function TeamLeaderDashboard() {
 
         {/* Team Performance */}
         <div className="space-y-8">
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-blue-500" />
               Member Performance
             </h2>
             <div className="space-y-5">
               {teamEmployees.length === 0 ? (
-                <p className="text-sm text-slate-400">No employees on your team yet.</p>
+                <p className="text-sm text-slate-400 dark:text-slate-500">No employees on your team yet.</p>
               ) : (
                 teamEmployees.map(member => {
                   const memberTasks = tasks.filter(t => t.assignedTo === member.id);
@@ -1302,12 +1310,12 @@ function TeamLeaderDashboard() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="relative">
-                            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">{member.name.charAt(0)}</div>
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">{member.name.charAt(0)}</div>
                             <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                           </div>
-                          <span className="text-xs font-bold text-slate-700">{member.name}</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{member.name}</span>
                         </div>
-                        <span className="text-[10px] font-black text-slate-400">{done}/{total}</span>
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500">{done}/{total}</span>
                       </div>
                       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" style={{ width: `${Math.max(pct, 4)}%` }} />
@@ -1319,8 +1327,8 @@ function TeamLeaderDashboard() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-100">
-            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-none dark:from-blue-900 dark:to-indigo-950">
+            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-32 h-32 bg-white/10 dark:bg-white/5 rounded-full blur-2xl" />
             <div className="relative z-10">
               <h3 className="text-lg font-bold mb-2">Team Status</h3>
               <p className="text-blue-100 text-xs leading-relaxed mb-4 font-medium">
@@ -1330,7 +1338,7 @@ function TeamLeaderDashboard() {
                 {teamEmployees.map(m => {
                   const isActive = timesheets.some(t => t.userId === m.id && !t.clockOut);
                   return (
-                    <div key={m.id} title={m.name} className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold border-2 ${isActive ? 'bg-white/20 border-white/40 text-white' : 'bg-white/5 border-white/10 text-white/30'}`}>
+                    <div key={m.id} title={m.name} className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold border-2 ${isActive ? 'bg-white/20 dark:bg-white/10 border-white/40 text-white' : 'bg-white/5 dark:bg-white/5 border-white/10 text-white/30'}`}>
                       {m.name.charAt(0)}
                     </div>
                   );
@@ -1370,7 +1378,7 @@ function UserDashboard() {
   const recentActivity = useMemo(() => {
     const activities = [
       ...timesheets.filter(t => t.userId === currentUser?.id).map(t => ({
-        type: 'Clock', title: t.clockOut ? 'Clocked Out' : 'Clocked In', time: t.clockOut || t.clockIn, icon: Clock, color: t.clockOut ? 'text-slate-400' : 'text-emerald-500'
+        type: 'Clock', title: t.clockOut ? 'Clocked Out' : 'Clocked In', time: t.clockOut || t.clockIn, icon: Clock, color: t.clockOut ? 'text-slate-400 dark:text-slate-500' : 'text-emerald-500'
       })),
       ...Leave.filter(l => l.userId === currentUser?.id).map(l => ({
         type: 'Leave', title: `Leave Request: ${l.type}`, time: l.createdAt, icon: Calendar, color: 'text-blue-500'
@@ -1406,7 +1414,7 @@ function UserDashboard() {
 
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-indigo-500" />
                 My Active Tasks
               </h2>
@@ -1416,8 +1424,8 @@ function UserDashboard() {
         </div>
 
         <div className="space-y-8">
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-800 mb-8 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center gap-2">
               <Timer className="w-5 h-5 text-emerald-500" />
               Recent Activity
             </h2>
@@ -1425,27 +1433,27 @@ function UserDashboard() {
               {recentActivity.map((activity, i) => (
                 <div key={i} className="flex gap-4 relative">
                   {i !== recentActivity.length - 1 && (
-                    <div className="absolute left-6 top-10 bottom-[-20px] w-0.5 bg-slate-50" />
+                    <div className="absolute left-6 top-10 bottom-[-20px] w-0.5 bg-slate-50 dark:bg-slate-900/80" />
                   )}
-                  <div className={`w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center flex-shrink-0 border border-slate-100 shadow-sm ${activity.color}`}>
+                  <div className={`w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/80 flex items-center justify-center flex-shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm ${activity.color}`}>
                     <activity.icon className="w-5 h-5" />
                   </div>
                   <div className="pt-1">
-                    <p className="text-sm font-bold text-slate-800 leading-tight mb-1">{activity.title}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight mb-1">{activity.title}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
                       {format(new Date(activity.time), 'MMM d • HH:mm')}
                     </p>
                   </div>
                 </div>
               ))}
               {recentActivity.length === 0 && (
-                <p className="text-center text-slate-400 text-sm py-10 font-medium">No recent activity detected.</p>
+                <p className="text-center text-slate-400 dark:text-slate-500 text-sm py-10 font-medium">No recent activity detected.</p>
               )}
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-100">
-            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-none dark:from-blue-900 dark:to-indigo-950">
+            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-32 h-32 bg-white/10 dark:bg-white/5 rounded-full blur-2xl" />
             <div className="relative z-10">
               <h3 className="text-lg font-bold mb-2">Need a break?</h3>
               <p className="text-blue-100 text-xs leading-relaxed mb-6 font-medium">
@@ -1453,7 +1461,7 @@ function UserDashboard() {
               </p>
               <Link
                 href="/my-requests?tab=leave"
-                className="flex w-full items-center justify-center py-3.5 bg-white text-blue-600 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
+                className="flex w-full items-center justify-center rounded-2xl bg-white py-3.5 text-xs font-black uppercase tracking-widest text-blue-600 shadow-sm transition-all active:scale-95 dark:bg-slate-900 dark:text-indigo-300 dark:shadow-none"
               >
                 Request Leave
               </Link>

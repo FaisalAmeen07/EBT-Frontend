@@ -113,11 +113,11 @@ export default function RegisterView() {
       <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-3">
         <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">
               Full name
             </label>
             <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 autoComplete="name"
@@ -137,11 +137,11 @@ export default function RegisterView() {
             {fieldError.name ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.name}</p> : null}
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">
               Email
             </label>
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="email"
                 autoComplete="email"
@@ -158,11 +158,11 @@ export default function RegisterView() {
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">
               Phone
             </label>
             <div className="relative">
-              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="tel"
                 autoComplete="tel"
@@ -182,11 +182,11 @@ export default function RegisterView() {
             {fieldError.phone ? <p className="mt-1 text-xs font-semibold text-rose-600">{fieldError.phone}</p> : null}
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">
               Department
             </label>
             <div className="relative">
-              <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value as Department)}
@@ -212,11 +212,11 @@ export default function RegisterView() {
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
+          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">
             Password
           </label>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               type={showPw ? 'text' : 'password'}
               required
@@ -231,7 +231,7 @@ export default function RegisterView() {
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 sm:right-3"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 sm:right-3"
             >
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
