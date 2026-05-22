@@ -236,6 +236,8 @@ export interface TimesheetEntry {
   clockIn: string;
   clockOut?: string;
   breaks: BreakEntry[];
+  /** Attendance-service row status (e.g. BREAK, LIMIT_REACHED). */
+  sessionStatus?: string;
   /** Backend tracked completed break minutes for current shift. */
   breakDurationMinutes?: number;
   totalHours?: number;

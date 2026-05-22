@@ -154,6 +154,7 @@ const toTimesheet = (row: AttendanceRow): TimesheetEntry => {
     userId: String(row.user_id),
     clockIn: row.check_in,
     clockOut: row.check_out ?? undefined,
+    sessionStatus: row.status ?? undefined,
     breaks: isBreakActive
       ? [
           {

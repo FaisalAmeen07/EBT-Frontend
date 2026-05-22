@@ -40,7 +40,7 @@ import {
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subDays, isWithinInterval } from 'date-fns';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { MAX_SHIFT_WORK_MS } from '@/lib/attendanceLimits';
+import { isLimitReachedSessionStatus, MAX_SHIFT_WORK_MS } from '@/lib/attendanceLimits';
 import { fetchPendingUsersCountApi, fetchWorkforceCountApi } from '@/services/admin.service';
 import { fetchAttendanceSummaryApi, getCurrentShiftApi, getShiftStatusApi } from '@/services/attendance.service';
 import { fetchLeaveRequestsApi } from '@/services/attendance-requests.service';
@@ -286,7 +286,8 @@ function TimerWidget() {
     const completedBreakMsFromApi = Math.max(0, Number(activeTimesheet.breakDurationMinutes || 0)) * 60 * 1000;
 
     const diffMsRaw = Math.max(0, effectiveNowMs - clockInMs - Math.max(completedBreakMs, completedBreakMsFromApi));
-    const reachedLimit = diffMsRaw >= MAX_SHIFT_WORK_MS;
+    const reachedLimit =
+      diffMsRaw >= MAX_SHIFT_WORK_MS || isLimitReachedSessionStatus(activeTimesheet.sessionStatus);
     const diffMs = Math.min(MAX_SHIFT_WORK_MS, diffMsRaw);
     const hours = Math.floor(diffMs / 3600000);
     const minutes = Math.floor((diffMs % 3600000) / 60000);
@@ -297,18 +298,21 @@ function TimerWidget() {
     };
   }, [activeTimesheet, now, activeBreak]);
 
-  const isPaused = !!activeBreak;
-  /** Treat max work duration like a break: timer display is frozen and primary action is clock out. */
-  const timerFrozen = isPaused || reachedWorkLimit;
-  const showBreakOutAction = !!activeBreak && !reachedWorkLimit;
+  const limitReachedFromApi = isLimitReachedSessionStatus(activeTimesheet?.sessionStatus);
+  const isPaused = !!activeBreak && !limitReachedFromApi;
+  /** Max work duration: timer frozen; only clock out (not break out). */
+  const timerFrozen = isPaused || reachedWorkLimit || limitReachedFromApi;
+  const showBreakOutAction = !!activeBreak && !reachedWorkLimit && !limitReachedFromApi;
   const hasAnyBreak = (activeTimesheet?.breaks?.length || 0) > 0;
   const lineColorClass = !isClockedIn
     ? 'bg-blue-600'
-    : activeBreak
-      ? 'bg-rose-600'
-      : hasAnyBreak
-        ? 'bg-blue-600'
-        : 'bg-amber-500';
+    : reachedWorkLimit || limitReachedFromApi
+      ? 'bg-amber-500'
+      : activeBreak
+        ? 'bg-rose-600'
+        : hasAnyBreak
+          ? 'bg-blue-600'
+          : 'bg-amber-500';
 
   const roleLabel = currentUser?.department ?? currentUser?.role ?? '—';
   const shiftStartLabel = formatShiftTime(shiftStartApi);
@@ -324,7 +328,7 @@ function TimerWidget() {
     <div className="space-y-5">
       <div>
         <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-50 tracking-tight">
-          Hello, <span className="font-black">{currentUser?.name.split(' ')[0]}</span>
+          Hello, <span className="font-black">{currentUser?.name?.split(' ')[0] ?? 'there'}</span>
         </h1>
         <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
           {format(now, 'eee MMMM d yyyy')} • {format(now, 'HH:mm')}
@@ -375,7 +379,11 @@ function TimerWidget() {
                       timerFrozen ? 'text-amber-700' : 'text-emerald-700'
                     }`}
                   >
-                    {reachedWorkLimit ? 'Work Limit Reached (Paused)' : isPaused ? 'On Break (Paused)' : 'Working'}
+                    {reachedWorkLimit || limitReachedFromApi
+                      ? 'Work Limit Reached — Clock Out'
+                      : isPaused
+                        ? 'On Break (Paused)'
+                        : 'Working'}
                   </span>
                   <span
                     className={`text-sm font-mono font-black ${timerFrozen ? 'text-amber-800' : 'text-emerald-800'}`}
