@@ -5,7 +5,7 @@ export const ACCESS_TOKEN_COOKIE = 'accessToken';
 
 const DEFAULT_DEV_ORIGIN = 'http://localhost:5000';
 /** Deployed Express API (Render). Override with NEXT_PUBLIC_API_URL in hosting env or .env.production. */
-const DEFAULT_PROD_ORIGIN = 'https://gdc-backend-yrit.onrender.com';
+const DEFAULT_PROD_ORIGIN = 'https://authservices-backend.onrender.com';
 
 function resolveBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim() ?? '';

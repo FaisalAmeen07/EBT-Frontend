@@ -8,6 +8,7 @@ import { useTimesheetTab } from '@/features/timesheet/useTimesheetTab';
 import { PersonalStats, TimesheetTable } from '@/features/timesheet/widgets';
 import { useStore, useShallow } from '@/lib/store';
 import { employeeDisplayId } from '@/lib/attendanceSite';
+import { BRAND_ID_LABEL } from '@/lib/brand';
 import { isClockInLate } from '@/lib/attendanceRules';
 import { format, subDays, startOfDay, isSameDay } from 'date-fns';
 import {
@@ -268,7 +269,7 @@ function EmployeeTimesheetView() {
                   Hours · flags
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] font-bold uppercase tracking-wider sm:px-8">
-                  Unique ID
+                  {BRAND_ID_LABEL}
                 </th>
               </tr>
             </thead>

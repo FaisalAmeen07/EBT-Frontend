@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { BRAND_LOGO_DARK_URL, BRAND_LOGO_URL } from '@/lib/brand';
+import { BrandSidebarLockup } from '@/components/brand/BrandLogo';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSessionCookies } from '@/views/auth/authSession';
 import { logoutFromApi } from '@/services/auth.service';
@@ -108,23 +107,8 @@ const navItems = [
          role="dialog"
          aria-modal="true"
        >
-         <div className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5">
-           <div className="relative h-10 w-[140px] shrink-0">
-             <Image
-               src={BRAND_LOGO_URL}
-               alt="Global Digital Care"
-               fill
-               className="object-contain object-left dark:hidden"
-               sizes="140px"
-             />
-             <Image
-               src={BRAND_LOGO_DARK_URL}
-               alt="Global Digital Care"
-               fill
-               className="hidden object-contain object-left dark:block"
-               sizes="140px"
-             />
-           </div>
+         <div className="flex h-20 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-700">
+           <BrandSidebarLockup />
            <button
              onClick={onClose}
              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

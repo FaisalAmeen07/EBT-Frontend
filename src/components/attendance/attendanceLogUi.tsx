@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, type ReactNode } from 'react';
+import { BRAND_ID_LABEL } from '@/lib/brand';
 import {
   Menu,
   Calendar,
@@ -182,7 +183,7 @@ export function StandardFilterBar({
   onFilterChange,
   showSiteFilter = true,
   showProviderFilter = true,
-  idSearchPlaceholder = 'Unique ID, code, or name',
+  idSearchPlaceholder = `${BRAND_ID_LABEL}, code, or name`,
 }: {
   sites: string[];
   providers: string[];
@@ -244,7 +245,7 @@ export function StandardFilterBar({
         </label>
       ) : null}
       <label className="flex min-w-[160px] flex-1 flex-col gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-        Unique ID / search
+        {BRAND_ID_LABEL} / search
         <input
           type="search"
           value={idQuery}

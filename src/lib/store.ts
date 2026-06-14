@@ -857,8 +857,12 @@ export const useStore = create<AppState>()((set, get) => ({
       refreshAttendanceFromApi: async () => {
         const { currentUser } = get();
         if (!currentUser) return;
-        const timesheets = await fetchAttendanceRecordsApi();
-        set({ timesheets });
+        try {
+          const timesheets = await fetchAttendanceRecordsApi();
+          set({ timesheets });
+        } catch {
+          /* attendance service offline or route unavailable — keep existing rows */
+        }
       },
 
       refreshNotificationsFromApi: async () => {

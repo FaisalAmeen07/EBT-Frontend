@@ -22,7 +22,7 @@ function logTaskApiError(method: string, url: string, error: unknown): void {
     data,
     hint:
       !status && !error.response
-        ? 'No response — task service down, wrong NEXT_PUBLIC_TASK_API_URL (use your Render URL, e.g. https://taskmanagment-backend-34i7.onrender.com), or task server CORS FRONTEND_ORIGINS missing your Vercel origin.'
+        ? 'No response — task service down, wrong NEXT_PUBLIC_TASK_API_URL (use your Render URL, e.g. https://taskservice-backend.onrender.com), or task server CORS FRONTEND_ORIGINS missing your Vercel origin.'
         : undefined,
   });
 }

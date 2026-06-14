@@ -129,14 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [mounted, currentUser?.id, currentUser?.role]);
 
-  // Prevent hydration mismatch by not rendering anything until mounted
-  if (!mounted) {
-    return null;
-  }
-
   return (
     <>
-      <ToastViewport />
+      {mounted ? <ToastViewport /> : null}
       {children}
     </>
   );

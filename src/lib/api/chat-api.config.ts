@@ -1,7 +1,7 @@
 /** Local dev only when `NEXT_PUBLIC_CHAT_API_URL` is unset. */
 const DEFAULT_CHAT_DEV = 'http://localhost:5002';
 /** Production fallback when env var is missing (Render). */
-const DEFAULT_CHAT_PROD = 'https://chat-backend-y6j2.onrender.com';
+const DEFAULT_CHAT_PROD = 'https://chatservice-backend.onrender.com';
 
 export function resolveChatBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_CHAT_API_URL?.trim() ?? '';

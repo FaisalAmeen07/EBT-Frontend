@@ -2,8 +2,8 @@ import axios, { AxiosError, AxiosHeaders, type AxiosInstance, type InternalAxios
 import Cookies from 'js-cookie';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/api/axios.config';
 
-const DEFAULT_ATTENDANCE_DEV = 'http://localhost:5003';
-const DEFAULT_ATTENDANCE_PROD = 'https://attendence-service-rdvv.onrender.com';
+const DEFAULT_ATTENDANCE_DEV = 'http://localhost:5000';
+const DEFAULT_ATTENDANCE_PROD = 'https://attendenceservice-backend.onrender.com';
 const LOCALHOST_RE = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 function resolveAttendanceBaseURL(): string {
@@ -12,6 +12,9 @@ function resolveAttendanceBaseURL(): string {
   const forceRemoteInDev = process.env.NEXT_PUBLIC_ATTENDANCE_API_FORCE_REMOTE === '1';
 
   if (process.env.NODE_ENV === 'development' && !forceRemoteInDev) {
+    if (normalized && LOCALHOST_RE.test(normalized)) {
+      return normalized;
+    }
     if (normalized && !LOCALHOST_RE.test(normalized)) {
       console.warn(
         `[attendance-api] Development mode: ignoring remote NEXT_PUBLIC_ATTENDANCE_API_URL (${normalized}) and using ${DEFAULT_ATTENDANCE_DEV}. Set NEXT_PUBLIC_ATTENDANCE_API_FORCE_REMOTE=1 to force remote in dev.`

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useStore, type Department } from '@/lib/store';
+import { formatBrandEmployeeId, BRAND_ID_LABEL } from '@/lib/brand';
 import { mapProfileToStoreUser } from '@/lib/auth/map-api-user';
 import { getCurrentUserProfile, updateProfileApi } from '@/services/user.service';
 import { Info, Camera, Loader2 } from 'lucide-react';
@@ -98,7 +99,7 @@ export default function ProfilePage() {
     avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=0ea5e9&color=fff&size=256`;
 
-  const uniqueId = currentUser.employeeCode || currentUser.id;
+  const uniqueId = formatBrandEmployeeId(currentUser.employeeCode, currentUser.id);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,7 +165,7 @@ export default function ProfilePage() {
       <div className="mb-8 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-100">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 dark:text-sky-300" aria-hidden />
         <p>
-          Details load from your account on the server. Save changes to update via the API. Unique ID is
+          Details load from your account on the server. Save changes to update via the API. {BRAND_ID_LABEL} is
           system-assigned and cannot be changed here. Profile photos are limited to {PROFILE_IMAGE_MAX_MB} MB.
         </p>
       </div>
@@ -261,7 +262,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Unique ID</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{BRAND_ID_LABEL}</label>
               <input className={`${inputClass} cursor-not-allowed bg-slate-100/90`} readOnly value={uniqueId} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">

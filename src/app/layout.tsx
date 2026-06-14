@@ -10,8 +10,8 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Global Digital Care | Assurgent',
-  description: 'Digital Register System and HR Management',
+  title: 'Elevate Bright Tec | EBT',
+  description: 'Elevate Your Future — workplace hub for teams, attendance, and operations',
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -31,7 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="min-h-dvh bg-slate-50 dark:bg-slate-950" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-dvh bg-slate-50 dark:bg-slate-950 antialiased`}>
+      <body
+        className={`${inter.className} min-h-dvh bg-slate-50 dark:bg-slate-950 antialiased`}
+        suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
             <RealtimeProvider>

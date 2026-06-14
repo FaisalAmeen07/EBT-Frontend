@@ -1,8 +1,13 @@
 import type { User } from '@/lib/store';
+import { formatBrandEmployeeId } from '@/lib/brand';
 
 /** Prefer HR code, then internal user id (and optional timesheet userId). */
 export function employeeDisplayId(user: User | undefined, fallbackUserId?: string): string {
-  return user?.employeeCode ?? user?.id ?? fallbackUserId ?? '—';
+  const code = user?.employeeCode?.trim();
+  if (code) return formatBrandEmployeeId(code);
+  const id = user?.id ?? fallbackUserId;
+  if (id) return formatBrandEmployeeId(null, id);
+  return '—';
 }
 
 /** Fallback first option; actual department list should come from store/api. */

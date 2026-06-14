@@ -1,6 +1,7 @@
 'use client';
 
 import { employeeDisplayId } from '@/lib/attendanceSite';
+import { BRAND_ID_LABEL } from '@/lib/brand';
 import { useStore, useShallow, Role, User, mergeUsersWithSeed } from '@/lib/store';
 import {
   approveUserApi,
@@ -253,7 +254,7 @@ export function EmployeesManagementPage() {
             </div>
             <div className="relative w-full max-w-md lg:w-80">
               <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Unique ID
+                {BRAND_ID_LABEL}
               </label>
               <div className="relative">
                 <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -295,7 +296,7 @@ export function EmployeesManagementPage() {
         ) : filteredUsers.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 py-16 text-center">
             <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No users match these filters.</p>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Try another role tab or clear the Unique ID search.</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Try another role tab or clear the {BRAND_ID_LABEL} search.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">

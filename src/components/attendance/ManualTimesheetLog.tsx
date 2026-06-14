@@ -13,6 +13,7 @@ import {
   type ManualTimesheetRow,
 } from '@/services/attendance.service';
 import { useStore } from '@/lib/store';
+import { BRAND_ID_LABEL, formatBrandEmployeeId } from '@/lib/brand';
 import { toast } from '@/lib/toast';
 import { X } from 'lucide-react';
 
@@ -199,7 +200,7 @@ export function ManualTimesheetLog({
             onFilterChange={() => setPage(1)}
             showSiteFilter={!isTeamLeaderViewer}
             showProviderFilter={!isTeamLeaderViewer}
-            idSearchPlaceholder="GDC-ID search"
+            idSearchPlaceholder={`${BRAND_ID_LABEL} search`}
           />
         }
         actions={
@@ -243,7 +244,7 @@ export function ManualTimesheetLog({
                 </th>
                 <th className="px-3 py-3">Sr#</th>
                 <th className="px-3 py-3">Name</th>
-                <th className="px-3 py-3">GDC-ID</th>
+                <th className="px-3 py-3">{BRAND_ID_LABEL}</th>
                 <th className="px-3 py-3">Role</th>
                 <th className="px-3 py-3">Department</th>
                 <th className="px-3 py-3">Date</th>
@@ -282,7 +283,7 @@ export function ManualTimesheetLog({
                     </td>
                     <td className="px-3 py-3">{r.sr}</td>
                     <td className="px-3 py-3 font-semibold text-slate-900 dark:text-slate-50">{resolveRowName(r)}</td>
-                    <td className="px-3 py-3">{r.gdc_id || '—'}</td>
+                    <td className="px-3 py-3">{r.gdc_id ? formatBrandEmployeeId(r.gdc_id) : '—'}</td>
                     <td className="px-3 py-3">{r.role || '—'}</td>
                     <td className="px-3 py-3">{r.department || '—'}</td>
                     <td className="px-3 py-3">{dateOnly(r.date)}</td>
@@ -341,7 +342,7 @@ export function ManualTimesheetLog({
                     <p className="text-sm font-semibold text-sky-600">{periodLabel || 'Selected period'}</p>
                     <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">{detailRow.department || '—'}</p>
                     <p className="mt-1 text-slate-700 dark:text-slate-200">{resolveRowName(detailRow)}</p>
-                    <p className="text-slate-700 dark:text-slate-200">{detailRow.gdc_id || '—'}</p>
+                    <p className="text-slate-700 dark:text-slate-200">{detailRow.gdc_id ? formatBrandEmployeeId(detailRow.gdc_id) : '—'}</p>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                       Status: <span className="font-semibold">{detailRow.status || '—'}</span>
                     </p>

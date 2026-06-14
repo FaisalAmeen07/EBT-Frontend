@@ -5,7 +5,7 @@ import { ACCESS_TOKEN_COOKIE } from '@/lib/api/axios.config';
 /** Local dev only when `NEXT_PUBLIC_TASK_API_URL` is unset. Production must set the env var (e.g. Render HTTPS URL). */
 const DEFAULT_TASK_DEV = 'http://localhost:5001';
 /** Production fallback when env var is missing (Render). */
-const DEFAULT_TASK_PROD = 'https://taskmanagment-backend-34i7.onrender.com';
+const DEFAULT_TASK_PROD = 'https://taskservice-backend.onrender.com';
 
 function resolveTaskBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_TASK_API_URL?.trim() ?? '';

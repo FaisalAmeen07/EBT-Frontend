@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { BRAND_LOGO_DARK_URL, BRAND_LOGO_URL } from '@/lib/brand';
+import { BrandSidebarLockup } from '@/components/brand/BrandLogo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { clearSessionCookies } from '@/views/auth/authSession';
@@ -97,38 +96,9 @@ export function Sidebar() {
         collapsed ? 'w-20' : 'w-64'
       )}
     >
-      <div className={cn('shrink-0 px-4 py-5', collapsed && 'px-3')}>
-        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-center')}>
-          {collapsed ? (
-            <div className="relative h-12 w-12 overflow-hidden">
-              <Image
-                src="/sidebar-handshake-icon.png"
-                alt="Global Digital Care"
-                fill
-                className="object-contain"
-                sizes="48px"
-                priority
-              />
-            </div>
-          ) : (
-            <div className="relative h-14 w-[170px]">
-              <Image
-                src={BRAND_LOGO_URL}
-                alt="Global Digital Care"
-                fill
-                className="object-contain object-center dark:hidden"
-                sizes="170px"
-                priority
-              />
-              <Image
-                src={BRAND_LOGO_DARK_URL}
-                alt="Global Digital Care"
-                fill
-                className="hidden object-contain object-center dark:block"
-                sizes="170px"
-              />
-            </div>
-          )}
+      <div className={cn('shrink-0 border-b border-transparent px-3 py-5 dark:border-slate-800', collapsed && 'px-2')}>
+        <div className={cn('flex items-center justify-center', collapsed ? 'py-1' : 'px-1 py-0')}>
+          <BrandSidebarLockup collapsed={collapsed} />
         </div>
       </div>
 
