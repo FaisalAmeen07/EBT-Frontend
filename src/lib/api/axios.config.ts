@@ -8,15 +8,17 @@ const DEFAULT_DEV_ORIGIN = 'http://localhost:5000';
 const DEFAULT_PROD_ORIGIN = 'https://authservices-backend.onrender.com';
 
 function resolveBaseURL(): string {
+  // Browser dev: same-origin `/api/*` → Next.js rewrites (BACKEND_PROXY_URL / NEXT_PUBLIC_API_URL).
+  // Must run before NEXT_PUBLIC_API_URL so local dev does not bypass the proxy and hit Render cross-origin.
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    return '';
+  }
+
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim() ?? '';
   const normalized = raw.replace(/\/$/, '');
   if (normalized) return normalized;
 
   if (process.env.NODE_ENV === 'development') {
-    if (typeof window !== 'undefined') {
-      // Same origin → Next.js rewrites forward to gdc-backend (avoids CORS / CORP / port mixups).
-      return '';
-    }
     return DEFAULT_DEV_ORIGIN;
   }
   console.warn(

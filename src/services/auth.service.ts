@@ -75,7 +75,7 @@ export async function registerWithApi(input: {
 
 export async function logoutFromApi(): Promise<void> {
   try {
-    await apiPost(API_PATHS.auth.logout, {});
+    await apiClient.post(API_PATHS.auth.logout, {});
   } catch {
     /* session may already be invalid */
   }

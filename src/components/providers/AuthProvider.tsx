@@ -10,6 +10,7 @@ import { getCurrentUserProfile } from '@/services/user.service';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useSyncExternalStore } from 'react';
 import Cookies from 'js-cookie';
+import { ACCESS_TOKEN_COOKIE } from '@/lib/api/axios.config';
 import { clearSessionCookies } from '@/views/auth/authSession';
 
 const noopSubscribe = () => () => {};
@@ -37,7 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
     const roleCookie = Cookies.get('auth-role');
     const idCookie = Cookies.get('auth-user-id');
+    const tokenCookie = Cookies.get(ACCESS_TOKEN_COOKIE);
     if (!roleCookie || !idCookie || currentUser) return;
+    if (!tokenCookie) {
+      clearSessionCookies();
+      return;
+    }
 
     let cancelled = false;
 
