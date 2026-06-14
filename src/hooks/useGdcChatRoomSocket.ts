@@ -8,15 +8,10 @@
  * and refetches messages (deduped server state). A future Mongo-backed service could swap
  * persistence without changing this client contract.
  */
-import { useEffect } from 'react';
-import { io } from 'socket.io-client';
+import { resolveSocketBaseUrl } from '@/lib/api/api-base-urls';
 import { useStore } from '@/lib/store';
-
-function resolveSocketBaseURL(): string | undefined {
-  const raw = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
-  if (raw) return raw.replace(/\/$/, '');
-  return undefined;
-}
+import { io } from 'socket.io-client';
+import { useEffect } from 'react';
 
 export type UseGdcChatRoomSocketOptions = {
   /** Active thread id (PostgreSQL chat id from CRM store). */
@@ -30,7 +25,9 @@ export function useGdcChatRoomSocket({ chatId, userId, enabled = true }: UseGdcC
   useEffect(() => {
     if (!enabled || typeof window === 'undefined' || !userId || !chatId) return;
 
-    const base = resolveSocketBaseURL();
+    const base = resolveSocketBaseUrl();
+    if (!base) return;
+
     const socket = io(base, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],

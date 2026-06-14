@@ -10,10 +10,27 @@ import {
   visibleDirectoryMembersToUsers,
 } from '@/services/team.service';
 import { useStore } from '@/lib/store';
+import { resolveSocketBaseUrl } from '@/lib/api/api-base-urls';
 import { io } from 'socket.io-client';
 import { useEffect } from 'react';
 
 const APP_BACKGROUND_SYNC_MS = 35_000;
+
+async function refreshDirectoryFromApi() {
+  const { currentUser, replaceDirectoryUsers } = useStore.getState();
+  if (!currentUser) return;
+  try {
+    if (currentUser.role === 'Admin' || currentUser.role === 'HR') {
+      const merged = await buildUsersWithResolvedTeams();
+      replaceDirectoryUsers(merged);
+    } else if (currentUser.role === 'Team Leader' || currentUser.role === 'Employee') {
+      const dir = await fetchVisibleDirectory();
+      replaceDirectoryUsers(visibleDirectoryMembersToUsers(dir));
+    }
+  } catch {
+    /* best-effort */
+  }
+}
 
 async function runAppBackgroundSync() {
   const st = useStore.getState();
@@ -34,34 +51,6 @@ async function runAppBackgroundSync() {
   await st.refreshNotificationsFromApi().catch(() => {});
 }
 
-function deriveSocketBaseUrl(): string | null {
-  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
-  if (socketUrl) return socketUrl.replace(/\/$/, '');
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (apiUrl) return apiUrl.replace(/\/$/, '');
-  if (typeof window !== 'undefined') {
-    // Local: `next.config.ts` rewrites `/socket.io/*` → gdc-backend
-    return window.location.origin;
-  }
-  return null;
-}
-
-async function refreshDirectoryFromApi() {
-  const { currentUser, replaceDirectoryUsers } = useStore.getState();
-  if (!currentUser) return;
-  try {
-    if (currentUser.role === 'Admin' || currentUser.role === 'HR') {
-      const merged = await buildUsersWithResolvedTeams();
-      replaceDirectoryUsers(merged);
-    } else if (currentUser.role === 'Team Leader' || currentUser.role === 'Employee') {
-      const dir = await fetchVisibleDirectory();
-      replaceDirectoryUsers(visibleDirectoryMembersToUsers(dir));
-    }
-  } catch {
-    /* best-effort */
-  }
-}
-
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const currentUser = useStore((s) => s.currentUser);
 
@@ -80,7 +69,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, [currentUser?.id]);
 
   useEffect(() => {
-    const base = deriveSocketBaseUrl();
+    const base = resolveSocketBaseUrl();
     if (!base || !currentUser) {
       return;
     }

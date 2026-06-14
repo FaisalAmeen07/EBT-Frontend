@@ -6,6 +6,12 @@ const backendProxy =
     "",
   );
 
+const chatProxy =
+  (process.env.CHAT_PROXY_URL || process.env.NEXT_PUBLIC_CHAT_API_URL || "https://chatservice-backend.onrender.com").replace(
+    /\/$/,
+    "",
+  );
+
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
@@ -14,7 +20,9 @@ const nextConfig: NextConfig = {
       { source: "/api/admin/:path*", destination: `${backendProxy}/api/admin/:path*` },
       { source: "/api/teams/:path*", destination: `${backendProxy}/api/teams/:path*` },
       { source: "/api/integrations/:path*", destination: `${backendProxy}/api/integrations/:path*` },
-      // Socket.IO on gdc-backend — browser uses same origin + this proxy (no NEXT_PUBLIC_SOCKET_URL needed locally)
+      { source: "/api/chats", destination: `${chatProxy}/api/chats` },
+      { source: "/api/chats/:path*", destination: `${chatProxy}/api/chats/:path*` },
+      // Socket.IO on auth backend — browser uses same origin + this proxy when NEXT_PUBLIC_SOCKET_URL is unset locally
       { source: "/socket.io/:path*", destination: `${backendProxy}/socket.io/:path*` },
     ];
   },

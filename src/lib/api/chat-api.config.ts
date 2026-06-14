@@ -7,8 +7,6 @@ export function resolveChatBaseURL(): string {
   const raw = process.env.NEXT_PUBLIC_CHAT_API_URL?.trim() ?? '';
   const normalized = raw.replace(/\/$/, '');
   if (normalized) {
-    // In production builds, a localhost chat URL is always a misconfiguration
-    // (NEXT_PUBLIC_* vars are baked into the client bundle at build time).
     if (
       process.env.NODE_ENV === 'production' &&
       /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalized)
@@ -20,10 +18,13 @@ export function resolveChatBaseURL(): string {
     }
     return normalized;
   }
+
+  // Browser prod without build-time env (e.g. Netlify): same-origin `/api/chats/*` → Next rewrites (no CORS).
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    return '';
+  }
+
   if (process.env.NODE_ENV === 'production') {
-    console.error(
-      `[chat-api] NEXT_PUBLIC_CHAT_API_URL is unset — using ${DEFAULT_CHAT_PROD}. Set it in Vercel env vars (no trailing slash).`
-    );
     return DEFAULT_CHAT_PROD;
   }
   return DEFAULT_CHAT_DEV;

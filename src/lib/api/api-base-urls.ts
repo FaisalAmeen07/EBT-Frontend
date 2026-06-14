@@ -134,3 +134,21 @@ export const API_PATHS = {
       `/api/chats/${encodeURIComponent(chatId)}/admins:remove/${encodeURIComponent(memberId)}`,
   },
 } as const;
+
+/** Render auth API — socket.io lives here. */
+export const DEFAULT_AUTH_API_ORIGIN = 'https://authservices-backend.onrender.com';
+
+/** Socket.IO base URL for browser clients (Render auth service unless env overrides). */
+export function resolveSocketBaseUrl(): string | null {
+  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
+  if (socketUrl) return socketUrl.replace(/\/$/, '');
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (apiUrl) return apiUrl.replace(/\/$/, '');
+  if (typeof window !== 'undefined') {
+    if (process.env.NODE_ENV === 'development') {
+      return window.location.origin;
+    }
+    return DEFAULT_AUTH_API_ORIGIN;
+  }
+  return null;
+}
