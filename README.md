@@ -1,48 +1,189 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Elevate Bright Tec CRM
 
-## API service layer (Express)
+<p align="center">
+  Elevate Bright Tec CRM Banner
+</p>
 
-- **Env:** [`.env.example`](./.env.example) → copy to `.env.local` and set `NEXT_PUBLIC_API_URL` (no trailing slash).
-- **Axios:** [`src/lib/api/axios.config.ts`](./src/lib/api/axios.config.ts) — `apiClient`, Bearer from **`accessToken`** cookie, headers `X-Client-Platform: web`, `X-Client-Version`.
-- **Paths:** [`src/lib/api/api-base-urls.ts`](./src/lib/api/api-base-urls.ts).
-- **HTTP:** [`src/lib/api/axios-request-handler.ts`](./src/lib/api/axios-request-handler.ts) — `apiGet` / `apiPost` / `apiPut` / `apiDelete`.
-- **Example:** [`src/services/user.service.ts`](./src/services/user.service.ts) — `getCurrentUserProfile()`.
+<p align="center">
+  Modern CRM & Workforce Management Platform built with Next.js, TypeScript, Express.js, and PostgreSQL.
+</p>
 
-**Auth integration:** Sign-in and register call the Express API ([`src/services/auth.service.ts`](./src/services/auth.service.ts)). Login stores **`accessToken`** + `auth-role` / `auth-user-id` via [`authSession.ts`](./src/views/auth/authSession.ts). Forgot/reset password uses the backend OTP + `resetUserId` cookie (keep requests on the same browser, `withCredentials: true`).
+<p align="center">
+  Employee Management • Attendance Tracking • Timesheets • Tasks • Messaging • Analytics
+</p>
 
-**Demo data:** The seeded user roster and sample tasks were removed from [`src/lib/store.ts`](./src/lib/store.ts). Clock-in, timesheets, tasks, messaging, and similar features still use **local persisted state** until you add matching backend APIs and sync them.
+---
 
-## Getting Started
+## 📖 Overview
 
-First, run the development server:
+Elevate Bright Tec CRM is a comprehensive workforce and customer relationship management platform designed to streamline employee operations, attendance tracking, task management, communication, and business workflows.
+
+The platform provides administrators, managers, and employees with an intuitive dashboard to manage daily operations efficiently while maintaining real-time visibility into organizational activities.
+
+---
+
+## 📸 Screenshots
+
+### Dashboard
+
+![Dashboard](./public/DashboardUI.jpeg)
+
+### Team Leader
+
+![TeamLead](./public/TLdashboard.jpeg)
+
+### Attendance & Timesheets
+
+![Attendance](./public/TimeSheetUI.jpeg)
+
+### Team Management
+
+![Teams](./public/TeamsUI.jpeg)
+
+### Messaging System
+
+![Messaging](./public/MessageUI.jpeg)
+
+---
+
+## ✨ Key Features
+
+* 🔐 Secure Authentication & Authorization
+* 👥 Employee Management
+* ⏰ Attendance Tracking
+* 📋 Timesheet Management
+* ✅ Task Assignment & Monitoring
+* 💬 Real-Time Messaging
+* 📊 Analytics Dashboard
+* 🔔 Notifications System
+* 📱 Responsive Design
+* 🌐 REST API Integration
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend
+
+* Next.js 15
+* React.js
+* TypeScript
+* Tailwind CSS
+* Axios
+* Zustand / Context API
+
+### Backend
+
+* Express.js
+* Node.js
+* PostgreSQL
+* Prisma ORM
+* JWT Authentication
+
+### Deployment
+
+* Vercel
+* Render
+* Supabase
+
+---
+
+## 📂 Project Structure
+
+```text
+src/
+├── app/
+├── components/
+├── lib/
+│   ├── api/
+│   ├── store/
+│   └── utils/
+├── services/
+├── views/
+├── hooks/
+└── types/
+```
+
+## ⚙️ Environment Variables
+
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_API_URL=your_api_url
+```
+
+---
+
+## 🚀 Getting Started
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🔗 API Integration
 
-To learn more about Next.js, take a look at the following resources:
+The application communicates with the Express.js backend through a centralized API service layer.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+* Axios Configuration
+* JWT Authentication
+* Cookie-based Session Management
+* Role-based Authorization
+* Error Handling
+* Request Interceptors
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📈 Future Enhancements
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* Real-Time Notifications
+* Advanced Reporting
+* Mobile Application
+* Payroll Integration
+* HR Management Module
+* Performance Analytics
+
+---
+
+## 👨‍💻 Developer
+
+**Faisal Ameen**
+
+Software Engineer | Full Stack Developer
+
+Portfolio:
+https://faisalameenportfolio.vercel.app/
+
+LinkedIn:
+https://www.linkedin.com/in/faisal-ameen07/
+
+---
+
+## 🏢 Company
+
+Elevate Bright Tec
+
+Building innovative digital solutions for modern businesses.
